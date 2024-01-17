@@ -188,15 +188,16 @@ alle_ladere_seneste_md <-  alle_ladere %>%
   
 ```
 
-Pr. `r as.character(seneste_md)` var der henholdsvis `r alle_ladere_seneste_md$UDV_OUTLETS[1]`, `r alle_ladere_seneste_md$UDV_OUTLETS[2]` og `r alle_ladere_seneste_md$UDV_OUTLETS[3]` flere normal-, hurtig- og lynladdere end i `r forhenvaerende_md`, hvilket svarer til en stigning på henholdsvis `r alle_ladere_seneste_md$PCT_UDV_OUTLETS[1]`, `r alle_ladere_seneste_md$PCT_UDV_OUTLETS[2]` og `r alle_ladere_seneste_md$PCT_UDV_OUTLETS[3]` pct. Sammenlignet med `r as.character(seneste_md)` sidste år er der henholdsvis `r alle_ladere_seneste_md$PCT_UDV_OUTLETS_12[1]`, `r alle_ladere_seneste_md$PCT_UDV_OUTLETS_12[2]` og `r alle_ladere_seneste_md$PCT_UDV_OUTLETS_12[3]` pct. flere normal-, hurtig- og lynladdere.
+Pr. `r as.character(seneste_md)` var der henholdsvis `r alle_ladere_seneste_md$UDV_OUTLETS[1]`, `r alle_ladere_seneste_md$UDV_OUTLETS[2]` og `r alle_ladere_seneste_md$UDV_OUTLETS[3]` flere normal-, hurtig- og lynladdere end i `r forhenvaerende_md`, hvilket svarer til en månedlig stigning på henholdsvis `r alle_ladere_seneste_md$PCT_UDV_OUTLETS[1]`, `r alle_ladere_seneste_md$PCT_UDV_OUTLETS[2]` og `r alle_ladere_seneste_md$PCT_UDV_OUTLETS[3]` pct. Sammenlignet med `r as.character(seneste_md)` sidste år er der henholdsvis `r alle_ladere_seneste_md$PCT_UDV_OUTLETS_12[1]`, `r alle_ladere_seneste_md$PCT_UDV_OUTLETS_12[2]` og `r alle_ladere_seneste_md$PCT_UDV_OUTLETS_12[3]` pct. flere normal-, hurtig- og lynladdere.
 
-Fordelingen blandt de 3 typer af ladeefekt er pr. `r as.character(seneste_md)` 
+Fordelingen blandt de 3 typer af ladeefekt normal-, hurtig- og lynlader er pr. `r as.character(seneste_md)` er på henholdsvis `r alle_ladere_seneste_md$ANDEL[1]`, `r alle_ladere_seneste_md$ANDEL[2]` og `r alle_ladere_seneste_md$ANDEL[3]` pct., sammenlignet med `r as.character(seneste_md)` `r as.character(aar-1)`, hvor fordelingen var `r alle_ladere_seneste_md$ANDEL_12[1]`, `r alle_ladere_seneste_md$ANDEL_12[2]` og `r alle_ladere_seneste_md$ANDEL_12[3]` pct.
 
 **Figur 2. Udvikling antallet af offentligt tilgængelige ladepunkter fordelt på ladeeffekt**
 ```{r cars}
 
 
 alle_ladere %>% 
+  mutate(LADEEFFEKT  = factor(LADEEFFEKT, levels = c("Lynlader", "Hurtiglader","Normallader"))) %>% 
   hchart('area', hcaes(x = DATE, y =OUTLETS, group = LADEEFFEKT), marker = FALSE, borderColor = 0) |> 
   hc_plotOptions(series = list(stacking = "normal", lineWidth = 0)) %>% 
           # },
@@ -219,7 +220,7 @@ alle_ladere %>%
 
 Antallet af elbiler pr. offentligt tilgængelige ladepunkt har været stigende fra `r as.character(head(elbil_lader_komgrp$el_bil_pr_outlets,1))` elbiler pr. offentligt ladepunkt ultimo august 2018 til knap 13,9 elbiler pr. offentligt ladepunkt ultimo januar 2022, hvilket skyldes, at antallet af elbiler er vokset hurtigere end antallet af offentligt tilgængelige ladepunkter.
 
-Siden august 2022 er antallet af offentligt tilgængelige ladepunkter dog steget relativt mere end antallet af elbiler, og der har derfor været en faldende tendens i antallet af elbiler pr. offentligt ladepunkt. Ved udgangen af `r as.character(seneste_md)` 2023 var der `r as.character(tail(elbil_lader_komgrp$el_bil_pr_outlets,1))` elbiler pr. offentligt tilgængelige ladepunkt.
+Fra august 2022 til maj 2023 steg er antallet af offentligt tilgængelige ladepunkter dog relativt mere end antallet af elbiler, og der var derfor en faldende tendens i antallet af elbiler pr. offentligt ladepunkt til 11,1 elbiler pr ladepunkt i maj 2023. Siden maj 2023 har der være en svagt stigende trend og ved udgangen af `r as.character(seneste_md)` 2023 var der `r as.character(tail(elbil_lader_komgrp$el_bil_pr_outlets,1))` elbiler pr. offentligt tilgængelige ladepunkt.
 
 **Figur 3. Antallet elbiler pr. offentligt tilgængelige ladepunkter**
 ```{r pressure, echo=FALSE}
