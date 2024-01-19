@@ -1,7 +1,7 @@
 ---
 title: "Ladeinfrastruktur"
 output: html_document
-date: "2024-01-10"
+date: 'Opdateret `r format(Sys.Date(), "%d. %B %Y")`'
 ---
 
 <style type="text/css">
@@ -29,6 +29,7 @@ library(officer)
 library(lubridate)
 library(plotly)
 library(scales)
+library(downloadthis)
 
 lang <- getOption("highcharter.lang")
 lang$decimalPoint <- ","
@@ -137,18 +138,53 @@ sl_pr_elbil <- elbil_lader_komgrp |>
 
 ```
 
-## Antal ladepunkter
+```{r}
+
+figur_1 <- alle_ladere_u_effekt 
+
+figur_2 <- alle_ladere %>% 
+  mutate(LADEEFFEKT  = factor(LADEEFFEKT, levels = c("Lynlader", "Hurtiglader","Normallader")))
+
+figur_3 <- elbil_lader_komgrp
+
+
+```
+
+# Ladeinfrastruktur
+
+Dette er Transportministeriets interne statusnotat for ladeinfrastruktur, som viser udviklingen i antallet af ladepunkter. Notatet opdateres månedligt er baseret på data fra ChargeX og Danmarks Statistik.  
+
+Ønskes at arbejde med data fra rapporten kan de hentes her:
+```{r}
+list(
+  "Figur 1" = figur_1 %>% 
+    select(`Måned (ultimo)` = DATE, Ladepunkter =  OUTLETS, `Ladepunkter (udvikling)` =  UDV_OUTLETS), 
+  "Figur 2" = figur_2  %>% 
+    select(`Måned (ultimo)` = DATE, Ladeeffekt = LADEEFFEKT, Ladepunkter =  OUTLETS) %>% 
+    pivot_wider(names_from = "Ladeeffekt", values_from = "Ladepunkter"), 
+  "Figur 3" = figur_3 %>% 
+    select(`Måned (ultimo)` = DATE, `Elbiler pr ladepunkt` =  el_bil_pr_outlets)) %>%
+  download_this(
+    output_name = "Data til rapport om status på ladestandermarkedet",
+    output_extension = ".xlsx",
+    button_label = "Download datasæt",
+    button_type = "info",
+    has_icon = TRUE,
+    icon = "fa fa-save"
+  )
+```
+
+## Status på udviklingen i antal ladepunkter
 
 De relativt store stigninger i antallet af offentligt tilgængelige ladepunkter fortsætter ind i `r as.character(seneste_md)` måned. I `r as.character(seneste_md)` er antallet af offentligt tilgængelige ladepunkter steget med `r alle_ladere_u_effekt$UDV_OUTLETS[l_udv]` ladepunkter, svarende til en stigning på `r (alle_ladere_u_effekt$OUTLETS[l_udv]/alle_ladere_u_effekt$OUTLETS[l_udv-1]-1)*100` pct. 
 
-Dermed er det samlede antal offentligt tilgængelige ladepunkter steget til godt `r alle_ladere_u_effekt$OUTLETS[l_udv]` ultimo `r as.character(seneste_md)` `r aar`, hvilket er en stigning på godt `r alle_ladere_u_effekt$OUTLETS[l_udv]-alle_ladere_u_effekt$OUTLETS[l_udv-12]` i forhold til `r as.character(seneste_md)` `r as.character(aar-1)` Den største stigning er sket det seneste halve år. Antallet er i gennemsnit steget med `r gnst_udv` ladepunkter pr. måned siden december `r as.character(aar-1)`, jf. figur 1.
+Dermed er det samlede antal offentligt tilgængelige ladepunkter steget til godt `r alle_ladere_u_effekt$OUTLETS[l_udv]` ultimo `r as.character(seneste_md)` `r as.character(aar)`, hvilket er en stigning på godt `r alle_ladere_u_effekt$OUTLETS[l_udv]-alle_ladere_u_effekt$OUTLETS[l_udv-12]` i forhold til `r as.character(seneste_md)` `r as.character(aar-1)`. Antallet er i gennemsnit steget med `r gnst_udv` ladepunkter pr. måned siden december `r as.character(aar-1)`, jf. figur 1.
 
 
 **Figur 1. Udvikling og måned-til-måned vækst i antallet af offentligt til-gængelige ladepunkter, 2020-`r aar`**
 ```{r}
 
-data_fig_1 <- alle_ladere_u_effekt 
-lvls_fig_1 <- data_fig_1$DATE %>% unique()
+lvls_fig_1 <- figur_1$DATE %>% unique()
 
 highchart() %>%  
   # hc_yAxis_multiples(
@@ -160,8 +196,8 @@ highchart() %>%
       return this.value >= 1000 ? (this.value / 1000).toFixed(0) : this.value;
     }"))),
                      list(opposite = TRUE, title = list(text = "Antal nye ladepunkter"))) %>% 
-  hc_add_series(data_fig_1, "column", yAxis = 1,  hcaes(x = DATE, y =UDV_OUTLETS), color = trm_colors("orange"), name = "Antal nye ladepunkter (Højre akse)", borderColor = 0) %>% 
-  hc_add_series(data_fig_1, 'line', hcaes(x = DATE, y =OUTLETS), marker = FALSE, color = trm_colors("blaa"), name = "Antal ladepunkter i alt") %>%  
+  hc_add_series(figur_1, "column", yAxis = 1,  hcaes(x = DATE, y =UDV_OUTLETS), color = trm_colors("orange"), name = "Antal nye ladepunkter (Højre akse)", borderColor = 0) %>% 
+  hc_add_series(figur_1, 'line', hcaes(x = DATE, y =OUTLETS), marker = FALSE, color = trm_colors("blaa"), name = "Antal ladepunkter i alt") %>%  
   # hc_yAxis_multiples(opposite = TRUE) %>% 
   # hc_colors(c(trm_colors("blaa"))) |>
   hc_legend(reversed = TRUE) %>% 
@@ -196,8 +232,7 @@ Fordelingen blandt de 3 typer af ladeefekt normal-, hurtig- og lynlader er pr. `
 ```{r cars}
 
 
-alle_ladere %>% 
-  mutate(LADEEFFEKT  = factor(LADEEFFEKT, levels = c("Lynlader", "Hurtiglader","Normallader"))) %>% 
+figur_2 %>% 
   hchart('area', hcaes(x = DATE, y =OUTLETS, group = LADEEFFEKT), marker = FALSE, borderColor = 0) |> 
   hc_plotOptions(series = list(stacking = "normal", lineWidth = 0)) %>% 
           # },
@@ -224,7 +259,8 @@ Fra august 2022 til maj 2023 steg er antallet af offentligt tilgængelige ladepu
 
 **Figur 3. Antallet elbiler pr. offentligt tilgængelige ladepunkter**
 ```{r pressure, echo=FALSE}
-elbil_lader_komgrp %>% 
+
+figur_3 %>% 
   hchart('line', hcaes(x = DATE, y = el_bil_pr_outlets), marker = FALSE) %>% 
    hc_colors(c(trm_colors("blaa"))) |>
   hc_yAxis(title = list(text = "Antal elbiler pr. lader"),
