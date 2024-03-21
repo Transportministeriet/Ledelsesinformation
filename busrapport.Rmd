@@ -1,0 +1,320 @@
+---
+title: "Busser"
+output: html_document
+date: 'Opdateret `r format(Sys.Date(), "%d. %B %Y")`'
+---
+
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
+extrafont::loadfonts()
+```
+
+
+```{css, echo=FALSE}
+
+.main-container {
+  max-width: 700px !important;
+  margin: auto;
+}
+body{
+  font-family: Georgia;
+  font-size: 12pt;
+}
+.highcharts-background {
+    fill: #EDF1F4;
+
+}
+
+
+```
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+
+library(downloadthis)
+library(tidyverse)
+library(readxl)
+library(sf)
+library(TRMvisual)
+library(extrafont)
+library(statbank)
+library(highcharter)
+library(knitr)
+library(extrafont)
+library(ggpp)
+library(officer)
+library(lubridate)
+library(plotly)
+library(scales)
+library(downloadthis)
+library(zoo)
+
+
+
+lang <- getOption("highcharter.lang")
+lang$decimalPoint <- ","
+lang$thousandsSep <- "."
+lang$numericSymbols <- highcharter::JS("null") # optional: remove the SI prefixes
+options(highcharter.lang = lang)
+
+options(scipen = 1000, digits = 2, decimal.mark = ",", OutDec = ",")
+Sys.setenv(Lang = "da")
+
+knit_hooks$set(inline = function(x) {
+  if(is.numeric(x)){
+  return(prettyNum(x, big.mark=".", digits = 2))
+  } else{
+    return(x)
+  }
+})
+
+sti <- "S:/CKA/Databank/006 Bilstatistik/Busser"
+
+bestand_data <- dir(sti) %>% 
+  str_subset("Bestand") |>
+  (\(y) map_dfr(y, ~read_excel(str_c(sti,"/", .x), skip = 9,
+                                .name_repair = str_to_upper) %>% 
+     filter(row_number()!=max(row_number()), !is.na(ANVENDELSE)) %>% 
+       select(DRIVKRAFT, ANVENDELSE, BESTAND) %>% 
+       mutate(DRIVKRAFT = str_extract_all(DRIVKRAFT, "PHEV|El", simplify = T) %>% 
+                                na_if("") %>% 
+           coalesce(DRIVKRAFT),
+         
+         DRIV = ifelse(DRIVKRAFT %in% c("Benzin", "Gas", "PHEV",  "Brint", "Ukendt"), "Øvrige drivmidler", DRIVKRAFT) %>% 
+           factor(levels = c("Øvrige drivmidler", "Diesel", "El")),
+              DATE = parse_number(.x, locale = locale(grouping_mark = "-")),
+              DATE = lubridate::dmy(DATE))))() 
+
+bestand_data_1 <- bestand_data %>% 
+  filter(ANVENDELSE !="Særlig anvendelse") %>% 
+  summarise(ANTAL = sum(BESTAND),
+            .by = c("DATE", "DRIV")) %>% 
+  mutate(AAR = ifelse(month(max(DATE))!=12, 
+                      str_c(year(DATE), " (", format(DATE, "%B"), ")"), 
+                      as.character(year(DATE)+1)), 
+         A_BESTAND = ANTAL/sum(ANTAL)*100,
+         .by = "DATE") %>% 
+  arrange(AAR) %>% 
+  select(AAR, DRIV, ANTAL, A_BESTAND)
+  
+nyreg_data <- read_excel(str_c(sti, "/", "Nyregistreringer trm drivkraft med anvendelse, 01-01-2019 - 31-12-2023.xlsx"),
+           skip = 10,
+           .name_repair = ~str_replace_all(.x, c("\\.| "="_","__"="_", "kvartal_"="")) %>% 
+             {ifelse(str_detect(., "\\d+"), str_c("KVT_", .), .)} %>% 
+             str_to_upper()) %>%
+  filter(!is.na(ANVENDELSE )) %>% 
+  select(-1, -2, -TOTAL) %>% 
+  filter(DRIVKRAFT!="Total") %>% 
+  pivot_longer(where(is.numeric)) %>% 
+  mutate(DATE = str_remove(name, "KVT_") %>% 
+           as.yearqtr(format = "%q_%Y") %>% 
+           as.Date(),
+         
+         DRIVKRAFT = str_extract_all(DRIVKRAFT, "PHEV|El", simplify = T) %>% 
+                                na_if("") %>% 
+           coalesce(DRIVKRAFT),
+         
+         # DRIVKRAFT = case_when(str_detect(DRIVKRAFT, "PHEV")~
+         #                       str_detect(DRIVKRAFT, "PHEV")
+         #                       
+         #                       "PHEV", DRIVKRAFT),
+         ANTAL = value,
+         .keep = "unused") 
+
+
+nyreg_data_1 <- nyreg_data %>% 
+  filter(ANVENDELSE !="Særlig anvendelse") %>% 
+  summarise(ANTAL = sum(ANTAL),
+            .by = c("DATE", "DRIVKRAFT")) %>% 
+  mutate(DRIV = ifelse(DRIVKRAFT %in% c("Benzin", "Gas", "PHEV",  "Brint", "Ukendt"), "Øvrige drivmidler", DRIVKRAFT) %>% 
+           factor(levels = c("Øvrige drivmidler", "Diesel", "El")),
+         A_NYREG = round(ANTAL/sum(ANTAL)*100, 1),
+         .by = "DATE") %>% 
+  select(-DRIVKRAFT) %>% 
+  arrange(DATE) %>% 
+  filter(ANTAL>0) 
+
+nyreg_data_2 <- nyreg_data_1 |> 
+  mutate(AAR = str_sub(DATE, end = 4)) |> 
+  group_by(AAR, DRIV) |> 
+  summarise(ANTAL = sum(ANTAL, na.rm = T),
+            .groups = "drop_last") |> 
+  mutate(A_NYREG = round(ANTAL/sum(ANTAL)*100 ,1)) |> 
+  ungroup()
+
+```
+
+```{r globale variable til tekst}
+
+nummer_sidste_md <- bestand_data$DATE %>% max() %>% month()
+nummer_md_efter <- ifelse(nummer_sidste_md==12,1,nummer_sidste_md+1)
+
+
+nyeste_aar <- bestand_data$DATE %>% max() %>% year()
+nyeste_aar_efter <- ifelse(nummer_sidste_md==12,nyeste_aar+1,nyeste_aar)
+
+totalsalg_seneste <- nyreg_data_1 %>% filter(year(DATE)==max(year(DATE))) %>% pull(ANTAL) %>% sum()
+elsalg_seneste <- nyreg_data_1 %>% filter(year(DATE)==max(year(DATE)), DRIV=="El") %>% pull(ANTAL) %>% sum()
+
+
+totalsalg_naestseneste <- nyreg_data_1 %>% filter(year(DATE)==max(year(DATE))-1) %>% pull(ANTAL) %>% sum()
+elsalg_naestseneste <- nyreg_data_1 %>% filter(year(DATE)==max(year(DATE))-1, DRIV=="El") %>% pull(ANTAL) %>% sum()
+
+
+totalsalg_21 <- nyreg_data_1 %>% filter(year(DATE)==2021) %>% pull(ANTAL) %>% sum()
+elsalg_21 <- nyreg_data_1 %>% filter(year(DATE)==2021, DRIV=="El") %>% pull(ANTAL) %>% sum()
+
+
+
+seneste_kvt <- nyreg_data_1 %>% 
+  filter(DATE==max(DATE)) %>% 
+  mutate(KVT = str_c(lubridate::quarter(DATE), ". kvt" ))
+
+bestand_2020 <- bestand_data_1 %>% filter(AAR=="2020") %>% pull(ANTAL) %>% sum()
+bestand_seneste <- bestand_data_1 %>% filter(AAR==max(AAR)) %>% pull(ANTAL) %>% sum()
+elbestand_seneste <- bestand_data_1 %>% filter(AAR==max(AAR), DRIV=="El") %>% pull(ANTAL) %>% sum()
+
+```
+
+
+
+```{r}
+
+figur_1 <- nyreg_data_2 %>% 
+  select(år=AAR, 
+         drivmiddel=DRIV,
+         antal =ANTAL)
+
+
+figur_2 <- bind_rows(nyreg_data_2, 
+          nyreg_data_1 |> 
+            filter(DATE==max(DATE)) %>% 
+            mutate(AAR = str_c(year(DATE), " (",  lubridate::quarter(DATE), ". Kvt)" ))) %>%
+  select(år=AAR,
+         drivmiddel=DRIV,
+         andel =A_NYREG )
+
+ 
+figur_3 <- bestand_data_1 |>
+  select(år = AAR,
+         drivmiddel=DRIV,
+         antal =ANTAL , 
+         andel = A_BESTAND
+  ) 
+
+
+```
+
+Dette er Transportministeriets interne statusnotat for nyregistreringer og bestand af busser. Det viser bl.a.   udviklingen i antal busser fordelt på drivmiddeltyper. Notatet opdateres kvartalsvist og er baseret på data fra Bilstatistik.  
+
+Data fra rapporten kan hentes her:
+```{r}
+list("Figur 1" = figur_1, "Figur 2" = figur_2, "Figur 3" = figur_3) %>%
+  download_this(
+    output_name = "Data til rapport om status på elbusudviklingen",
+    output_extension = ".xlsx",
+    button_label = "Download datasæt",
+    button_type = "info",
+    has_icon = TRUE,
+    icon = "fa fa-save"
+  )
+```
+
+
+### Status på udviklingen af busbestanden
+I løbet af de første `r nummer_sidste_md` måneder af `r as.character(nyeste_aar)` er der nyregistreret `r totalsalg_seneste` busser, hvoraf `r elsalg_seneste` er elbusser. Til sammenligning blev der i hele `r as.character(nyeste_aar-1)` nyregistreret `r elsalg_naestseneste` elbusser. 
+
+```{r}
+
+farver <- c("graa",  "blaa", "groen")
+
+format_chart <- function(x) {hc_chart(x, spacingTop = 40,
+           style = list(fontFamily= 'Georgia'))}
+
+nyreg_data_2 |> 
+  filter(as.numeric(str_sub(AAR, end = 4))>max(as.numeric(str_sub(AAR, end = 4)))-5) |> 
+  hchart('column', hcaes(x = AAR, y =ANTAL, group = DRIV ), borderColor = 0) |> 
+  hc_plotOptions(column = list(stacking = "normal")) |> 
+  hc_colors(c(trm_colors(farver))) |> 
+  hc_yAxis(title = list(text = "Antal"),
+           labels = list(formatter = JS("function() {
+      return this.value >= 1000 ? (this.value / 1000).toFixed(0) : this.value;
+    }")),
+    stackLabels = list(enabled = TRUE, verticalAlign = 'top',
+                             crop = FALSE, overflow = 'none')) |> 
+  hc_xAxis(title = list(text = NULL)) %>% 
+  hc_legend(reversed =TRUE) %>% 
+  hc_tooltip(shared = TRUE) %>% 
+  format_chart %>% 
+  hc_title(text ="<b>Figur 1.</b> Udvikling i nyregistreringer af busser fordelt på drivmiddel",
+           margin = 20,
+           align = "left",
+           x = 25,
+           y = -10,
+    style = list(useHTML = TRUE))
+
+```
+
+
+Elbussers andel af det samlede antal nyregistreringer varierer meget fra år til år, men trenden har været stigende siden 2021. I 2021 udgjorde elbusser `r elsalg_21/totalsalg_21*100` pct. af de samlede nyregistreringer. I `r as.character(nyeste_aar)` har elbusser hidtil udgjort  `r elsalg_seneste/totalsalg_seneste*100` pct. af de samlede nyregistreringer, jf. figur 2. I `r str_c(unique(seneste_kvt$KVT), " ", nyeste_aar)` udgjorde elbusser `r seneste_kvt$A_NYREG[[2]] %>% as.numeric()` pct. af nyregistreringerne.
+
+
+```{r}
+
+# TODO: forstår ikke helt Camillas kommentarer til tekst
+
+bind_rows(nyreg_data_2, 
+          nyreg_data_1 |> 
+            filter(DATE==max(DATE)) %>% 
+            mutate(AAR = str_c(year(DATE), " (",  lubridate::quarter(DATE), ". Kvt)" ))) %>%
+  hchart('column', hcaes(x = AAR, y =A_NYREG , group = DRIV ), borderColor = 0) |> 
+  hc_plotOptions(column = list(stacking = "normal")) |> 
+  hc_colors(c(trm_colors(farver))) |> 
+  hc_yAxis(title = list(text = "Pct."), max = 100) |> 
+  hc_xAxis(title = list(text = NULL)) %>% 
+  hc_legend(reversed =TRUE) %>% 
+  hc_tooltip(shared = TRUE) %>% 
+  format_chart %>% 
+  hc_title(text ="<b>Figur 2.</b> Drivmidlernes andel af nyregistreringer for busser",
+           margin = 20,
+           align = "left",
+           x = 25,
+           y = -10,
+    style = list(useHTML = TRUE))
+```
+
+Den 1. januar 2020 var den samlede bestand på `r bestand_2020` busser. Fra 2020 til `r as.character(nyeste_aar_efter)` har bestanden været let faldende, så bestanden pr. `r str_c("1. ", format(ISOdate(2000, 1:12, 1), "%B")[as.numeric(nummer_md_efter)], " ", nyeste_aar_efter)` var der `r bestand_seneste` busser. Den `r str_c("1. ", format(ISOdate(2000, 1:12, 1), "%B")[as.numeric(nummer_md_efter)], " ", nyeste_aar_efter)` udgjorde elbusser `r elbestand_seneste/bestand_seneste*100` pct. af den samlede bestand mod 1,2 pct. i 2020. 
+
+
+```{r}
+#Ny figur 3 opgørelse af årlig bestand
+
+
+bestand_data_1 |> 
+  hchart('column', hcaes(x = AAR, y = ANTAL, group = DRIV ), borderColor = 0) |> 
+  hc_plotOptions(column = list(stacking = "normal")) |> 
+  hc_colors(c(trm_colors(farver))) |> 
+  hc_yAxis(
+    title = list(text = "Antal"),
+    labels = list(
+      format = "{value:,.0f}"),
+    stackLabels = list(enabled = TRUE, verticalAlign = 'top',
+                             crop = FALSE, overflow = 'none')
+  ) |> 
+  hc_xAxis(title = list(text = NULL))|>
+  hc_tooltip(
+    pointFormat = "{series.name}: <b>{point.y}<b> busser <br>
+    <b>{point.percentage:.1f}<b> pct. af den samlede bestand"
+  )  %>% 
+  hc_legend(reversed =TRUE) %>% 
+  format_chart %>% 
+  hc_title(text ="<b>Figur 3</b> Udviklingen i den samlede bestand af busser",
+           margin = 20,
+           align = "left",
+           x = 25,
+           y = -10,
+    style = list(useHTML = TRUE))
+
+```
+
+
