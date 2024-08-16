@@ -111,8 +111,6 @@ Nummer_sidste_md <- data_nysalg |>
   (\(y) ifelse(str_sub(y, start = -2, end = -2) == "0", str_sub(y, start = -1), str_sub(y, start = -2)))()
 
 
-
-
 nyeste_aar <- data_nysalg |> 
   slice_tail(n=1) |> 
   pull(TID) |> 
@@ -320,32 +318,23 @@ DST_tal <- data_bil_1 |>
                          str_c("1. januar ", round(AAR,0))),
          oprindelse = "DST")
          
-        
-  
-KF_salg <- read_excel(str_c(sti_kf, "/", "kf23_dataark_-_transport.xlsx"),
-           sheet = "Salg", skip =4) %>% 
-  rename("type"=1, drivmiddel = 2) %>% 
-  filter(!if_all(.fns =~is.na(.x))) %>% 
-  mutate(drivmiddel =coalesce(drivmiddel, "Total")) %>% 
-  fill(type) %>% 
-  pivot_longer(cols = matches("\\d+"), names_to = "aar", values_to = "antal") %>% 
-  mutate(antal = round(antal, 0))
-
-KF_bestand <- read_excel(str_c(sti_kf, "/", "kf23_dataark_-_transport.xlsx"),
+KF_bestand <- read_excel(str_c(sti_kf, "/", "KF24_dataark_Transport.xlsx"),
            sheet = "Bestand", skip =4) %>% 
   rename("type"=1, drivmiddel = 2) %>% 
   filter(!if_all(.fns =~is.na(.x))) %>% 
   mutate(drivmiddel =coalesce(drivmiddel, "Total")) %>% 
   fill(type) %>% 
+  summarise(across(where(is.double), sum),
+            .by = c("type","drivmiddel")) %>% 
   pivot_longer(cols = matches("\\d+"), names_to = "aar", values_to = "antal") %>% 
   mutate(antal = round(antal, 0))
 
 KF_tal <- KF_bestand %>% 
   filter(type=="Personbiler", drivmiddel =="BEV") %>% 
   mutate(aar = parse_number(aar),
-         x_axis = str_glue("1. januar {aar+1} forventet (KF23)"),
+         x_axis = str_glue("1. januar {aar+1} forventet (KF24)"),
          oprindelse = "KF") %>% 
-  filter(aar %in% c(as.numeric(nyeste_aar)-1, as.numeric(nyeste_aar))) %>% # TODO: Dette skal rettes når der kommer tal fra KF24
+  filter(aar %in% c(as.numeric(nyeste_aar), as.numeric(nyeste_aar)+1)) %>% # TODO: Dette skal rettes når der kommer tal fra KF24
   select(INDHOLD=antal, x_axis, oprindelse)
 
 ```
