@@ -45,6 +45,7 @@ library(plotly)
 library(scales)
 library(downloadthis)
 
+
 lang <- getOption("highcharter.lang")
 lang$decimalPoint <- ","
 lang$thousandsSep <- "."
@@ -66,6 +67,23 @@ ladere <- read_excel( "S:/CKA/Databank/002 Ladeinfrastruktur/kommuner_ladeeffekt
                      skip = 2, .name_repair = ~str_replace_all(.x, " |-", "_") %>% 
                        str_to_upper())
 
+
+#Da microsoft power BI har ændret sig lidt navne og længde, er jeg nødt til at lave lidt struktur gymnastik for at få det til at passe igen. 
+#ladere_2 <- read_excel( "S:/CKA/Databank/002 Ladeinfrastruktur/nyeste_måned.xlsx",
+                     #skip = 2, .name_repair = ~str_replace_all(.x, " |-", "_") %>% 
+                       #str_to_upper())
+
+
+#ladere_2 <- ladere_2 %>% select(-ANTAL_AF_CHARGE_SITE)
+
+#ladere_2 <- ladere_2 %>% rename_with(~ colnames(ladere))
+
+#ladere <- ladere_2
+
+#rm(ladere_2)
+
+ladere$SUM_AF_OUTLETS <- as.numeric(ladere$SUM_AF_OUTLETS)
+
 # |>
 #   (\(y) bind_rows(y, read_excel( "S:/CKA/Databank/002 Ladeinfrastruktur/kommuner_ladeeffekt_gl.xlsx",
 #                      skip = 2, .name_repair = ~str_replace_all(.x, " |-", "_") %>% 
@@ -74,9 +92,12 @@ ladere <- read_excel( "S:/CKA/Databank/002 Ladeinfrastruktur/kommuner_ladeeffekt
 # 
 # ladere %>% count(PWR_RANGE )
 
+ladere <- ladere %>%
+  mutate(SUM_AF_OUTLETS = ifelse(is.na(SUM_AF_OUTLETS), 0, SUM_AF_OUTLETS))
+
 alle_ladere <- ladere %>% 
-  mutate(REG=`'DK_INHAB_BY_AREA'[REGION]`, 
-         YEARMONTHSHORT,
+mutate(REG=REGION,     
+       YEARMONTHSHORT,
          DATE= format(YEARMONTHSHORT, "%b %Y") , 
          LADEEFFEKT = case_when(PWR_RANGE == "A 0-22kW" ~ "Normallader",
                                 PWR_RANGE %in% c("B 23-49kW", "C 50-99kW") ~ "Hurtiglader",
@@ -174,6 +195,7 @@ figur_2 <- alle_ladere_seneste_md_t %>%
  mutate(LADEEFFEKT  = factor(LADEEFFEKT, levels = c("Lynlader", "Hurtiglader","Normallader")))
 
 figur_3 <- elbil_lader_komgrp
+
 
 
 ```

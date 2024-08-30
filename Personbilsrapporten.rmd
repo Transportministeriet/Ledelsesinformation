@@ -31,6 +31,8 @@ body{
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = FALSE, warning=FALSE, message = FALSE )
 
+
+
 library(tidyverse)
 library(readxl)
 library(sf)
@@ -322,7 +324,7 @@ DST_tal <- data_bil_1 |>
          
         
   
-KF_salg <- read_excel(str_c(sti_kf, "/", "kf23_dataark_-_transport.xlsx"),
+KF_salg <- read_excel(str_c(sti_kf, "/", "kf24_dataark_-_transport.xlsx"),
            sheet = "Salg", skip =4) %>% 
   rename("type"=1, drivmiddel = 2) %>% 
   filter(!if_all(.fns =~is.na(.x))) %>% 
@@ -331,7 +333,7 @@ KF_salg <- read_excel(str_c(sti_kf, "/", "kf23_dataark_-_transport.xlsx"),
   pivot_longer(cols = matches("\\d+"), names_to = "aar", values_to = "antal") %>% 
   mutate(antal = round(antal, 0))
 
-KF_bestand <- read_excel(str_c(sti_kf, "/", "kf23_dataark_-_transport.xlsx"),
+KF_bestand <- read_excel(str_c(sti_kf, "/", "kf24_dataark_-_transport.xlsx"),
            sheet = "Bestand", skip =4) %>% 
   rename("type"=1, drivmiddel = 2) %>% 
   filter(!if_all(.fns =~is.na(.x))) %>% 
@@ -343,10 +345,12 @@ KF_bestand <- read_excel(str_c(sti_kf, "/", "kf23_dataark_-_transport.xlsx"),
 KF_tal <- KF_bestand %>% 
   filter(type=="Personbiler", drivmiddel =="BEV") %>% 
   mutate(aar = parse_number(aar),
-         x_axis = str_glue("1. januar {aar+1} forventet (KF23)"),
+         x_axis = str_glue("1. januar {aar+1} forventet (KF24)"),
          oprindelse = "KF") %>% 
   filter(aar %in% c(as.numeric(nyeste_aar)-1, as.numeric(nyeste_aar))) %>% # TODO: Dette skal rettes når der kommer tal fra KF24
   select(INDHOLD=antal, x_axis, oprindelse)
+
+
 
 ```
 
@@ -583,12 +587,15 @@ ny_figur_3_1 |>
     <b>{point.percentage:.1f}<b> pct. af den samlede bestand"
   )  %>% 
   hc_legend(reversed =TRUE) %>% 
-  format_chart(titel =str_glue("<b>Figur 3.</b> Udviklingen i den samlede bestand af personbiler" ))
+  format_chart(titel =str_glue("<b>Figur 3.</b> Bestand af personbiler" ))
+
+rest <- KF_tal$INDHOLD[[2]] - DST_tal$INDHOLD[[2]]
+
+
 
 ```
 
-
-Udviklingen i salget af elbiler har resulteret i, at antallet af elbiler pr. 1. august 2023 overgik KF23's estimat for bestanden ved udgangen af 2023. Bestanden pr. `r str_remove_all(DST_tal$x_axis[[2]], " observeret")` er `r DST_tal$INDHOLD[[2]]` elbiler, jf. figur 4. 
+Jævnfør Klimastatus og -fremskrivning 2024 vil der ved udgangen af 2024 være `r KF_tal$INDHOLD[[2]]` elbiler i Danmark. Bestanden pr. `r str_remove_all(DST_tal$x_axis[[2]], " observeret")` var `r DST_tal$INDHOLD[[2]]` elbiler, jf. figur 4. Differencen mellem det nuværende antal elbiler og det forventede antal elbiler ved udgangen af året er således `r rest`.
 
 ```{r}
 
@@ -604,9 +611,6 @@ bind_rows(DST_tal, KF_tal) |>
   format_chart(titel =str_glue("<b>Figur 4.</b> Status for antallet af elbiler i {nyeste_aar}" ))
 
 ```
-
-
-Tilgangen af elbiler i 2023 var `r antal_el_biler_ialt` biler jf. figur 5. Dette er cirka `r pct_el_biler_ialt` pct. højere end estimeret i KF23 for samme periode.
 
 Alt imens bestanden af elbiler er under udvikling, er bestanden af fossilbiler gået fra en nettotilgang på  `r tal_fos_2019` biler i de første `r month(max(dat_fig_3$DATE))` måneder af 2020 til en nettoafgang på `r abs(tal_fos_2023)` biler i de første `r month(max(dat_fig_3$DATE))` måneder af `r nyeste_aar`. Det skyldes særligt, at bestanden af dieselbiler har været faldende siden august 2020, mens bestanden af benzinbiler har været faldende siden august 2021.
 
@@ -624,7 +628,7 @@ data_fig_4 |>
       return this.value ? (this.value / 1000).toFixed(0) : this.value;
     }"))) |> 
   hc_xAxis(title = list(text = NULL)) %>%
-  format_chart(titel =str_glue("<b>Figur 5.</b> Udvikling i antallet af biler til bestanden fra januar til {format(ISOdate(2000, as.numeric(Nummer_sidste_md), 1), '%B')}" ))
+  format_chart(titel =str_glue("<b>Figur 5.</b> Udvikling i antallet af biler fra januar til {format(ISOdate(2000, as.numeric(Nummer_sidste_md), 1), '%B')}" ))
 
 ```
 

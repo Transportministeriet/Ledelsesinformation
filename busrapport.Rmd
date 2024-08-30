@@ -28,6 +28,9 @@ body{
 
 ```
 
+
+
+
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = FALSE)
 
@@ -85,6 +88,31 @@ bestand_data <- dir(sti) %>%
               DATE = parse_number(.x, locale = locale(grouping_mark = "-")),
               DATE = lubridate::dmy(DATE))))() 
 
+bestand_data <- bestand_data %>%
+  mutate(DATE = ymd(DATE))
+
+# Håndter NA-værdier og find den nyeste dato
+nyeste_dato <- max(bestand_data$DATE, na.rm = TRUE)
+
+# Filtrér dataframen for at få de nyeste observationer
+bestand_seneste_data <- bestand_data %>%
+  filter(DATE == nyeste_dato)
+
+
+
+bestand_data_x <- bestand_seneste_data %>% 
+  filter(ANVENDELSE !="Særlig anvendelse") %>% 
+  summarise(ANTAL = sum(BESTAND),
+            .by = c("DATE", "DRIV")) %>% 
+  mutate(AAR = ifelse(month(max(DATE))!=12, 
+                      str_c(year(DATE), " (", format(DATE, "%B"), ")"), 
+                      as.character(year(DATE)+1)), 
+         A_BESTAND = ANTAL/sum(ANTAL)*100,
+         .by = "DATE") %>% 
+  arrange(AAR) %>% 
+  select(AAR, DRIV, ANTAL, A_BESTAND)
+
+
 bestand_data_1 <- bestand_data %>% 
   filter(ANVENDELSE !="Særlig anvendelse") %>% 
   summarise(ANTAL = sum(BESTAND),
@@ -97,13 +125,13 @@ bestand_data_1 <- bestand_data %>%
   arrange(AAR) %>% 
   select(AAR, DRIV, ANTAL, A_BESTAND)
   
-nyreg_data <- read_excel(str_c(sti, "/", "Nyregistreringer trm drivkraft med anvendelse, 01-01-2019 - 31-12-2023.xlsx"),
+nyreg_data <- read_excel(str_c(sti, "/", "Nyregistreringer trm drivkraft med anvendelse, 01-01-2019 - 30-06-2024.xlsx"),
            skip = 10,
            .name_repair = ~str_replace_all(.x, c("\\.| "="_","__"="_", "kvartal_"="")) %>% 
-             {ifelse(str_detect(., "\\d+"), str_c("KVT_", .), .)} %>% 
+            {ifelse(str_detect(., "\\d+"), str_c("KVT_", .), .)} %>% 
              str_to_upper()) %>%
   filter(!is.na(ANVENDELSE )) %>% 
-  select(-1, -2, -TOTAL) %>% 
+select(-1, -2, -TOTAL) %>% 
   filter(DRIVKRAFT!="Total") %>% 
   pivot_longer(where(is.numeric)) %>% 
   mutate(DATE = str_remove(name, "KVT_") %>% 
@@ -115,11 +143,18 @@ nyreg_data <- read_excel(str_c(sti, "/", "Nyregistreringer trm drivkraft med anv
            coalesce(DRIVKRAFT),
          
          # DRIVKRAFT = case_when(str_detect(DRIVKRAFT, "PHEV")~
-         #                       str_detect(DRIVKRAFT, "PHEV")
-         #                       
+        #                       str_detect(DRIVKRAFT, "PHEV")
+       #                       
          #                       "PHEV", DRIVKRAFT),
-         ANTAL = value,
-         .keep = "unused") 
+        ANTAL = value,
+        .keep = "unused") 
+
+
+
+
+# Output the cleaned data
+print(nyreg_data)
+
 
 
 nyreg_data_1 <- nyreg_data %>% 
@@ -248,10 +283,11 @@ nyreg_data_2 |>
   format_chart %>% 
   hc_title(text ="<b>Figur 1.</b> Udvikling i nyregistreringer af busser fordelt på drivmiddel",
            margin = 20,
-           align = "left",
+           align = "left",           
            x = 25,
            y = -10,
     style = list(useHTML = TRUE))
+
 
 ```
 
@@ -281,16 +317,24 @@ bind_rows(nyreg_data_2,
            x = 25,
            y = -10,
     style = list(useHTML = TRUE))
+
+bestand_seneste <- sum(bestand_data_x$ANTAL)
+
 ```
 
-Den 1. januar 2020 var den samlede bestand på `r bestand_2020` busser. Fra 2020 til `r as.character(nyeste_aar_efter)` har bestanden været let faldende, så bestanden pr. `r str_c("1. ", format(ISOdate(2000, 1:12, 1), "%B")[as.numeric(nummer_md_efter)], " ", nyeste_aar_efter)` var der `r bestand_seneste` busser. Den `r str_c("1. ", format(ISOdate(2000, 1:12, 1), "%B")[as.numeric(nummer_md_efter)], " ", nyeste_aar_efter)` udgjorde elbusser `r elbestand_seneste/bestand_seneste*100` pct. af den samlede bestand mod 1,2 pct. i 2020. 
+Den 1. januar 2020 var den samlede bestand på `r bestand_2020` busser. Fra 2020 til `r as.character(nyeste_aar_efter)` har bestanden været let faldende, så bestanden pr. `r str_c("1. ", format(ISOdate(2000, 1:12, 1), "%B")[as.numeric(nummer_md_efter)], " ", nyeste_aar_efter)` var der `r bestand_seneste` busser. Den `r str_c("1. ", format(ISOdate(2000, 1:12, 1), "%B")[as.numeric(nummer_md_efter)], " ", nyeste_aar_efter)` udgjorde elbusser `r round(bestand_data_x[2, 4], digits = 0)` pct. af den samlede bestand mod 1,2 pct. i 2020. 
+
+
 
 
 ```{r}
 #Ny figur 3 opgørelse af årlig bestand
 
+bestand_data_2 <- bestand_data_1 %>%
+  slice(1:(n() - 3))
 
-bestand_data_1 |> 
+
+bestand_data_2 |> 
   hchart('column', hcaes(x = AAR, y = ANTAL, group = DRIV ), borderColor = 0) |> 
   hc_plotOptions(column = list(stacking = "normal")) |> 
   hc_colors(c(trm_colors(farver))) |> 
@@ -306,7 +350,7 @@ bestand_data_1 |>
     pointFormat = "{series.name}: <b>{point.y}<b> busser <br>
     <b>{point.percentage:.1f}<b> pct. af den samlede bestand"
   )  %>% 
-  hc_legend(reversed =TRUE) %>% 
+  hc_legend(reversed = T) %>% 
   format_chart %>% 
   hc_title(text ="<b>Figur 3</b> Udviklingen i den samlede bestand af busser",
            margin = 20,
@@ -316,5 +360,4 @@ bestand_data_1 |>
     style = list(useHTML = TRUE))
 
 ```
-
 

@@ -168,7 +168,7 @@ nyreg_data_1 <- nyreg_data %>%
          .by = "AAR") %>% 
   arrange(AAR)
 
-KF_salg <- read_excel(str_c(sti_kf, "/", "kf23_dataark_-_transport.xlsx"),
+KF_salg <- read_excel(str_c(sti_kf, "/", "kf24_dataark_-_transport.xlsx"),
            sheet = "Salg", skip =4) %>% 
   rename("type"=1, drivmiddel = 2) %>% 
   filter(!if_all(.fns =~is.na(.x))) %>% 
@@ -177,7 +177,7 @@ KF_salg <- read_excel(str_c(sti_kf, "/", "kf23_dataark_-_transport.xlsx"),
   pivot_longer(cols = matches("\\d+"), names_to = "aar", values_to = "antal") %>% 
   mutate(antal = round(antal, 0))
 
-KF_bestand <- read_excel(str_c(sti_kf, "/", "kf23_dataark_-_transport.xlsx"),
+KF_bestand <- read_excel(str_c(sti_kf, "/", "kf24_dataark_-_transport.xlsx"),
            sheet = "Bestand", skip =4) %>% 
   rename("type"=1, drivmiddel = 2) %>% 
   filter(!if_all(.fns =~is.na(.x))) %>% 
@@ -189,7 +189,7 @@ KF_bestand <- read_excel(str_c(sti_kf, "/", "kf23_dataark_-_transport.xlsx"),
 KF_tal <- KF_bestand %>% 
   filter(type=="Lastbiler", drivmiddel =="BEV") %>% 
   mutate(aar = parse_number(aar),
-         x_axis = str_glue("1. januar {aar+1} forventet (KF23)"),
+         x_axis = str_glue("1. januar {aar+1} forventet (KF24)"),
          oprindelse = "KF") %>% 
   filter(aar %in% c(nyeste_aar-1, nyeste_aar)) %>% # TODO: Når KF24 kommer skal denne rettes til
   select(ANTAL=antal, x_axis, oprindelse)
@@ -446,12 +446,12 @@ bestand_data_1 |>
   )  %>% 
   format_chart("<b>Figur 3.</b> Udviklingen i den samlede bestand af lastbiler") %>% 
   hc_legend(reversed =TRUE)
+
+rest <- KF_tal$ANTAL[[2]] - elbestand_seneste
   
 ```
 
-
-
-Bestanden for 1. januar 2024 blev i KF23 fremskrevet til `r KF_tal$ANTAL[1]` ellastbiler og `r KF_tal$ANTAL[2]` 1. januar 2025. Den faktiske bestand var `r elbestand_seneste` ellastbiler utlimo `r str_c(seneste_md, " ", nyeste_aar)`, jf. figur 4. 
+Jævnfør Klimastatus og -fremskrvining 2024 forventes der at være cirka `r KF_tal$ANTAL[[2]]` elektriske lastbiler i Danmark ved udgangen af 2024. Differencen mellem det nuværende  og det forventede antal elektriske lastbiler ved udgangen af året er således `r rest` lastbiler, jf. figur 4.
 
 
 
@@ -495,10 +495,13 @@ sidste_aars_udv <- bestand_data_udv %>%
   pull(name = DRIV)
 
 
+
+
 ```
 
-
-Bestanden af diesellastbiler er indtil videre faldet med `r abs(nyeste_aars_udv[["Diesel"]])` i `r as.character(nyeste_aar)`, mens bestanden af ellastbiler er steget med `r nyeste_aars_udv[["El"]]`. I samme periode sidste år faldt bestanden af diesellastbiler med `r abs(sidste_aars_udv[["Diesel"]])`, mens antallet af ellastbiler steg med `r sidste_aars_udv[["El"]]`.
+Bestanden af diesellastbiler er indtil videre `r ifelse(abs(nyeste_aars_udv[["Diesel"]]) >= 0, "steget", "faldet")`
+med `r abs(nyeste_aars_udv[["Diesel"]])` i `r as.character(nyeste_aar)`, mens bestanden af ellastbiler er steget med `r nyeste_aars_udv[["El"]]`. I samme periode sidste år `r ifelse(abs(nyeste_aars_udv[["Diesel"]]) >= 0, "steg", "faldt")`
+ bestanden af diesellastbiler med `r abs(sidste_aars_udv[["Diesel"]])`, mens antallet af ellastbiler steg med `r sidste_aars_udv[["El"]]`.
 
 
 ```{r}
