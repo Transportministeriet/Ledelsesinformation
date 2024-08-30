@@ -3,6 +3,8 @@ library(tidyverse)
 library(knitr)
 library(rmarkdown)
 library(lubridate)
+library(statbank)
+library(readxl)
 
 # tribble(~aarmd, ~type, ~koersels_dato,
 #         "2024M05", "Personbil", format(Sys.time(), "%Y-%m-%d %X"),
@@ -61,17 +63,17 @@ ladest_peri <- read_excel( "S:/CKA/Databank/002 Ladeinfrastruktur/kommuner_ladee
 seneste_peri <- c(dst_pers_peri, bilstat_peri, ladest_peri)
 
 
-render_fkt <- function(rapport){
+render_fkt <- function(rapport, senest_peri_nu){
   render(str_c(getwd(), "/", rapport, ".rmd"))
   
   log <- read.csv2("Opdaterings log.csv") 
   
   log_ny <- log %>% 
-    add_row(aarmd = dst_pers_peri, 
+    add_row(aarmd = senest_peri_nu, 
             type = rapport,
             koersels_dato = format(Sys.time(), "%Y-%m-%d %X")) %>% 
     arrange(type, aarmd) %>% 
-    distinct()
+    distinct(aarmd, type, .keep_all = T)
   
   write.csv2(log_ny, row.names = F, "Opdaterings log.csv")
 }
@@ -80,9 +82,9 @@ rapporter_navn <- log$type %>% unique()
 
 map(rapporter_navn, function(x){
       if(log_seneste_peri[x]!=seneste_peri[x]){
-  tryCatch(render_fkt(x), 
+  tryCatch(render_fkt(x, seneste_peri[x]), 
            error = print("fejl"))
-} else{stop("Der er ikke ny månede")}})
+} else{str_c("Der er ikke ny månede for ", x)}})
 
 
 
