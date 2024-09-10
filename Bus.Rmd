@@ -151,7 +151,7 @@ nyreg_data <- til_indlaes %>%
   {read_excel(str_c(sti, "/", .),
            skip = 10,
            .name_repair = ~str_replace_all(.x, c("\\.| "="_","__"="_", "kvartal_"="")) %>% 
-            {ifelse(str_detect(., "\\d+"), str_c("KVT_", .), .)} %>% 
+             {ifelse(str_detect(., "\\d+"), str_c("KVT_", .), .)} %>% 
              str_to_upper())} %>%
   filter(!is.na(ANVENDELSE )) %>% 
 select(-1, -2, -TOTAL) %>% 
