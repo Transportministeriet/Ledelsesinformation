@@ -519,7 +519,7 @@ format_chart <- function(x, titel) {hc_chart(x, spacingTop = 40,
     style = list(useHTML = TRUE)) |> 
   hc_exporting(
     enabled = TRUE, # always enabled
-    filename = str_extract(titel, "Figur \\d+")
+    filename = paste0("Personbil_", str_extract(titel, "Figur \\d+"))
     )}
 
 data_nysalg_2 |> 

@@ -287,8 +287,21 @@ I løbet af de første `r nummer_sidste_md` måneder af `r as.character(nyeste_a
 
 farver <- c("graa",  "blaa", "groen")
 
-format_chart <- function(x) {hc_chart(x, spacingTop = 40,
-           style = list(fontFamily= 'Georgia'))}
+format_chart <- function(x, titel) {
+  hc_chart(x, spacingTop = 40,
+           style = list(fontFamily = 'Georgia')) %>%
+    hc_title(text = titel,
+             margin = 20,
+             align = "left",
+             x = 25,
+             y = -10,
+             style = list(useHTML = TRUE)) %>%
+    hc_exporting(
+      enabled = TRUE, # always enabled
+      filename = paste0("Bus_", str_extract(titel, "Figur \\d+"))
+    )
+}
+  
 
 nyreg_data_2 |> 
   filter(as.numeric(str_sub(AAR, end = 4))>max(as.numeric(str_sub(AAR, end = 4)))-5) |> 
@@ -304,13 +317,7 @@ nyreg_data_2 |>
   hc_xAxis(title = list(text = NULL)) %>% 
   hc_legend(reversed =TRUE) %>% 
   hc_tooltip(shared = TRUE) %>% 
-  format_chart %>% 
-  hc_title(text ="<b>Figur 1.</b> Udvikling i nyregistreringer af busser fordelt på drivmiddel",
-           margin = 20,
-           align = "left",           
-           x = 25,
-           y = -10,
-    style = list(useHTML = TRUE))
+  format_chart("<b>Figur 1.</b> Udvikling i nyregistreringer af busser fordelt på drivmiddel")
 
 
 ```
@@ -334,13 +341,7 @@ bind_rows(nyreg_data_2,
   hc_xAxis(title = list(text = NULL)) %>% 
   hc_legend(reversed =TRUE) %>% 
   hc_tooltip(shared = TRUE) %>% 
-  format_chart %>% 
-  hc_title(text ="<b>Figur 2.</b> Drivmidlernes andel af nyregistreringer for busser",
-           margin = 20,
-           align = "left",
-           x = 25,
-           y = -10,
-    style = list(useHTML = TRUE))
+  format_chart ("<b>Figur 2.</b> Drivmidlernes andel af nyregistreringer for busser")
 
 bestand_seneste <- sum(bestand_data_x$ANTAL)
 
@@ -375,13 +376,7 @@ bestand_data_2 |>
     <b>{point.percentage:.1f}<b> pct. af den samlede bestand"
   )  %>% 
   hc_legend(reversed = T) %>% 
-  format_chart %>% 
-  hc_title(text ="<b>Figur 3</b> Udviklingen i den samlede bestand af busser",
-           margin = 20,
-           align = "left",
-           x = 25,
-           y = -10,
-    style = list(useHTML = TRUE))
+  format_chart("<b>Figur 3</b> Udviklingen i den samlede bestand af busser")
 
 ```
 

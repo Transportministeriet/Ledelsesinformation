@@ -247,7 +247,11 @@ format_chart <- function(x, titel) {hc_chart(x, spacingTop = 40,
            align = "left",
            x = 25,
            y = -10,
-    style = list(useHTML = TRUE))}
+    style = list(useHTML = TRUE))|> 
+  hc_exporting(
+    enabled = TRUE, # always enabled
+    filename = paste0("Ladestander_", str_extract(titel, "Figur \\d+")))}
+
 
 lvls_fig_1 <- figur_1$DATE %>% unique()
 
