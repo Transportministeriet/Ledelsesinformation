@@ -96,15 +96,15 @@ ladere <- ladere %>%
   mutate(SUM_AF_OUTLETS = ifelse(is.na(SUM_AF_OUTLETS), 0, SUM_AF_OUTLETS))
 
 alle_ladere <- ladere %>% 
-mutate(REG=REGION,     
-       YEARMONTHSHORT,
+  mutate(REG= REGION, 
+         YEARMONTHSHORT,
          DATE= format(YEARMONTHSHORT, "%b %Y") , 
          LADEEFFEKT = case_when(PWR_RANGE == "A 0-22kW" ~ "Normallader",
                                 PWR_RANGE %in% c("B 23-49kW", "C 50-99kW") ~ "Hurtiglader",
                                 PWR_RANGE %in% c("D 100-149kW", "E 150- kW") ~ "Lynlader",
                                 T ~ "Uoplyst"),
          .keep = "unused") |> 
-  reframe(OUTLETS = sum(SUM_AF_OUTLETS),
+  reframe(OUTLETS = sum(SUM_AF_OUTLETS, na.rm = TRUE),
           .by = c("DATE", "YEARMONTHSHORT", "LADEEFFEKT")) %>% 
   arrange(YEARMONTHSHORT) %>% 
   filter(year(YEARMONTHSHORT)>2019)

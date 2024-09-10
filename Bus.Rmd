@@ -71,9 +71,27 @@ knit_hooks$set(inline = function(x) {
   }
 })
 
-sti <- "S:/CKA/Databank/006 Bilstatistik/Busser"
+sti <- "S:/CKA/Databank/006 Bilstatistik/Bus"
 
-bestand_data <- dir(sti) %>% 
+
+til_indlaes <- bilstat_peri <- dir(str_c("S:/CKA/Databank/006 Bilstatistik/Bus")) %>% 
+      enframe() %>% 
+      mutate(dato = coalesce(parse_date_time2(value, orders = "dmY") %>% as.Date(),
+                             map_chr(value, ~strsplit(.x, ', ', fixed = TRUE)[[1]][2]) %>% 
+                               map_chr(~strsplit(.x, '- ', fixed = TRUE)[[1]][2]) %>% 
+                               parse_date_time2(orders = "dmY") %>% as.Date()
+      )) 
+
+seneste_kvt <- til_indlaes %>% 
+  filter(str_detect(value, "Nyregistreringer")) %>% 
+  filter(dato==max(dato)) %>% 
+  (\(y) pull(y, dato) +1)() %>% #Lægger 1 ti da de tilfælde hvor vi er i slutningen af kvartalet vælges det indeværende kvartal
+  (\(x) floor_date(x, unit = "quarter")-1)() %>% 
+  floor_date(unit = "quarter")
+
+
+bestand_data <- til_indlaes %>% 
+  pull(value) %>% 
   str_subset("Bestand") |>
   (\(y) map_dfr(y, ~read_excel(str_c(sti,"/", .x), skip = 9,
                                 .name_repair = str_to_upper) %>% 
@@ -122,14 +140,19 @@ bestand_data_1 <- bestand_data %>%
                       as.character(year(DATE)+1)), 
          A_BESTAND = ANTAL/sum(ANTAL)*100,
          .by = "DATE") %>% 
+  filter(!str_detect(AAR, "\\(") | str_detect(AAR, "\\(") & DATE==max(DATE) ) %>% 
   arrange(AAR) %>% 
   select(AAR, DRIV, ANTAL, A_BESTAND)
-  
-nyreg_data <- read_excel(str_c(sti, "/", "Nyregistreringer trm drivkraft med anvendelse, 01-01-2019 - 30-06-2024.xlsx"),
+
+nyreg_data <- til_indlaes %>% 
+  filter(str_detect(value, "Nyregistreringer")) %>% 
+  filter(dato==max(dato)) %>% 
+  pull(value) %>% 
+  {read_excel(str_c(sti, "/", .),
            skip = 10,
            .name_repair = ~str_replace_all(.x, c("\\.| "="_","__"="_", "kvartal_"="")) %>% 
             {ifelse(str_detect(., "\\d+"), str_c("KVT_", .), .)} %>% 
-             str_to_upper()) %>%
+             str_to_upper())} %>%
   filter(!is.na(ANVENDELSE )) %>% 
 select(-1, -2, -TOTAL) %>% 
   filter(DRIVKRAFT!="Total") %>% 
@@ -146,8 +169,9 @@ select(-1, -2, -TOTAL) %>%
         #                       str_detect(DRIVKRAFT, "PHEV")
        #                       
          #                       "PHEV", DRIVKRAFT),
-        ANTAL = value,
-        .keep = "unused") 
+         ANTAL = value,
+         .keep = "unused") %>% 
+  filter(DATE<=seneste_kvt)
 
 
 
