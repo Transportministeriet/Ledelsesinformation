@@ -45,6 +45,7 @@ library(plotly)
 library(scales)
 library(downloadthis)
 
+
 lang <- getOption("highcharter.lang")
 lang$decimalPoint <- ","
 lang$thousandsSep <- "."
@@ -66,6 +67,23 @@ ladere <- read_excel( "S:/CKA/Databank/002 Ladeinfrastruktur/kommuner_ladeeffekt
                      skip = 2, .name_repair = ~str_replace_all(.x, " |-", "_") %>% 
                        str_to_upper())
 
+
+#Da microsoft power BI har ændret sig lidt navne og længde, er jeg nødt til at lave lidt struktur gymnastik for at få det til at passe igen. 
+#ladere_2 <- read_excel( "S:/CKA/Databank/002 Ladeinfrastruktur/nyeste_måned.xlsx",
+                     #skip = 2, .name_repair = ~str_replace_all(.x, " |-", "_") %>% 
+                       #str_to_upper())
+
+
+#ladere_2 <- ladere_2 %>% select(-ANTAL_AF_CHARGE_SITE)
+
+#ladere_2 <- ladere_2 %>% rename_with(~ colnames(ladere))
+
+#ladere <- ladere_2
+
+#rm(ladere_2)
+
+ladere$SUM_AF_OUTLETS <- as.numeric(ladere$SUM_AF_OUTLETS)
+
 # |>
 #   (\(y) bind_rows(y, read_excel( "S:/CKA/Databank/002 Ladeinfrastruktur/kommuner_ladeeffekt_gl.xlsx",
 #                      skip = 2, .name_repair = ~str_replace_all(.x, " |-", "_") %>% 
@@ -73,6 +91,9 @@ ladere <- read_excel( "S:/CKA/Databank/002 Ladeinfrastruktur/kommuner_ladeeffekt
 #               anti_join(y, by = "YEARMONTHSHORT")))()
 # 
 # ladere %>% count(PWR_RANGE )
+
+ladere <- ladere %>%
+  mutate(SUM_AF_OUTLETS = ifelse(is.na(SUM_AF_OUTLETS), 0, SUM_AF_OUTLETS))
 
 alle_ladere <- ladere %>% 
   mutate(REG= REGION, 
@@ -176,6 +197,7 @@ figur_2 <- alle_ladere_seneste_md_t %>%
 figur_3 <- elbil_lader_komgrp
 
 
+
 ```
 
 Dette er Transportministeriets interne statusnotat for ladeinfrastruktur. Det viser bl.a. udviklingen i antallet af ladepunkter. Notatet opdateres månedligt og er baseret på data fra ChargeX og Danmarks Statistik.  
@@ -225,7 +247,11 @@ format_chart <- function(x, titel) {hc_chart(x, spacingTop = 40,
            align = "left",
            x = 25,
            y = -10,
-    style = list(useHTML = TRUE))}
+    style = list(useHTML = TRUE))|> 
+  hc_exporting(
+    enabled = TRUE, # always enabled
+    filename = paste0("Ladestander_", str_extract(titel, "Figur \\d+")))}
+
 
 lvls_fig_1 <- figur_1$DATE %>% unique()
 

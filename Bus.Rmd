@@ -28,6 +28,9 @@ body{
 
 ```
 
+
+
+
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = FALSE)
 
@@ -103,6 +106,31 @@ bestand_data <- til_indlaes %>%
               DATE = parse_number(.x, locale = locale(grouping_mark = "-")),
               DATE = lubridate::dmy(DATE))))() 
 
+bestand_data <- bestand_data %>%
+  mutate(DATE = ymd(DATE))
+
+# Håndter NA-værdier og find den nyeste dato
+nyeste_dato <- max(bestand_data$DATE, na.rm = TRUE)
+
+# Filtrér dataframen for at få de nyeste observationer
+bestand_seneste_data <- bestand_data %>%
+  filter(DATE == nyeste_dato)
+
+
+
+bestand_data_x <- bestand_seneste_data %>% 
+  filter(ANVENDELSE !="Særlig anvendelse") %>% 
+  summarise(ANTAL = sum(BESTAND),
+            .by = c("DATE", "DRIV")) %>% 
+  mutate(AAR = ifelse(month(max(DATE))!=12, 
+                      str_c(year(DATE), " (", format(DATE, "%B"), ")"), 
+                      as.character(year(DATE)+1)), 
+         A_BESTAND = ANTAL/sum(ANTAL)*100,
+         .by = "DATE") %>% 
+  arrange(AAR) %>% 
+  select(AAR, DRIV, ANTAL, A_BESTAND)
+
+
 bestand_data_1 <- bestand_data %>% 
   filter(ANVENDELSE !="Særlig anvendelse") %>% 
   summarise(ANTAL = sum(BESTAND),
@@ -126,7 +154,7 @@ nyreg_data <- til_indlaes %>%
              {ifelse(str_detect(., "\\d+"), str_c("KVT_", .), .)} %>% 
              str_to_upper())} %>%
   filter(!is.na(ANVENDELSE )) %>% 
-  select(-1, -2, -TOTAL) %>% 
+select(-1, -2, -TOTAL) %>% 
   filter(DRIVKRAFT!="Total") %>% 
   pivot_longer(where(is.numeric)) %>% 
   mutate(DATE = str_remove(name, "KVT_") %>% 
@@ -138,12 +166,19 @@ nyreg_data <- til_indlaes %>%
            coalesce(DRIVKRAFT),
          
          # DRIVKRAFT = case_when(str_detect(DRIVKRAFT, "PHEV")~
-         #                       str_detect(DRIVKRAFT, "PHEV")
-         #                       
+        #                       str_detect(DRIVKRAFT, "PHEV")
+       #                       
          #                       "PHEV", DRIVKRAFT),
          ANTAL = value,
          .keep = "unused") %>% 
   filter(DATE<=seneste_kvt)
+
+
+
+
+# Output the cleaned data
+print(nyreg_data)
+
 
 
 nyreg_data_1 <- nyreg_data %>% 
@@ -252,8 +287,21 @@ I løbet af de første `r nummer_sidste_md` måneder af `r as.character(nyeste_a
 
 farver <- c("graa",  "blaa", "groen")
 
-format_chart <- function(x) {hc_chart(x, spacingTop = 40,
-           style = list(fontFamily= 'Georgia'))}
+format_chart <- function(x, titel) {
+  hc_chart(x, spacingTop = 40,
+           style = list(fontFamily = 'Georgia')) %>%
+    hc_title(text = titel,
+             margin = 20,
+             align = "left",
+             x = 25,
+             y = -10,
+             style = list(useHTML = TRUE)) %>%
+    hc_exporting(
+      enabled = TRUE, # always enabled
+      filename = paste0("Bus_", str_extract(titel, "Figur \\d+"))
+    )
+}
+  
 
 nyreg_data_2 |> 
   filter(as.numeric(str_sub(AAR, end = 4))>max(as.numeric(str_sub(AAR, end = 4)))-5) |> 
@@ -269,13 +317,8 @@ nyreg_data_2 |>
   hc_xAxis(title = list(text = NULL)) %>% 
   hc_legend(reversed =TRUE) %>% 
   hc_tooltip(shared = TRUE) %>% 
-  format_chart %>% 
-  hc_title(text ="<b>Figur 1.</b> Udvikling i nyregistreringer af busser fordelt på drivmiddel",
-           margin = 20,
-           align = "left",
-           x = 25,
-           y = -10,
-    style = list(useHTML = TRUE))
+  format_chart("<b>Figur 1.</b> Udvikling i nyregistreringer af busser fordelt på drivmiddel")
+
 
 ```
 
@@ -298,23 +341,25 @@ bind_rows(nyreg_data_2,
   hc_xAxis(title = list(text = NULL)) %>% 
   hc_legend(reversed =TRUE) %>% 
   hc_tooltip(shared = TRUE) %>% 
-  format_chart %>% 
-  hc_title(text ="<b>Figur 2.</b> Drivmidlernes andel af nyregistreringer for busser",
-           margin = 20,
-           align = "left",
-           x = 25,
-           y = -10,
-    style = list(useHTML = TRUE))
+  format_chart ("<b>Figur 2.</b> Drivmidlernes andel af nyregistreringer for busser")
+
+bestand_seneste <- sum(bestand_data_x$ANTAL)
+
 ```
 
-Den 1. januar 2020 var den samlede bestand på `r bestand_2020` busser. Fra 2020 til `r as.character(nyeste_aar_efter)` har bestanden været let faldende, så bestanden pr. `r str_c("1. ", format(ISOdate(2000, 1:12, 1), "%B")[as.numeric(nummer_md_efter)], " ", nyeste_aar_efter)` var der `r bestand_seneste` busser. Den `r str_c("1. ", format(ISOdate(2000, 1:12, 1), "%B")[as.numeric(nummer_md_efter)], " ", nyeste_aar_efter)` udgjorde elbusser `r elbestand_seneste/bestand_seneste*100` pct. af den samlede bestand mod 1,2 pct. i 2020. 
+Den 1. januar 2020 var den samlede bestand på `r bestand_2020` busser. Fra 2020 til `r as.character(nyeste_aar_efter)` har bestanden været let faldende, så bestanden pr. `r str_c("1. ", format(ISOdate(2000, 1:12, 1), "%B")[as.numeric(nummer_md_efter)], " ", nyeste_aar_efter)` var der `r bestand_seneste` busser. Den `r str_c("1. ", format(ISOdate(2000, 1:12, 1), "%B")[as.numeric(nummer_md_efter)], " ", nyeste_aar_efter)` udgjorde elbusser `r round(bestand_data_x[2, 4], digits = 0)` pct. af den samlede bestand mod 1,2 pct. i 2020. 
+
+
 
 
 ```{r}
 #Ny figur 3 opgørelse af årlig bestand
 
+bestand_data_2 <- bestand_data_1 %>%
+  slice(1:(n() - 3))
 
-bestand_data_1 |> 
+
+bestand_data_2 |> 
   hchart('column', hcaes(x = AAR, y = ANTAL, group = DRIV ), borderColor = 0) |> 
   hc_plotOptions(column = list(stacking = "normal")) |> 
   hc_colors(c(trm_colors(farver))) |> 
@@ -330,15 +375,8 @@ bestand_data_1 |>
     pointFormat = "{series.name}: <b>{point.y}<b> busser <br>
     <b>{point.percentage:.1f}<b> pct. af den samlede bestand"
   )  %>% 
-  hc_legend(reversed =TRUE) %>% 
-  format_chart %>% 
-  hc_title(text ="<b>Figur 3</b> Udviklingen i den samlede bestand af busser",
-           margin = 20,
-           align = "left",
-           x = 25,
-           y = -10,
-    style = list(useHTML = TRUE))
+  hc_legend(reversed = T) %>% 
+  format_chart("<b>Figur 3</b> Udviklingen i den samlede bestand af busser")
 
 ```
-
 
