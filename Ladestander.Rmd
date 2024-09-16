@@ -63,11 +63,17 @@ knit_hooks$set(inline = function(x) {
   }
 })
 
-ladere <- read_excel( "S:/CKA/Databank/002 Ladeinfrastruktur/kommuner_ladeeffekt.xlsx",
+ladere_temp <- read_excel( "S:/CKA/Databank/002 Ladeinfrastruktur/kommuner_ladeeffekt.xlsx",
                      skip = 2, .name_repair = ~str_replace_all(.x, " |-", "_") %>% 
                        str_to_upper())
 
+ladere_prew <- read_excel( "S:/CKA/Databank/002 Ladeinfrastruktur/kommuner_ladeeffekt_prew.xlsx",
+                     skip = 2, .name_repair = ~str_replace_all(.x, " |-", "_") %>% 
+                       str_to_upper()) 
+  
 
+ladere <- bind_rows(ladere_temp,
+                    ladere_prew %>% filter(YEARMONTHSHORT>max(ladere_temp$YEARMONTHSHORT)))
 #Da microsoft power BI har ændret sig lidt navne og længde, er jeg nødt til at lave lidt struktur gymnastik for at få det til at passe igen. 
 #ladere_2 <- read_excel( "S:/CKA/Databank/002 Ladeinfrastruktur/nyeste_måned.xlsx",
                      #skip = 2, .name_repair = ~str_replace_all(.x, " |-", "_") %>% 

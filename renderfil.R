@@ -51,6 +51,9 @@ bilstat_peri <- map(c("Lastbil", "Bus"),
 ladest_peri <- read_excel( "S:/CKA/Databank/002 Ladeinfrastruktur/kommuner_ladeeffekt.xlsx",
                       skip = 2, .name_repair = ~str_replace_all(.x, " |-", "_") %>% 
                         str_to_upper()) %>% 
+  bind_rows(read_excel( "S:/CKA/Databank/002 Ladeinfrastruktur/kommuner_ladeeffekt_prew.xlsx",
+                        skip = 2, .name_repair = ~str_replace_all(.x, " |-", "_") %>% 
+                          str_to_upper())) %>% 
   mutate(dato = as.Date(YEARMONTHSHORT),
          aarmd = str_c(year(dato), "M", str_pad(month(dato), 
                                                 width = 2,
@@ -82,8 +85,7 @@ rapporter_navn <- log$type %>% unique()
 
 map(rapporter_navn, function(x){
       if(log_seneste_peri[x]!=seneste_peri[x]){
-  tryCatch(render_fkt(x, seneste_peri[x]), 
-           error = print("fejl"))
+  tryCatch(render_fkt(x, seneste_peri[x]))
 } else{str_c("Der er ikke ny månede for ", x)}})
 
 
