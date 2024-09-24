@@ -460,11 +460,11 @@ bestand_data_1 |>
   format_chart("<b>Figur 3.</b> Udviklingen i den samlede bestand af lastbiler") %>% 
   hc_legend(reversed =TRUE)
 
-rest <- KF_tal$ANTAL[[2]] - elbestand_seneste
+rest <-elbestand_seneste - KF_tal$ANTAL[[1]]  
   
 ```
 
-Jævnfør Klimastatus og -fremskrvining 2024 forventes der at være cirka `r KF_tal$ANTAL[[2]]` elektriske lastbiler i Danmark ved udgangen af 2024. Differencen mellem det nuværende  og det forventede antal elektriske lastbiler ved udgangen af året er således `r rest` lastbiler, jf. figur 4.
+Jævnfør Klimastatus og -fremskrvining 2024 forventes der at være cirka `r KF_tal$ANTAL[[1]]` elektriske lastbiler i Danmark ved udgangen af 2024. Differencen mellem det nuværende  og det forventede antal elektriske lastbiler ved udgangen af året er således `r rest` lastbiler, jf. figur 4.
 
 
 

@@ -63,28 +63,68 @@ ladest_peri <- read_excel( "S:/CKA/Databank/002 Ladeinfrastruktur/kommuner_ladee
 seneste_peri <- c(dst_pers_peri, bilstat_peri, ladest_peri)
 
 
-render_fkt <- function(rapport, senest_peri_nu){
-  render(str_c(getwd(), "/", rapport, ".rmd"))
+output_path = "C:/Users/B339409/Documents/Output - vidensbank"
+
+render_fkt <- function(rapport, senest_peri_nu, output_path) {
+  # Construct the full path to the R Markdown file
+  rmd_file <- str_c(getwd(), "/", rapport, ".rmd")
   
+  # Ensure the output directory exists
+  dir.create(output_path, recursive = TRUE, showWarnings = FALSE)
+  
+  # Render the report and specify the output destination
+  render(input = rmd_file, output_file = str_c(output_path, "/", rapport, ".html"))
+  
+  # Read the existing log file
   log <- read.csv2("Opdaterings log.csv") 
   
+  # Add a new row to the log with the report generation details
   log_ny <- log %>% 
     add_row(aarmd = senest_peri_nu, 
             type = rapport,
             koersels_dato = format(Sys.time(), "%Y-%m-%d %X")) %>% 
     arrange(type, aarmd) %>% 
-    distinct(aarmd, type, .keep_all = T)
+    distinct(aarmd, type, .keep_all = TRUE)
   
-  write.csv2(log_ny, row.names = F, "Opdaterings log.csv")
+  # Write the updated log back to the CSV file
+  write.csv2(log_ny, row.names = FALSE, "Opdaterings log.csv")
 }
+
 
 rapporter_navn <- log$type %>% unique()
 
-map(rapporter_navn, function(x){
-      if(log_seneste_peri[x]!=seneste_peri[x]){
-  tryCatch(render_fkt(x, seneste_peri[x]), 
-           error = print("fejl"))
-} else{str_c("Der er ikke ny månede for ", x)}})
+map(rapporter_navn, function(x) {
+  tryCatch(
+    {
+      # Attempt to render the report
+      render_fkt(x, seneste_peri[x])
+    },
+    error = function(e) {
+      # Print the error message, but continue
+      message("Error encountered while processing report: ", x)
+      message("Error message: ", e$message)
+    }
+  )
+})
 
 
-
+# map(rapporter_navn, function(x) {
+#   if (log_seneste_peri[x] != seneste_peri[x]) {
+#     tryCatch(
+#       {
+#         # Attempt to render the report
+#         render_fkt(x, seneste_peri[x])
+#       },
+#       error = function(e) {
+#         # Print the error message, but continue
+#         message("Error encountered while processing report: ", x)
+#         message("Error message: ", e$message)
+#       }
+#     )
+#   } else {
+#     # If there is no new month for the report, return a message
+#     str_c("Der er ikke ny månede for ", x)
+#   }
+# })
+# 
+# 
