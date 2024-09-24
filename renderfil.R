@@ -63,7 +63,7 @@ ladest_peri <- read_excel( "S:/CKA/Databank/002 Ladeinfrastruktur/kommuner_ladee
 seneste_peri <- c(dst_pers_peri, bilstat_peri, ladest_peri)
 
 
-output_path = "C:/Users/B339409/Documents/Output - vidensbank"
+Destination = "S:/CKA/Databank/011 Output Vidensbank"
 
 render_fkt <- function(rapport, senest_peri_nu, output_path) {
   # Construct the full path to the R Markdown file
@@ -97,8 +97,7 @@ map(rapporter_navn, function(x) {
   tryCatch(
     {
       # Attempt to render the report
-      render_fkt(x, seneste_peri[x])
-    },
+      render_fkt(x, seneste_peri[x], Destination)},
     error = function(e) {
       # Print the error message, but continue
       message("Error encountered while processing report: ", x)
