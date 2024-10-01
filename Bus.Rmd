@@ -26,6 +26,7 @@ body{
 }
 
 
+
 ```
 
 
@@ -151,7 +152,7 @@ nyreg_data <- til_indlaes %>%
   {read_excel(str_c(sti, "/", .),
            skip = 10,
            .name_repair = ~str_replace_all(.x, c("\\.| "="_","__"="_", "kvartal_"="")) %>% 
-             {ifelse(str_detect(., "\\d+"), str_c("KVT_", .), .)} %>% 
+            {ifelse(str_detect(., "\\d+"), str_c("KVT_", .), .)} %>% 
              str_to_upper())} %>%
   filter(!is.na(ANVENDELSE )) %>% 
 select(-1, -2, -TOTAL) %>% 
@@ -174,11 +175,7 @@ select(-1, -2, -TOTAL) %>%
   filter(DATE<=seneste_kvt)
 
 
-
-
-# Output the cleaned data
-print(nyreg_data)
-
+  # mutate(DRIV = ifelse(DRIVKRAFT %in% c("El", "Diesel"), DRIVKRAFT, "Øvrige drivmidler"))
 
 
 nyreg_data_1 <- nyreg_data %>% 
@@ -201,6 +198,76 @@ nyreg_data_2 <- nyreg_data_1 |>
   mutate(A_NYREG = round(ANTAL/sum(ANTAL)*100 ,1)) |> 
   ungroup()
 
+tapply(bestand_data$BESTAND, bestand_data$ANVENDELSE, sum)
+
+
+udvalgte_kat <- c("Buskørsel", "Rutekørsel", "Kun godkendt til rutekørsel") %>% 
+  factor(., levels = .)
+
+
+bestand_data_underkat <- bestand_data %>%
+  mutate (ANVENDELSE = ifelse(ANVENDELSE %in% c("Buskørsel", "Rutekørsel", "Kun godkendt til rutekørsel"), ANVENDELSE, "Anden anvendelse")
+  )
+
+
+bestand_data_underkat <-  bestand_data_underkat %>% 
+  filter (ANVENDELSE %in% udvalgte_kat, month(DATE)==12 | DATE==max(DATE)) %>% 
+  summarise(BESTAND = sum(BESTAND), 
+                                        .by = c("DATE","ANVENDELSE", "DRIV")) %>% 
+  mutate(AAR = ifelse(month(max(DATE))!=12, 
+                      str_c(year(DATE), " (", format(DATE, "%B"), ")"), 
+                      as.character(year(DATE)+1)), 
+         A_BESTAND = BESTAND/sum(BESTAND)*100,
+         .by = c("DATE","ANVENDELSE")) %>% 
+  select(AAR,ANVENDELSE, DRIV, BESTAND, A_BESTAND) %>% 
+  arrange(AAR)
+
+nyreg_data$DATE <- as.Date(nyreg_data$DATE)
+
+#Skaber aar-variabel
+nyreg_data$AAR <- as.character(format(nyreg_data$DATE, "%Y")) 
+
+
+nyreg_data_underkat <- nyreg_data %>%
+  # Opret DRIV-kolonnen baseret på DRIVKRAFT
+  mutate(DRIV = ifelse(DRIVKRAFT %in% c("El", "Diesel"), DRIVKRAFT, "Øvrige drivmidler")) %>%
+  
+  # Filtrér for udvalgte kategorier i ANVENDELSE
+  filter(ANVENDELSE %in% udvalgte_kat) %>%
+  
+  # Summering af ANTAL pr. AAR, ANVENDELSE og DRIV
+  summarise(ANTAL = sum(ANTAL), .by = c("AAR", "ANVENDELSE", "DRIV"))
+
+# Tilføj seneste AAR baseret på den maksimale DATE
+nyreg_data_seneste <- nyreg_data %>%
+  filter(DATE == max(DATE)) %>%
+  # Sørg for, at DRIV er defineret her også
+  mutate(DRIV = ifelse(DRIVKRAFT %in% c("El", "Diesel"), DRIVKRAFT, "Øvrige drivmidler")) %>%
+  mutate(AAR = str_c(year(DATE), " (", format(DATE, "%B"), ")")) %>%
+  select(AAR, DRIV, ANTAL, ANVENDELSE)
+
+# Bind rows sammen
+nyreg_data_underkat <- bind_rows(nyreg_data_underkat, nyreg_data_seneste) %>%
+  
+  # Beregning af procentandel for nyregistreringer
+  mutate(A_NYREG = round(ANTAL / sum(ANTAL) * 100, 1), 
+         .by = c("AAR", "ANVENDELSE")) %>%
+  
+  # Konverter DRIV til en faktor med fastsatte niveauer
+ mutate(DRIV = factor(DRIV, levels = c("Øvrige drivmidler", "Diesel", "El")),
+         A_NYREG = round(ANTAL / sum(ANTAL) * 100, 1),
+         .by = c("AAR", "ANVENDELSE")) %>%
+  
+  
+  # Sorter efter AAR
+  arrange(AAR)
+
+
+
+
+
+
+
 ```
 
 ```{r globale variable til tekst}
@@ -208,6 +275,10 @@ nyreg_data_2 <- nyreg_data_1 |>
 nummer_sidste_md <- bestand_data$DATE %>% max() %>% month()
 nummer_md_efter <- ifelse(nummer_sidste_md==12,1,nummer_sidste_md+1)
 
+maaneder <- c("januar", "februar", "marts", "april", "maj", "juni", 
+               "juli", "august", "september", "oktober", "november", "december")
+
+seneste_md_navn <- maaneder[nummer_sidste_md]
 
 nyeste_aar <- bestand_data$DATE %>% max() %>% year()
 nyeste_aar_efter <- ifelse(nummer_sidste_md==12,nyeste_aar+1,nyeste_aar)
@@ -261,6 +332,28 @@ figur_3 <- bestand_data_1 |>
          andel = A_BESTAND
   ) 
 
+  figur_4 <- nyreg_data_underkat |> 
+  arrange(ANVENDELSE, AAR, desc(DRIV)) |>
+  mutate(år = AAR,
+         ANVENDELSE = str_replace_all(ANVENDELSE, '_', ' ') %>% 
+                          str_to_sentence(),
+         drivmiddel=DRIV,
+         antal =ANTAL,
+         andel = A_NYREG,
+         .keep = "none"
+  ) 
+  
+figur_5 <- bestand_data_underkat |> 
+  arrange(ANVENDELSE, AAR, desc(DRIV)) |>
+    mutate(år = AAR,
+         ANVENDELSE = str_replace_all(ANVENDELSE, '_', ' ') %>% 
+                          str_to_sentence(),
+         drivmiddel=DRIV,
+         antal =BESTAND,
+         andel = A_BESTAND,
+         .keep = "none"
+  ) 
+
 
 ```
 
@@ -285,7 +378,7 @@ I løbet af de første `r nummer_sidste_md` måneder af `r as.character(nyeste_a
 
 ```{r}
 
-farver <- c("graa",  "blaa", "groen")
+farver <- c("graa",  "blaa", "groen") %>% factor(., levels = .)
 
 format_chart <- function(x, titel) {
   hc_chart(x, spacingTop = 40,
@@ -377,6 +470,82 @@ bestand_data_2 |>
   )  %>% 
   hc_legend(reversed = T) %>% 
   format_chart("<b>Figur 3</b> Udviklingen i den samlede bestand af busser")
+
+
+nyreg_data_underkat_txt_el <- nyreg_data_underkat %>% filter(AAR == nyeste_aar-1, DRIV == "El") %>% select(ANVENDELSE, A_NYREG) %>% deframe() %>% as.list
+
+
+EL_KGR<-nyreg_data_underkat_txt_el$`Kun godkendt til rutekørsel`
+
+bestand_data_senestemåned <- tail(bestand_data_underkat, n = 9)
+
+bestand_data_senestemåned_txt_el <- bestand_data_senestemåned %>% filter(DRIV == "El") %>% select(ANVENDELSE, A_BESTAND) %>% deframe() %>% as.list
+
+bestand_data_senestemåned_txt_diesel <- bestand_data_senestemåned %>% filter(DRIV == "Diesel") %>% select(ANVENDELSE, A_BESTAND) %>% deframe() %>% as.list
+
+Diesel_bestand_KGR<-bestand_data_senestemåned_txt_diesel$`Kun godkendt til rutekørsel`
+
+El_bestand_KGR<-bestand_data_senestemåned_txt_el$`Kun godkendt til rutekørsel`
+
+
+```
+
+Opdeles busserne efter anvendelse ses tydeligt, at der primært nyregistreres elbusser til brug for rutekørsel. Indkøb af busser til rutekørsel styres i højere grad af offentlige udbud, hvilket kan forklare den store forskel. Sidste år udgjorde elbusser `r EL_KGR` pct. af nyregistreringerne for busser kun godkendt til rutekørsel. Til sammenlingning udgjorde elbusser `r nyreg_data_underkat_txt_el$Buskørsel` pct. af nyregistreringerne for busser godkendt til buskørsel.
+
+
+```{r, results='asis'}
+cat("**Figur 4. Andel af nyregistreringer fordelt på anvendelse og drivmiddel**")
+
+fct_sort <- nyreg_data_underkat$AAR %>% unique()
+
+map(udvalgte_kat, ~{nyreg_data_underkat |>
+        filter(ANVENDELSE==.x) %>% 
+  mutate(AAR = factor(AAR, levels = fct_sort)) %>% 
+  hchart('column', hcaes(x = AAR, y =ANTAL, group = DRIV ), borderColor = 0) |> 
+  hc_plotOptions(column = list(stacking = "percent")) |> 
+  hc_colors(c(trm_colors(farver))) |> 
+  hc_yAxis(title = list(text = "Pct."), max = 100) |> 
+  hc_xAxis(categories = fct_sort, title = list(text = NULL)) %>% 
+  hc_legend(reversed =TRUE) %>% 
+  hc_tooltip(shared = TRUE,
+    pointFormat = "<b>{series.name}</b>: {point.percentage:.1f} pct. ({point.y:,.0f} busser) <br>"
+  )  %>% 
+  format_chart(str_glue("<b>{str_replace_all(.x, c('_'=' ', 'OE'='Ø', 'AA'='Å', 'AE'='Æ')) %>% str_to_sentence()}<b>"))}) |> 
+  hw_grid(rowheight = 400) %>% htmltools::browsable()
+
+nyeste_aar_C <- as.character(nyeste_aar)
+
+
+```
+
+Bestanden af busser er forsat domineret af dieselbusser. Det gælder særligt for busser anvendt til buskørsel, hvor dieselbusser  i `r seneste_md_navn` `r nyeste_aar_C` udgjorde `r bestand_data_senestemåned_txt_diesel$Buskørsel` pct. af bestanden. 
+
+For busser kun godkendt til rutekørsel udgjorde dieselbusser kun `r Diesel_bestand_KGR` pct. alt i mens elbusser udgjorde `r round (El_bestand_KGR)` pct. for denne anvendelseskategori.
+
+```{r, results='asis'}
+cat("**Figur 5. Bestanden fordelt på anvendelse og drivmiddel**")
+
+
+fct_sor_2 <- bestand_data_underkat$AAR %>% unique()
+
+
+map(udvalgte_kat, ~{bestand_data_underkat |> 
+  filter(ANVENDELSE==.x) %>% 
+  hchart('column', hcaes(x = AAR, y = BESTAND, group = DRIV ), borderColor = 0) |> 
+  hc_plotOptions(column = list(stacking = "normal")) |> 
+  hc_colors(c(trm_colors(farver))) |> 
+  hc_yAxis(
+    title = list(text = "BESTAND"),
+    labels = list(
+      format = "{value:,.0f}")
+  ) |> 
+  hc_xAxis(categories = fct_sor_2, title = list(text = NULL)) %>% 
+  hc_tooltip(shared = TRUE,
+             pointFormat = "<b>{series.name}</b>: {point.y:,.0f} busser ({point.percentage:.1f} pct.) <br>"
+  )  %>% 
+  hc_legend(reversed =TRUE) %>% 
+  format_chart(str_glue("<b>{str_replace_all(.x, c('_'=' ', 'OE'='Ø', 'AA'='Å', 'AE'='Æ')) %>% str_to_sentence()}<b>"))}) |> 
+  hw_grid(rowheight = 400) %>% htmltools::browsable()
 
 ```
 
