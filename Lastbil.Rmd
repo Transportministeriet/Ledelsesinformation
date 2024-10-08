@@ -99,6 +99,8 @@ bestand_data <- dir(sti) %>%
 
 
 nummer_sidste_md <- bestand_data$DATE %>% max() %>% month()
+nummer_næst_sidste_md <- bestand_data$DATE %>% max() %>% month() - 1
+
 nyeste_aar <- bestand_data$DATE %>% max() %>% year()
 
 # Til figur 3: bestand ultimo året og bestand i seneste måned i indeværende år
@@ -129,6 +131,19 @@ bestand_data_udv <- bestand_data %>%
                                   "Total")),
          .keep = "unused") %>% 
   select(-KASSORI) %>% 
+  arrange(AAR)
+
+bestand_data_2 <- bestand_data %>% 
+  filter(DRIV != "Total", KASSORI == "TOTAL") %>%
+  filter(DATE == sort(unique(DATE), decreasing = TRUE)[2]) %>%  # Get the second newest date
+  summarise(ANTAL = sum(ANTAL), 
+            .by = c("DATE", "DRIV")) %>% 
+  mutate(AAR = ifelse(month(DATE) != 12, 
+                      str_c(year(DATE), " (", format(DATE, "%B"), ")"), 
+                      as.character(year(DATE) + 1)), 
+         A_BESTAND = ANTAL / sum(ANTAL) * 100,
+         .by = c("DATE")) %>% 
+  select(AAR, DRIV, ANTAL, A_BESTAND) %>% 
   arrange(AAR)
   
 nyreg_data <- dir(sti) %>% 
@@ -268,7 +283,8 @@ seneste_md_tal <- nyreg_data_1 %>%
 bestand_2021 <- bestand_data_1 %>% filter(AAR=="2021") %>% pull("ANTAL") %>% sum()
 bestand_seneste <- bestand_data_1 %>% filter(str_detect(AAR, "\\(")) %>% pull("ANTAL") %>% sum()
 elbestand_seneste <- bestand_data_1 %>% filter(str_detect(AAR, "\\("), DRIV=="El") %>% pull("ANTAL")
-
+elbestand_næst_seneste <- bestand_data_2 %>% filter(str_detect(AAR, "\\("), DRIV=="El") %>% pull("ANTAL")
+udv_elbestand_seneste_måned <- elbestand_seneste - elbestand_næst_seneste
 
 # 
 # Alt imens bestanden af elbiler er under udvikling, er bestanden af fossilbiler gået fra en nettotilgang på  `r tal_fos_2019` biler i de første `r month(max(dat_fig_3$DATE))` måneder af 2020 til en nettoafgang på `r tal_fos_2023` biler i de første `r month(max(dat_fig_3$DATE))` måneder af 2023. Det skyldes særligt, at bestanden af dieselbiler har været faldende siden august 2020, mens bestanden af benzinbiler har været faldende siden august 2021.
@@ -456,7 +472,7 @@ bestand_data_1 |>
   hc_tooltip(
     pointFormat = "{series.name}: <b>{point.y:,.0f}<b> lastbiler <br>
     <b>{point.percentage:.1f}<b> pct. af den samlede bestand"
-  )  %>% 
+  )  %>%                             
   format_chart("<b>Figur 3.</b> Udviklingen i den samlede bestand af lastbiler") %>% 
   hc_legend(reversed =TRUE)
 
@@ -464,7 +480,8 @@ rest <- KF_tal$ANTAL[[2]] - elbestand_seneste
   
 ```
 
-Jævnfør Klimastatus og -fremskrvining 2024 forventes der at være cirka `r KF_tal$ANTAL[[2]]` elektriske lastbiler i Danmark ved udgangen af 2024. Differencen mellem det nuværende  og det forventede antal elektriske lastbiler ved udgangen af året er således `r rest` lastbiler, jf. figur 4.
+
+I september måned voksede bestanden af ellastbiler med `r udv_elbestand_seneste_måned` lastbiler. Jævnfør Klimastatus og -fremskrvining 2024 forventes der at være cirka `r KF_tal$ANTAL[[2]]` elektriske lastbiler i Danmark ved udgangen af 2025. Differencen mellem det nuværende  og det forventede antal elektriske lastbiler ved udgangen af 2025 er således `r rest` lastbiler, jf. figur 4.
 
 
 

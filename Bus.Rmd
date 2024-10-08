@@ -54,7 +54,6 @@ library(downloadthis)
 library(zoo)
 
 
-
 lang <- getOption("highcharter.lang")
 lang$decimalPoint <- ","
 lang$thousandsSep <- "."
@@ -83,6 +82,11 @@ til_indlaes <- bilstat_peri <- dir(str_c("S:/CKA/Databank/006 Bilstatistik/Bus")
                                parse_date_time2(orders = "dmY") %>% as.Date()
       )) 
 
+
+
+
+
+#Koden finder den nyeste dato for registreringer af "Nyregistreringer" i til_indlaes-dataframen, tilføjer 1 dag til denne dato, runder den derefter ned til starten af kvartalet, og til sidst returneres datoen for starten af det kvartal. Resultatet gemmes i variablen seneste_kvt.
 seneste_kvt <- til_indlaes %>% 
   filter(str_detect(value, "Nyregistreringer")) %>% 
   filter(dato==max(dato)) %>% 
@@ -190,16 +194,31 @@ nyreg_data_1 <- nyreg_data %>%
   arrange(DATE) %>% 
   filter(ANTAL>0) 
 
+
 nyreg_data_2 <- nyreg_data_1 |> 
   mutate(AAR = str_sub(DATE, end = 4)) |> 
   group_by(AAR, DRIV) |> 
   summarise(ANTAL = sum(ANTAL, na.rm = T),
-            .groups = "drop_last") |> 
+            .groups = "drop_last") |>                      
   mutate(A_NYREG = round(ANTAL/sum(ANTAL)*100 ,1)) |> 
-  ungroup()
+  ungroup()                                                                        
 
-tapply(bestand_data$BESTAND, bestand_data$ANVENDELSE, sum)
 
+
+
+nyreg_data_3 <- nyreg_data %>% 
+  filter(!(ANVENDELSE %in% c("Særlig anvendelse", "Brandsluknings-/redningskørsel", "Privat buskørsel", "Privat personkørsel"))) %>%
+  summarise(ANTAL = sum(ANTAL),
+            .by = c("DATE", "DRIVKRAFT", "ANVENDELSE")) %>% 
+  mutate(DRIV = ifelse(DRIVKRAFT %in% c("Benzin", "Gas", "PHEV",  "Brint", "Ukendt"), "Øvrige drivmidler", DRIVKRAFT) %>% 
+           factor(levels = c("Øvrige drivmidler", "Diesel", "El")),
+         .by = "DATE") %>% 
+  select(-DRIVKRAFT) %>% 
+  arrange(DATE) %>% 
+  filter(ANTAL>0) 
+
+
+nyreg_data_3$DATE <- as.Date(nyreg_data_3$DATE)
 
 udvalgte_kat <- c("Buskørsel", "Rutekørsel", "Kun godkendt til rutekørsel") %>% 
   factor(., levels = .)
@@ -222,51 +241,43 @@ bestand_data_underkat <-  bestand_data_underkat %>%
   select(AAR,ANVENDELSE, DRIV, BESTAND, A_BESTAND) %>% 
   arrange(AAR)
 
-nyreg_data$DATE <- as.Date(nyreg_data$DATE)
+#Her skabes NYREG til opdelt anvendelse
 
-#Skaber aar-variabel
-nyreg_data$AAR <- as.character(format(nyreg_data$DATE, "%Y")) 
+nyreg_data_3 <- nyreg_data_3 %>%
+  mutate(DATE = as.Date(DATE))  
+nyreg_data_3$MONTH <- format(nyreg_data_3$DATE, "%m")
+nyreg_data_3$AAR <- format(nyreg_data_3$DATE, "%Y")
 
 
-nyreg_data_underkat <- nyreg_data %>%
-  # Opret DRIV-kolonnen baseret på DRIVKRAFT
-  mutate(DRIV = ifelse(DRIVKRAFT %in% c("El", "Diesel"), DRIVKRAFT, "Øvrige drivmidler")) %>%
-  
-  # Filtrér for udvalgte kategorier i ANVENDELSE
-  filter(ANVENDELSE %in% udvalgte_kat) %>%
-  
-  # Summering af ANTAL pr. AAR, ANVENDELSE og DRIV
-  summarise(ANTAL = sum(ANTAL), .by = c("AAR", "ANVENDELSE", "DRIV"))
+result <- nyreg_data_3 %>%
+  mutate(AAR = format(DATE, "%Y")) %>%  
+  group_by(AAR, ANVENDELSE, DRIV) %>%    
+  summarize(
+    ANTAL = sum(ANTAL),              
+    DATE = min(DATE),                      
+    .groups = 'drop'
+  ) %>% 
+  group_by(AAR, ANVENDELSE) %>%           
+  mutate(A_NYREG = ANTAL / sum(ANTAL) * 100) %>%  
+  ungroup()
 
-# Tilføj seneste AAR baseret på den maksimale DATE
-nyreg_data_seneste <- nyreg_data %>%
+result_max_month <- nyreg_data_3 %>%
   filter(DATE == max(DATE)) %>%
-  # Sørg for, at DRIV er defineret her også
-  mutate(DRIV = ifelse(DRIVKRAFT %in% c("El", "Diesel"), DRIVKRAFT, "Øvrige drivmidler")) %>%
-  mutate(AAR = str_c(year(DATE), " (", format(DATE, "%B"), ")")) %>%
-  select(AAR, DRIV, ANTAL, ANVENDELSE)
-
-# Bind rows sammen
-nyreg_data_underkat <- bind_rows(nyreg_data_underkat, nyreg_data_seneste) %>%
-  
-  # Beregning af procentandel for nyregistreringer
-  mutate(A_NYREG = round(ANTAL / sum(ANTAL) * 100, 1), 
-         .by = c("AAR", "ANVENDELSE")) %>%
-  
-  # Konverter DRIV til en faktor med fastsatte niveauer
- mutate(DRIV = factor(DRIV, levels = c("Øvrige drivmidler", "Diesel", "El")),
-         A_NYREG = round(ANTAL / sum(ANTAL) * 100, 1),
-         .by = c("AAR", "ANVENDELSE")) %>%
-  
-  
-  # Sorter efter AAR
-  arrange(AAR)
+  group_by(AAR, MONTH, ANVENDELSE, DRIV) %>%    
+  summarize(
+    ANTAL = sum(ANTAL),                  
+    DATE = max(DATE),                    # Keep the maximum DATE for each group
+    .groups = 'drop'
+  ) %>% 
+  group_by(AAR, MONTH, ANVENDELSE) %>%            
+  mutate(
+    A_NYREG = ANTAL / sum(ANTAL) * 100,  
+    AAR = str_c(year(DATE), " (", lubridate::quarter(DATE), ". Kvt)")  # Use DATE to create AAR with year and quarter
+  ) %>%  
+  ungroup()
 
 
-
-
-
-
+ nyreg_data_underkat <- bind_rows(result, result_max_month)
 
 ```
 
@@ -340,8 +351,8 @@ figur_3 <- bestand_data_1 |>
          drivmiddel=DRIV,
          antal =ANTAL,
          andel = A_NYREG,
-         .keep = "none"
-  ) 
+         .keep = "none")
+
   
 figur_5 <- bestand_data_underkat |> 
   arrange(ANVENDELSE, AAR, desc(DRIV)) |>
