@@ -585,11 +585,11 @@ ny_figur_3_1 |>
 
 rest <- KF_tal$INDHOLD[[2]] - DST_tal$INDHOLD[[2]]
 
-
+KF_tal$INDHOLD[[2]]
 
 ```
 
-Jævnfør Klimastatus og -fremskrivning 2024 vil der ved udgangen af 2024 være `r KF_tal$INDHOLD[[2]]` elbiler i Danmark. Bestanden pr. `r str_remove_all(DST_tal$x_axis[[2]], " observeret")` var `r DST_tal$INDHOLD[[2]]` elbiler, jf. figur 4. Differencen mellem det nuværende antal elbiler og det forventede antal elbiler ved udgangen af året er således `r rest`.
+Jævnfør Klimastatus og -fremskrivning 2024 vil der ved udgangen af 2025 være `r KF_tal$INDHOLD[[2]]` elbiler i Danmark. Bestanden pr. `r str_remove_all(DST_tal$x_axis[[2]], " observeret")` var `r DST_tal$INDHOLD[[2]]` elbiler, jf. figur 4. Differencen mellem det nuværende antal elbiler og det forventede antal elbiler ved udgangen af 2025 er således `r rest`.
 
 ```{r}
 

@@ -66,8 +66,14 @@ ladest_peri <- read_excel( "S:/CKA/Databank/002 Ladeinfrastruktur/kommuner_ladee
 seneste_peri <- c(dst_pers_peri, bilstat_peri, ladest_peri)
 
 
-render_fkt <- function(rapport, senest_peri_nu){
-  render(str_c(getwd(), "/", rapport, ".rmd"))
+output_sti = "S:/CKA/Databank/011 Output Vidensbank"
+
+
+render_fkt <- function(rapport, senest_peri_nu, output_path){
+  
+  render(input = str_c(getwd(), "/", rapport, ".rmd"), 
+         output_file = str_c(output_path, "/", rapport, ".html"))
+  
   
   log <- read.csv2("Opdaterings log.csv") 
   
@@ -84,9 +90,14 @@ render_fkt <- function(rapport, senest_peri_nu){
 rapporter_navn <- log$type %>% unique()
 
 map(rapporter_navn, function(x){
-      if(log_seneste_peri[x]!=seneste_peri[x]){
-  tryCatch(render_fkt(x, seneste_peri[x]))
-} else{str_c("Der er ikke ny månede for ", x)}})
+  if(log_seneste_peri[x]!=seneste_peri[x]){
+    tryCatch(render_fkt(x, seneste_peri[x], output_sti),
+             error = print("fejl"))
+  } else{str_c("Der er ikke ny månede for ", x)}})
+
+
+map(rapporter_navn, function(x){
+  tryCatch(render_fkt(x, seneste_peri[x], output_sti))})
 
 
 
