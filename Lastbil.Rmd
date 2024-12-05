@@ -35,6 +35,10 @@ body{
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = FALSE)
 
+
+# ---- INDLEDNING ----
+
+
 library(downloadthis)
 library(tidyverse)
 library(readxl)
@@ -52,6 +56,9 @@ library(plotly)
 library(scales)
 library(downloadthis)
 library(zoo)
+library(htmltools)
+
+
 
 lang <- getOption("highcharter.lang")
 lang$decimalPoint <- ","
@@ -74,49 +81,92 @@ knit_hooks$set(inline = function(x) {
 sti_kf <- "S:/CKA/Databank/007 Klimafremskrivning"
 sti <- "S:/CKA/Databank/006 Bilstatistik/Lastbil"
 
-bestand_data <- dir(sti) %>% 
-  str_subset("Bestand") |>
-  (\(y) map_dfr(y, ~read_excel(str_c(sti,"/", .x), skip = 9,
-                               .name_repair = ~str_to_upper(.x) %>% 
-                                 str_replace_all(c(" |\\,|\\.|-|\\/|\\(|\\)"="_", "Å"="AA", "Æ"="AE", "Ø"="OE", "__"="_") )) %>% 
-                  select(-NR_) %>% 
-                  pivot_longer(cols = -"DRIVKRAFT", names_to = "KASSORI", values_to = "ANTAL") %>% 
-                  arrange(KASSORI, DRIVKRAFT)  %>% 
-                  mutate(DRIVKRAFT = str_extract_all(DRIVKRAFT, "PHEV|El", simplify = T) %>% 
-                           na_if("") %>% 
-                           coalesce(DRIVKRAFT),
-                         
-                         DRIV = case_when(DRIVKRAFT %in% c("Benzin", "PHEV",  "Brint",
-                                                           "Ukendt") ~ "Øvrige drivmidler",
-                                          DRIVKRAFT=="Total for rapport" ~"Total",
-                                          T ~DRIVKRAFT) %>% 
-                           factor(levels = c("Øvrige drivmidler", "Diesel", "Gas", "El",
-                                             "Total")),
-                         DATE = parse_number(.x, locale = locale(grouping_mark = "-")),
-                         DATE = lubridate::dmy(DATE))))() %>%  
-  summarise(ANTAL = sum(ANTAL), 
-            .by = c("KASSORI", "DATE", "DRIV")) 
 
+# ---- BESTAND  ----
+
+
+# Define a function to process bestand data based on a specific pattern
+process_bestand_data <- function(sti, pattern) {
+  dir(sti) %>%
+    str_subset(pattern) %>%
+    map_dfr(~read_excel(str_c(sti, "/", .x), skip = 9,
+                        .name_repair = ~str_to_upper(.x) %>% 
+                          str_replace_all(c(" |\\,|\\.|-|\\/|\\(|\\)"="_", "Å"="AA", "Æ"="AE", "Ø"="OE", "__"="_"))) %>%
+              select(-NR_) %>%
+              pivot_longer(cols = -"DRIVKRAFT", names_to = "KASSORI", values_to = "ANTAL") %>%
+              arrange(KASSORI, DRIVKRAFT) %>%
+              mutate(
+                DRIVKRAFT_CLEANED = str_extract(DRIVKRAFT, "PHEV|El") %>% 
+                  coalesce(DRIVKRAFT),
+                DRIV = case_when(
+                  DRIVKRAFT_CLEANED %in% c("Benzin", "PHEV", "Brint", "Ukendt") ~ "Øvrige drivmidler",
+                  DRIVKRAFT_CLEANED == "Total for rapport" ~ "Total",
+                  TRUE ~ DRIVKRAFT_CLEANED
+                ) %>%
+                  factor(levels = c("Øvrige drivmidler", "Diesel", "Gas", "El", "Total")),
+                DATE = parse_number(.x, locale = locale(grouping_mark = "-")),
+                DATE = dmy(DATE)
+              ) %>%
+              select(-DRIVKRAFT)
+    ) %>%
+    summarise(ANTAL = sum(ANTAL), .by = c("KASSORI", "DATE", "DRIV"))
+}
+
+# Use the function with different patterns for gamle, tunge, and lette
+bestand_data_gamle <- process_bestand_data(sti, "Bestand(?!.*lette|.*tunge)")
+bestand_data_tunge <- process_bestand_data(sti, "Bestand.*tunge")
+bestand_data_lette <- process_bestand_data(sti, "Bestand.*lette")
+
+
+bestand_data <- bind_rows(
+  bestand_data_lette %>% mutate(TUNG = 0),
+  bestand_data_tunge %>% mutate(TUNG = 1)
+)
+
+
+bestand_data_ny <- bestand_data %>%
+  select(-TUNG) %>%
+    filter(DATE >= as.Date("2024-10-31")) %>%
+    group_by(DRIV, DATE, KASSORI) %>%
+  summarise(ANTAL = sum(ANTAL, na.rm = TRUE), .groups = "drop") %>%
+    arrange(DATE, DRIV)
+
+bestand_data_samlet_gammel_metode <- bind_rows(
+  bestand_data_gamle,
+  bestand_data_ny
+)
 
 nummer_sidste_md <- bestand_data$DATE %>% max() %>% month()
 nummer_næst_sidste_md <- bestand_data$DATE %>% max() %>% month() - 1
-
 nyeste_aar <- bestand_data$DATE %>% max() %>% year()
 
-# Til figur 3: bestand ultimo året og bestand i seneste måned i indeværende år
-bestand_data_1 <- bestand_data %>% 
-  filter(DRIV !="Total", KASSORI=="TOTAL", month(DATE)==12 | DATE==max(DATE)) %>% 
-  summarise(ANTAL = sum(ANTAL), 
-            .by = c("DATE", "DRIV")) %>% 
-  mutate(AAR = ifelse(month(max(DATE))!=12, 
-                      str_c(year(DATE), " (", format(DATE, "%B"), ")"), 
-                      as.character(year(DATE)+1)), 
-         A_BESTAND = ANTAL/sum(ANTAL)*100,
-         .by = c("DATE")) %>% 
-  select(AAR, DRIV, ANTAL, A_BESTAND) %>% 
-  arrange(AAR)
+process_bestand_data <- function(data) {
+  data %>% 
+    filter(DRIV != "Total", KASSORI == "TOTAL", month(DATE) == 12 | DATE == max(DATE)) %>% 
+    summarise(ANTAL = sum(ANTAL), .by = c("DATE", "DRIV")) %>% 
+    mutate(
+      AAR = ifelse(month(max(DATE)) != 12, 
+                   str_c(year(DATE), " (", format(DATE, "%B"), ")"), 
+                   as.character(year(DATE) + 1)), 
+      A_BESTAND = ANTAL / sum(ANTAL) * 100, 
+      .by = c("DATE")
+    ) %>% 
+    select(AAR, DRIV, ANTAL, A_BESTAND) %>% 
+    arrange(AAR)
+}
 
-bestand_data_udv <- bestand_data %>% 
+# Process and assign directly to the global environment
+list2env(
+  map(list(
+    bestand_data_1 = bestand_data,
+    bestand_data_1_lette = bestand_data_lette,
+    bestand_data_1_tunge = bestand_data_tunge
+  ), process_bestand_data),
+  envir = .GlobalEnv
+)
+
+
+bestand_data_udv <- bestand_data_samlet_gammel_metode %>% 
   filter(KASSORI=="TOTAL", month(DATE)==12 | month(DATE)==nummer_sidste_md) %>% 
     mutate(AAR = ifelse(month(DATE)!=12, 
                       year(DATE),
@@ -133,6 +183,8 @@ bestand_data_udv <- bestand_data %>%
   select(-KASSORI) %>% 
   arrange(AAR)
 
+
+
 bestand_data_2 <- bestand_data %>% 
   filter(DRIV != "Total", KASSORI == "TOTAL") %>%
   filter(DATE == sort(unique(DATE), decreasing = TRUE)[2]) %>%  # Get the second newest date
@@ -146,42 +198,145 @@ bestand_data_2 <- bestand_data %>%
   select(AAR, DRIV, ANTAL, A_BESTAND) %>% 
   arrange(AAR)
   
-nyreg_data <- dir(sti) %>% 
-  str_subset("Nyregistreringer") |>
-  (\(y) map_dfr(y, ~read_excel(str_c(sti,"/", .x), skip = 9,
-                               .name_repair = ~str_to_upper(.x) %>% 
-                                 str_replace_all(c(" |\\,|\\.|-|\\/|\\(|\\)"="_", "Å"="AA", "Æ"="AE", "Ø"="OE", "__"="_") )) %>% 
-                  select(-NR_) %>% 
-                  pivot_longer(cols = -"DRIVKRAFT", names_to = "KASSORI", values_to = "ANTAL") %>% 
-                  arrange(KASSORI, DRIVKRAFT)  %>% 
-                  mutate(DRIVKRAFT = str_extract_all(DRIVKRAFT, "PHEV|El", simplify = T) %>% 
-                           na_if("") %>% 
-                           coalesce(DRIVKRAFT),
-                         
-                         DRIV = case_when(DRIVKRAFT %in% c("Benzin", "PHEV",  "Brint",
-                                                           "Ukendt") ~ "Øvrige drivmidler",
-                                          DRIVKRAFT=="Total for rapport" ~"Total",
-                                          T ~DRIVKRAFT) %>% 
-                           factor(levels = c("Øvrige drivmidler", "Diesel", "Gas", "El",
-                                             "Total")),
-                         DATE1 = parse_number(.x, locale = locale(grouping_mark = "-")),
-                         DATE2 = str_sub(.x, start = -15) %>% parse_number(locale = locale(grouping_mark = "-")),
-                         DATE_ST = lubridate::dmy(DATE1),
-                         DATE_SL = lubridate::dmy(DATE2),
-                         AAR = year(DATE_ST) %>% as.character())))() %>% 
-  select(-DATE1,-DATE2)
 
 
-nyreg_data_1 <- nyreg_data %>% 
-  filter(DRIV !="Total", KASSORI=="TOTAL") |>
-  (\(y) bind_rows(summarise(y, ANTAL = sum(ANTAL), 
-                            .by = c("AAR", "DRIV")),
-                  filter(y, DATE_SL==max(DATE_SL)) %>% 
-                    mutate(AAR = str_c(year(DATE_SL), " (", format(DATE_SL, "%B"), ")")) %>% 
-                    select(AAR, DRIV, ANTAL)))() %>% 
-  mutate(A_NYREG = round(ANTAL/sum(ANTAL)*100,1),
-         .by = "AAR") %>% 
-  arrange(AAR)
+
+
+# ---- NYREG ----
+
+nyreg_data_lette <- dir(sti) %>% 
+  # Filter for files with "Nyregistreringer" and "lette" in the filename
+  str_subset("Nyregistreringer.*lette") %>% 
+  map_dfr(function(y) 
+    read_excel(
+      str_c(sti, "/", y), 
+      skip = 9,
+      .name_repair = ~str_to_upper(.x) %>% 
+                     str_replace_all(c(" |\\,|\\.|-|\\/|\\(|\\)" = "_", "Å" = "AA", "Æ" = "AE", "Ø" = "OE", "__" = "_"))
+    ) %>% 
+      select(-NR_) %>%  # Remove unnecessary column `NR_`
+      
+      # Transform data from wide to long format
+      pivot_longer(cols = -"DRIVKRAFT", names_to = "KASSORI", values_to = "ANTAL") %>% 
+      arrange(KASSORI, DRIVKRAFT) %>% 
+      
+      # Data cleaning and manipulation
+      mutate(
+        # Extract "PHEV" or "El" if present, otherwise keep `DRIVKRAFT` as is
+        DRIVKRAFT = str_extract(DRIVKRAFT, "PHEV|El") %>% 
+                    na_if("") %>% 
+                    coalesce(DRIVKRAFT), 
+        
+        # Recode `DRIV` based on `DRIVKRAFT` values
+        DRIV = case_when(
+          DRIVKRAFT %in% c("Benzin", "PHEV", "Brint", "Ukendt") ~ "Øvrige drivmidler",
+          DRIVKRAFT == "Total for rapport" ~ "Total",
+          TRUE ~ DRIVKRAFT
+        ) %>% factor(levels = c("Øvrige drivmidler", "Diesel", "Gas", "El", "Total")),
+        
+        # Extract all dates in DD-MM-YYYY format from the string and parse them
+        DATE_RANGE = str_extract_all(y, "\\d{2}-\\d{2}-\\d{4}"),
+        
+        # Assign first extracted date as DATE1 and second as DATE2, if both are present
+        DATE1 = map_chr(DATE_RANGE, ~ .x[1] %||% NA_character_),
+        DATE2 = map_chr(DATE_RANGE, ~ .x[2] %||% NA_character_),
+        
+        # Convert to date objects
+        DATE_ST = lubridate::dmy(DATE1),
+        DATE_SL = lubridate::dmy(DATE2),
+        AAR = year(DATE_ST) %>% as.character())) %>% 
+  select(-DATE1, -DATE2, -DATE_RANGE)
+
+
+nyreg_data_tunge <- dir(sti) %>% 
+  # Filter for files with "Nyregistreringer" and "lette" in the filename
+  str_subset("Nyregistreringer.*tunge") %>% 
+  map_dfr(function(y) 
+    read_excel(
+      str_c(sti, "/", y), 
+      skip = 9,
+      .name_repair = ~str_to_upper(.x) %>% 
+                     str_replace_all(c(" |\\,|\\.|-|\\/|\\(|\\)" = "_", "Å" = "AA", "Æ" = "AE", "Ø" = "OE", "__" = "_"))
+    ) %>% 
+      select(-NR_) %>%  # Remove unnecessary column `NR_`
+      
+      # Transform data from wide to long format
+      pivot_longer(cols = -"DRIVKRAFT", names_to = "KASSORI", values_to = "ANTAL") %>% 
+      arrange(KASSORI, DRIVKRAFT) %>% 
+      
+      # Data cleaning and manipulation
+      mutate(
+        # Extract "PHEV" or "El" if present, otherwise keep `DRIVKRAFT` as is
+        DRIVKRAFT = str_extract(DRIVKRAFT, "PHEV|El") %>% 
+                    na_if("") %>% 
+                    coalesce(DRIVKRAFT), 
+        
+        # Recode `DRIV` based on `DRIVKRAFT` values
+        DRIV = case_when(
+          DRIVKRAFT %in% c("Benzin", "PHEV", "Brint", "Ukendt") ~ "Øvrige drivmidler",
+          DRIVKRAFT == "Total for rapport" ~ "Total",
+          TRUE ~ DRIVKRAFT
+        ) %>% factor(levels = c("Øvrige drivmidler", "Diesel", "Gas", "El", "Total")),
+        
+        # Extract all dates in DD-MM-YYYY format from the string and parse them
+        DATE_RANGE = str_extract_all(y, "\\d{2}-\\d{2}-\\d{4}"),
+        
+        # Assign first extracted date as DATE1 and second as DATE2, if both are present
+        DATE1 = map_chr(DATE_RANGE, ~ .x[1] %||% NA_character_),
+        DATE2 = map_chr(DATE_RANGE, ~ .x[2] %||% NA_character_),
+        
+        # Convert to date objects
+        DATE_ST = lubridate::dmy(DATE1),
+        DATE_SL = lubridate::dmy(DATE2),
+        AAR = year(DATE_ST) %>% as.character())) %>% 
+  select(-DATE1, -DATE2, -DATE_RANGE)
+
+
+
+nyreg_data <- bind_rows(
+  nyreg_data_lette %>% mutate(TUNG = 0),
+  nyreg_data_tunge %>% mutate(TUNG = 1)
+)
+
+
+process_nyreg_data <- function(data, date_column) {
+  data %>% 
+    filter(DRIV != "Total", KASSORI == "TOTAL") %>%
+    (\(y) bind_rows(
+      # Summarize data by year and DRIV
+      summarise(y, ANTAL = sum(ANTAL), .by = c("AAR", "DRIV")),
+      
+      # Process the latest month data
+      filter(y, !!sym(date_column) == max(!!sym(date_column))) %>%
+        group_by(DRIV) %>%
+        summarise(
+          ANTAL = sum(ANTAL), 
+          DATE_ST = max(!!sym(date_column)), 
+          .groups = "drop"
+        ) %>%  
+        mutate(AAR = str_c(year(DATE_ST), " (", format(DATE_ST, "%B"), ")")) %>% 
+        select(AAR, DRIV, ANTAL)
+    ))() %>% 
+    mutate(A_NYREG = round(ANTAL / sum(ANTAL) * 100, 1), .by = "AAR") %>% 
+    arrange(AAR)
+}
+
+# Process each dataset and assign results directly to the global environment
+list2env(
+  map(
+    list(
+      nyreg_data_1 = list(data = nyreg_data, date_column = "DATE_ST"),
+      nyreg_data_1_lette = list(data = nyreg_data_lette, date_column = "DATE_SL"),
+      nyreg_data_1_tunge = list(data = nyreg_data_tunge, date_column = "DATE_SL")
+    ),
+    ~ process_nyreg_data(.x$data, .x$date_column)
+  ),
+  envir = .GlobalEnv
+)
+
+
+# ---- DIVERSE ----
+
 
 KF_salg <- read_excel(str_c(sti_kf, "/", "KF24_dataark_Transport.xlsx"),
                       sheet = "Salg", skip = 4) %>%
@@ -218,21 +373,18 @@ KF_tal <- KF_bestand %>%
   select(ANTAL=antal, x_axis, oprindelse)
   
 
-# bestand_data %>% 
-#   filter(KASSORI!="TOTAL") %>% 
-#   summarise(ANTAL_EL = sum(ifelse(DRIV=="El", ANTAL, 0)),
-#             ANTAL = sum(ANTAL),
-#             ANDEL = ANTAL_EL/ANTAL*100,
-#     .by = c("KASSORI", "DATE")
-#   ) %>% 
-#   filter(DATE==max(DATE)) %>% 
-#   arrange(desc(ANTAL)) %>% 
-#   view()
+
+nyreg_data_uden_vægt <- nyreg_data %>%
+  select(-TUNG) %>%
+  group_by(DRIV, DATE_SL, KASSORI, AAR) %>%
+  summarise(ANTAL = sum(ANTAL, na.rm = TRUE), .groups = "drop") %>%
+  arrange(DATE_SL, DRIV)
+
 
 udvalgte_kat <- c("RENOVATIONSAGGREGAT", "KOELEANLAEG", "LUKKET_KASSE", "LAESSEBAGSMAEK", "TANK", "LAESSEKRAN") %>% 
   factor(., levels = .)
 
-nyreg_data_underkat <- nyreg_data %>% 
+nyreg_data_underkat <- nyreg_data_uden_vægt %>% 
   filter(DRIV !="Total", KASSORI %in% udvalgte_kat) |>
   (\(y) bind_rows(summarise(y, ANTAL = sum(ANTAL), 
                             .by = c("AAR","KASSORI", "DRIV")),
@@ -243,7 +395,7 @@ nyreg_data_underkat <- nyreg_data %>%
          .by = c("AAR", "KASSORI")) %>% 
   arrange(AAR)
 
-bestand_data_underkat <-  bestand_data %>% 
+bestand_data_underkat <- bestand_data_samlet_gammel_metode %>% 
   filter(DRIV !="Total", KASSORI %in% udvalgte_kat, month(DATE)==12 | DATE==max(DATE)) %>% 
   summarise(ANTAL = sum(ANTAL), 
                                         .by = c("DATE","KASSORI", "DRIV")) %>% 
@@ -265,6 +417,14 @@ totalsalg_seneste <- nyreg_data_1 %>% filter(AAR==nyeste_aar) %>% pull(ANTAL) %>
 elsalg_seneste <- nyreg_data_1 %>% filter(AAR==nyeste_aar, DRIV=="El") %>% pull(ANTAL) %>% sum()
 
 
+totalsalg_seneste_lette <- nyreg_data_1_lette %>% filter(AAR==nyeste_aar) %>% pull(ANTAL) %>% sum()
+elsalg_seneste_lette <- nyreg_data_1_lette %>% filter(AAR==nyeste_aar, DRIV=="El") %>% pull(ANTAL) %>% sum()
+
+
+totalsalg_seneste_tunge <- nyreg_data_1_tunge %>% filter(AAR==nyeste_aar) %>% pull(ANTAL) %>% sum()
+elsalg_seneste_tunge <- nyreg_data_1_tunge %>% filter(AAR==nyeste_aar, DRIV=="El") %>% pull(ANTAL) %>% sum()
+
+
 totalsalg_naestseneste <- nyreg_data_1 %>%  filter(AAR==nyeste_aar-1) %>% pull(ANTAL) %>% sum()
 elsalg_naestseneste <- nyreg_data_1 %>%  filter(AAR==nyeste_aar-1, DRIV=="El") %>% pull(ANTAL) %>% sum()
 
@@ -282,7 +442,11 @@ seneste_md_tal <- nyreg_data_1 %>%
 
 bestand_2021 <- bestand_data_1 %>% filter(AAR=="2021") %>% pull("ANTAL") %>% sum()
 bestand_seneste <- bestand_data_1 %>% filter(str_detect(AAR, "\\(")) %>% pull("ANTAL") %>% sum()
+bestand_seneste_lette <- bestand_data_1_lette %>% filter(str_detect(AAR, "\\(")) %>% pull("ANTAL") %>% sum()
+bestand_seneste_tunge <- bestand_data_1_tunge %>% filter(str_detect(AAR, "\\(")) %>% pull("ANTAL") %>% sum()
 elbestand_seneste <- bestand_data_1 %>% filter(str_detect(AAR, "\\("), DRIV=="El") %>% pull("ANTAL")
+elbestand_seneste_lette <- bestand_data_1_lette %>% filter(str_detect(AAR, "\\("), DRIV=="El") %>% pull("ANTAL")
+elbestand_seneste_tunge <- bestand_data_1_tunge %>% filter(str_detect(AAR, "\\("), DRIV=="El") %>% pull("ANTAL")
 elbestand_næst_seneste <- bestand_data_2 %>% filter(str_detect(AAR, "\\("), DRIV=="El") %>% pull("ANTAL")
 udv_elbestand_seneste_måned <- elbestand_seneste - elbestand_næst_seneste
 
@@ -308,6 +472,19 @@ figur_1_2 <- nyreg_data_1 %>%
          antal =ANTAL,
          andel = A_NYREG)
 
+figur_1_2_lette <- nyreg_data_1_lette %>% 
+  select(år=AAR, 
+         drivmiddel=DRIV,
+         antal =ANTAL,
+         andel = A_NYREG)
+
+figur_1_2_tunge <- nyreg_data_1_tunge %>% 
+  select(år=AAR, 
+         drivmiddel=DRIV,
+         antal =ANTAL,
+         andel = A_NYREG)
+
+
 
  
 figur_3 <- bestand_data_1 |>
@@ -316,6 +493,21 @@ figur_3 <- bestand_data_1 |>
          antal =ANTAL , 
          andel = A_BESTAND
   ) 
+
+figur_3_lette <- bestand_data_1_lette|>
+  select(år = AAR,
+         drivmiddel=DRIV,
+         antal =ANTAL , 
+         andel = A_BESTAND
+  ) 
+
+figur_3_tunge <- bestand_data_1_tunge |>
+  select(år = AAR,
+         drivmiddel=DRIV,
+         antal =ANTAL , 
+         andel = A_BESTAND
+  ) 
+
 
 figur_4 <- bestand_data_1 %>% 
   filter(AAR %in% c(nyeste_aar-1,nyeste_aar), DRIV =="El") %>% 
@@ -347,6 +539,7 @@ figur_5 <- bestand_data_udv |>
          andel = A_NYREG,
          .keep = "none"
   ) 
+  
 figur_7 <- bestand_data_underkat |> 
   arrange(KASSORI, AAR, desc(DRIV)) |>
     mutate(år = AAR,
@@ -374,7 +567,7 @@ Dette er Transportministeriets interne statusnotat for nyregistreringer og besta
 
 Data fra rapporten kan hentes her:
 ```{r}
-list("Figur 1 og 2" = figur_1_2, "Figur 3" = figur_3, "Figur 4" = figur_4, "Figur 5" = figur_5,
+list("Figur 1 og 2 samlet" = figur_1_2, "Figur 1 og 2 lette" = figur_1_2_lette, "Figur 1 og 2 tunge" = figur_1_2_tunge, "Figur 3 samlet" = figur_3,"Figur 3 lette" = figur_3_lette, "Figur 3 tunge" = figur_3_tunge, "Figur 4" = figur_4, "Figur 5" = figur_5,
      "Figur 6" = figur_6, "Figur 7" = figur_7) %>%
   download_this(
     output_name = "Data til rapport om status på lastbilsudviklingen",
@@ -388,11 +581,16 @@ list("Figur 1 og 2" = figur_1_2, "Figur 3" = figur_3, "Figur 4" = figur_4, "Figu
 
 
 ### Status på udviklingen af bestanden
-I løbet af de første `r  nummer_sidste_md` måneder af `r as.character(nyeste_aar)` er der nyregistreret `r totalsalg_seneste` lastbiler, hvoraf `r elsalg_seneste` er ellastbiler. Til sammenligning blev der i hele `r as.character(nyeste_aar-1)` nyregistreret `r elsalg_naestseneste` ellastbiler. 
+I løbet af de første `r  nummer_sidste_md` måneder af `r as.character(nyeste_aar)` er der nyregistreret `r totalsalg_seneste` lastbiler, hvoraf `r elsalg_seneste` er ellastbiler. Til sammenligning blev der i hele `r as.character(nyeste_aar-1)` nyregistreret `r elsalg_naestseneste` ellastbiler.
+
+
+Ellastbilers andel af det samlede antal nyregistreringer har været svagt stigende siden 2021.  I  `r str_c(seneste_md)` måned udgjorde ellastbiler  `r seneste_md_tal` pct. af de samlede nyregistreringer, hvor ellastbiler i gennemsnit hidtil har  udgjort  `r elsalg_seneste/totalsalg_seneste*100` pct. af de samlede nyregistreringer i `r as.character(nyeste_aar)`. Til sammenligning udgjorde ellastbiler `r elsalg_naestseneste/totalsalg_naestseneste*100` pct. af de samlede nyregistreringer i `r as.character(nyeste_aar-1)`. 
+
 
 ```{r}
 
 farver <- c("graa",  "blaa", "orange","groen") %>% factor(., levels = .)
+
 
 format_chart <- function(x, titel) {hc_chart(x, spacingTop = 40,
            style = list(fontFamily= 'Georgia')) %>% 
@@ -422,41 +620,102 @@ nyreg_data_1 |>
                              crop = FALSE, overflow = 'none')) |> 
   hc_xAxis(title = list(text = NULL)) %>% 
   hc_legend(reversed =TRUE) %>% 
-  hc_tooltip(shared = TRUE) %>% 
+  hc_tooltip(shared = TRUE,
+                   pointFormat = "<b>{series.name}</b>: {point.percentage:.1f} pct. ({point.y:,.0f} lastbiler) <br>") %>%
   format_chart("<b>Figur 1.</b> Udvikling i nyregistreringer af lastbiler fordelt på drivmiddel")
+
+
 
 ```
 
 
-Ellastbilers andel af det samlede antal nyregistreringer har været svagt stigende siden 2021. I `r as.character(nyeste_aar)` har ellastbiler hidtil udgjort  `r elsalg_seneste/totalsalg_seneste*100` pct. af de samlede nyregistreringer, jf. figur 2, hvor ellastbiler udgjorde `r seneste_md_tal` pct. af nyregistreringerne i `r str_c(seneste_md, " ", nyeste_aar)`. I `r as.character(nyeste_aar-1)` udgjorde ellastbiler `r elsalg_naestseneste/totalsalg_naestseneste*100` pct. af de samlede nyregistreringer.
-
+Det er dog særligt lette lastbiler, med en vægt på 4.250 kg. og under der omstilles. I `r as.character(nyeste_aar)` har ellastbiler udgjort `r elsalg_seneste_lette/totalsalg_seneste_lette*100` pct. af nyregistreringerne for lette lastbiler, jævnfør figur 2.1. Til sammenligning har ellastbiler i indeværende år udgjort `r elsalg_seneste_tunge/totalsalg_seneste_tunge*100` pct. af nyregistreringerne for lastbiler med en vægt over 4.250 kg., jævnfør figur 2.2.
 
 ```{r}
 
 fct_sort <- nyreg_data_1$AAR %>% unique()
 
-nyreg_data_1 |> 
-  mutate(AAR = factor(AAR, levels = fct_sort)) %>% 
+figur2_lette <- nyreg_data_1_lette |> 
+  mutate(AAR = factor(AAR, levels = fct_sort),
+                           antal = ANTAL) %>%  # Add ANTAL column for use in the tooltip
   hchart('column', hcaes(x = AAR, y =A_NYREG , group = DRIV ), borderColor = 0) |> 
   hc_plotOptions(column = list(stacking = "normal"), style = list(
           fontFamily = "Georgia"
         )) |> 
-  hc_colors(c(trm_colors(farver))) |> 
+  hc_colors(as.character(trm_colors(farver[c(2, 4)]))) |>  # Use only "blaa" and "groen" (the second and fourth colors)
   hc_yAxis(title = list(text = "Pct."), max = 100) |> 
   hc_xAxis(title = list(text = NULL), categories = fct_sort) %>% 
   hc_legend(reversed =TRUE) %>% 
-  hc_tooltip(shared = TRUE) %>% 
-  format_chart("<b>Figur 2.</b> Drivmidlernes andel af nyregistreringer for lastbiler")
+  hc_chart(marginBottom = 110)  %>%
+  hc_tooltip(shared = TRUE,
+  pointFormat = "<b>{series.name}</b>: {point.percentage:.1f} pct. (<b>{point.antal:,.0f}</b> lastbiler)<br>") %>%
+ format_chart("<b>Figur 2.1</b> Drivmidlernes andel af nyregistreringer for lette lastbiler")
+
+
+
+
+figur2_tunge <- nyreg_data_1_tunge |> 
+  mutate(AAR = factor(AAR, levels = fct_sort),
+                  antal = ANTAL) %>%  # Add ANTAL column for use in the tooltip
+  hchart('column', hcaes(x = AAR, y = A_NYREG , group = DRIV), borderColor = 0) |> 
+  hc_plotOptions(column = list(stacking = "normal"), style = list(fontFamily = "Georgia")) |> 
+  hc_colors(c(trm_colors(farver))) |> 
+  hc_yAxis(title = list(text = "Pct."), max = 100) |> 
+   hc_xAxis(title = list(text = NULL), categories = fct_sort) %>% 
+ hc_legend(reversed = TRUE, 
+            layout = "horizontal", 
+            align = "center", 
+            verticalAlign = "bottom",
+            itemStyle = list(fontSize = "11px"))%>%
+    hc_chart(marginBottom = 110)  %>%# Reduce font size if necessary %>%  # Adding spacing between items
+  hc_tooltip(shared = TRUE,
+                        pointFormat = "<b>{series.name}</b>: {point.percentage:.1f} pct. (<b>{point.antal:,.0f}</b> lastbiler)<br>") %>%
+  format_chart("<b>Figur 2.2</b> Drivmidlernes andel af nyregistreringer for tunge lastbiler")
+
+
+
+
+# Create a HTML structure with two columns
+html <- tagList(
+  div(style = "display: flex; justify-content: space-between;",
+      div(style = "width: 48%;", figur2_lette),
+      div(style = "width: 48%;", figur2_tunge)
+  )
+)
+
+# Render it in the browser
+browsable(html)
 
 ```
 
-Diesel er stadig det dominernde drivmiddel i bestanden af lastbiler. Bestanden af lastbiler har generelt været stigende siden 1. januar 2021, hvor bestanden var `r bestand_2021`, mens bestanden ultimo `r format(ISOdate(2000, nummer_sidste_md, 1), "%B")` `r as.character(nyeste_aar)` var `r bestand_seneste` lastbiler. Ultimo `r format(ISOdate(2000, nummer_sidste_md, 1), "%B")` `r as.character(nyeste_aar)` var der `r elbestand_seneste` ellastbiler svarende til `r elbestand_seneste/bestand_seneste*100` pct. af den samlede bestand.
+Diesel er stadig det dominernde drivmiddel i bestanden af lastbiler. Bestanden af lastbiler har generelt været svagt stigende siden 1. januar 2021, hvor den samlede bestand var `r bestand_2021`, mens  bestanden ultimo `r format(ISOdate(2000, nummer_sidste_md, 1), "%B")` `r as.character(nyeste_aar)` var `r bestand_seneste` lastbiler. 
+
+Omend bestanden af tunge lastbiler er væsentligt større end bestanden af lette lastbiler, er det værd at bemærke, at bestanden af lette lastbiler har været stigende siden 2022. Ellastbiler udgjorde ved udgangen af oktober måned `r elbestand_seneste_lette/bestand_seneste_lette*100` pct. af den samlede bestand af lette lastbiler, jævnfør figur 3.1. I modsætning hertil udgjorde ellastbiler blot `r elbestand_seneste_tunge/bestand_seneste_tunge*100` pct. af den samlede bestand af tunge lastbiler, jævnfør figur 3.2.
 
 
 ```{r}
 #Ny figur 3 opgørelse af årlig bestand
 
-bestand_data_1 |> 
+figur3_lette <-bestand_data_1_lette |> 
+  hchart('column', hcaes(x = AAR, y = ANTAL, group = DRIV ), borderColor = 0) |> 
+  hc_plotOptions(column = list(stacking = "normal")) |> 
+  hc_colors(as.character(trm_colors(farver[c(1,2,4)]))) |>  # Use only "blaa" and "groen" (the second and fourth colors)
+  hc_yAxis(
+    title = list(text = "Antal"),
+    labels = list(formatter = JS("function() {
+      return this.value >= 1000 ? (this.value / 1000).toFixed(0) : this.value;
+    }")),
+    stackLabels = list(enabled = TRUE, verticalAlign = 'top',
+                             crop = FALSE, overflow = 'none')
+  ) |> 
+  hc_xAxis(title = list(text = NULL))|>
+  hc_tooltip(shared=TRUE,
+ pointFormat = "<b>{series.name}</b>: {point.percentage:.1f} pct. ({point.y:,.0f} lastbiler) <br>") %>%
+  format_chart("<b>Figur 3.1</b> Udviklingen i den samlede bestand af lette lastbiler") %>% 
+      hc_chart(marginBottom = 110)  %>%# Reduce font size if necessary %>%  # Adding spacing between items
+  hc_legend(reversed =TRUE)
+
+figur3_tunge <-bestand_data_1_tunge |> 
   hchart('column', hcaes(x = AAR, y = ANTAL, group = DRIV ), borderColor = 0) |> 
   hc_plotOptions(column = list(stacking = "normal")) |> 
   hc_colors(c(trm_colors(farver))) |> 
@@ -469,19 +728,30 @@ bestand_data_1 |>
                              crop = FALSE, overflow = 'none')
   ) |> 
   hc_xAxis(title = list(text = NULL))|>
-  hc_tooltip(
-    pointFormat = "{series.name}: <b>{point.y:,.0f}<b> lastbiler <br>
-    <b>{point.percentage:.1f}<b> pct. af den samlede bestand"
-  )  %>%                             
-  format_chart("<b>Figur 3.</b> Udviklingen i den samlede bestand af lastbiler") %>% 
+    hc_tooltip(shared=TRUE,
+ pointFormat = "<b>{series.name}</b>: {point.percentage:.1f} pct. ({point.y:,.0f} lastbiler) <br>") %>%
+  format_chart("<b>Figur 3.2</b> Udviklingen i den samlede bestand af tunge lastbiler") %>% 
+      hc_chart(marginBottom = 110)  %>%# Reduce font size if necessary %>%  # Adding spacing between items
   hc_legend(reversed =TRUE)
+
+# Create a HTML structure with two columns
+html <- tagList(
+  div(style = "display: flex; justify-content: space-between;",
+      div(style = "width: 48%;", figur3_lette),
+      div(style = "width: 48%;", figur3_tunge)
+  )
+)
+
+# Render it in the browser
+browsable(html)
+
 
 rest <- KF_tal$ANTAL[[2]] - elbestand_seneste
   
 ```
 
 
-I september måned voksede bestanden af ellastbiler med `r udv_elbestand_seneste_måned` lastbiler. Jævnfør Klimastatus og -fremskrvining 2024 forventes der at være cirka `r KF_tal$ANTAL[[2]]` elektriske lastbiler i Danmark ved udgangen af 2025. Differencen mellem det nuværende  og det forventede antal elektriske lastbiler ved udgangen af 2025 er således `r rest` lastbiler, jf. figur 4.
+I `r format(ISOdate(2000, nummer_sidste_md, 1), "%B")` måned voksede bestanden af ellastbiler med `r udv_elbestand_seneste_måned` lastbiler. Jævnfør Klimastatus og -fremskrvining 2024 forventes der at være cirka `r KF_tal$ANTAL[[2]]` elektriske lastbiler i Danmark ved udgangen af 2025. Differencen mellem det nuværende  og det forventede antal elektriske lastbiler ved udgangen af 2025 er således `r rest` lastbiler, jævnfør figur 4.
 
 
 
@@ -523,9 +793,6 @@ nyeste_aars_udv <- bestand_data_udv %>%
 sidste_aars_udv <- bestand_data_udv %>% 
   filter(DATE==max(DATE) %m-% years(1) ) %>% 
   pull(name = DRIV)
-
-
-
 
 ```
 
@@ -577,6 +844,12 @@ map(udvalgte_kat, ~{nyreg_data_underkat |>
   )  %>% 
   format_chart(str_glue("<b>{str_replace_all(.x, c('_'=' ', 'OE'='Ø', 'AA'='Å', 'AE'='Æ')) %>% str_to_sentence()}<b>"))}) |> 
   hw_grid(rowheight = 400) %>% htmltools::browsable()
+
+
+
+
+
+
 
 
 # TODO: Der er noget tekst jeg ikke kan se

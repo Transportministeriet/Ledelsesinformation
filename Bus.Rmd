@@ -372,7 +372,7 @@ Dette er Transportministeriets interne statusnotat for nyregistreringer og besta
 
 Data fra rapporten kan hentes her:
 ```{r}
-list("Figur 1" = figur_1, "Figur 2" = figur_2, "Figur 3" = figur_3) %>%
+list("Figur 1" = figur_1, "Figur 2" = figur_2, "Figur 3" = figur_3, "Figur 4" = figur_4, "Figur 5" = figur_5) %>%
   download_this(
     output_name = "Data til rapport om status på elbusudviklingen",
     output_extension = ".xlsx",
@@ -451,7 +451,7 @@ bestand_seneste <- sum(bestand_data_x$ANTAL)
 
 ```
 
-Den 1. januar 2020 var den samlede bestand på `r bestand_2020` busser. Fra 2020 til `r as.character(nyeste_aar_efter)` har bestanden været let faldende, så bestanden pr. `r str_c("1. ", format(ISOdate(2000, 1:12, 1), "%B")[as.numeric(nummer_md_efter)], " ", nyeste_aar_efter)` var der `r bestand_seneste` busser. Den `r str_c("1. ", format(ISOdate(2000, 1:12, 1), "%B")[as.numeric(nummer_md_efter)], " ", nyeste_aar_efter)` udgjorde elbusser `r round(bestand_data_x[2, 4], digits = 0)` pct. af den samlede bestand mod 1,2 pct. i 2020. 
+Den 1. januar 2020 var den samlede bestand på `r bestand_2020` busser. Fra 2020 til `r as.character(nyeste_aar_efter)` har bestanden været let faldende, så bestanden pr. `r str_c("1. ", format(ISOdate(2000, 1:12, 1), "%B")[as.numeric(nummer_md_efter)], " ", nyeste_aar_efter)` var `r bestand_seneste` busser. Den `r str_c("1. ", format(ISOdate(2000, 1:12, 1), "%B")[as.numeric(nummer_md_efter)], " ", nyeste_aar_efter)` udgjorde elbusser `r round(bestand_data_x[2, 4], digits = 0)` pct. af den samlede bestand mod 1,2 pct. i 2020. 
 
 
 
@@ -459,11 +459,9 @@ Den 1. januar 2020 var den samlede bestand på `r bestand_2020` busser. Fra 2020
 ```{r}
 #Ny figur 3 opgørelse af årlig bestand
 
-bestand_data_2 <- bestand_data_1 %>%
-  slice(1:(n() - 3))
 
 
-bestand_data_2 |> 
+bestand_data_1 |> 
   hchart('column', hcaes(x = AAR, y = ANTAL, group = DRIV ), borderColor = 0) |> 
   hc_plotOptions(column = list(stacking = "normal")) |> 
   hc_colors(c(trm_colors(farver))) |> 
@@ -531,7 +529,7 @@ nyeste_aar_C <- as.character(nyeste_aar)
 
 Bestanden af busser er forsat domineret af dieselbusser. Det gælder særligt for busser anvendt til buskørsel, hvor dieselbusser  i `r seneste_md_navn` `r nyeste_aar_C` udgjorde `r bestand_data_senestemåned_txt_diesel$Buskørsel` pct. af bestanden. 
 
-For busser kun godkendt til rutekørsel udgjorde dieselbusser kun `r Diesel_bestand_KGR` pct. alt i mens elbusser udgjorde `r round (El_bestand_KGR)` pct. for denne anvendelseskategori.
+For busser kun godkendt til rutekørsel udgjorde dieselbusser kun `r Diesel_bestand_KGR` pct., alt i mens elbusser udgjorde `r round (El_bestand_KGR)` pct. for denne anvendelseskategori.
 
 ```{r, results='asis'}
 cat("**Figur 5. Bestanden fordelt på anvendelse og drivmiddel**")
@@ -546,7 +544,7 @@ map(udvalgte_kat, ~{bestand_data_underkat |>
   hc_plotOptions(column = list(stacking = "normal")) |> 
   hc_colors(c(trm_colors(farver))) |> 
   hc_yAxis(
-    title = list(text = "BESTAND"),
+    title = list(text = "Antal"),
     labels = list(
       format = "{value:,.0f}")
   ) |> 

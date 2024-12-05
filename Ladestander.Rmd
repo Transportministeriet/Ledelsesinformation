@@ -318,7 +318,7 @@ figur_2 %>%
 
 Antallet af elbiler pr. offentligt tilgængeligt ladepunkt har været stigende fra `r as.character(head(elbil_lader_komgrp$el_bil_pr_outlets,1))` elbiler pr. offentligt ladepunkt ultimo august 2018 til knap 13,9 elbiler pr. offentligt ladepunkt ultimo januar 2022, hvilket skyldes, at antallet af elbiler er vokset hurtigere end antallet af offentligt tilgængelige ladepunkter.
 
-Fra august 2022 til maj 2023 er antallet af offentligt tilgængelige ladepunkter dog steget relativt mere end antallet af elbiler, og der var derfor en faldende tendens i antallet af elbiler pr. offentligt ladepunkt til 11,1 elbiler pr ladepunkt i maj 2023. Siden maj 2023 har der være en svagt stigende trend og ved udgangen af `r as.character(seneste_md)` 2023 var der `r as.character(tail(elbil_lader_komgrp$el_bil_pr_outlets,1))` elbiler pr. offentligt tilgængelige ladepunkt.
+Fra august 2022 til maj 2023 er antallet af offentligt tilgængelige ladepunkter dog steget relativt mere end antallet af elbiler, og der var derfor en faldende tendens i antallet af elbiler pr. offentligt ladepunkt til 11,1 elbiler pr ladepunkt i maj 2023. Siden maj 2023 har der været en svagt stigende trend og ved udgangen af `r as.character(seneste_md)` 2023 var der `r as.character(tail(elbil_lader_komgrp$el_bil_pr_outlets,1))` elbiler pr. offentligt tilgængelige ladepunkt.
 
 ```{r pressure, echo=FALSE}
 
