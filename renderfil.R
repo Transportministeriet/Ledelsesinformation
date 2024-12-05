@@ -30,27 +30,27 @@ dst_pers_peri <- tbl_dst("BIL54", "da")$TID %>%
 
 
 bilstat_peri <- map(c("Lastbil", "Bus"), 
-    ~dir(str_c("S:/CKA/Databank/006 Bilstatistik/", .x)) %>% 
-      enframe() %>% 
-      mutate(dato = coalesce(parse_date_time2(value, orders = "dmY") %>% as.Date(),
-                             map_chr(value, ~strsplit(.x, ', ', fixed = TRUE)[[1]][2]) %>% 
-                               map_chr(~strsplit(.x, '- ', fixed = TRUE)[[1]][2]) %>% 
-                               parse_date_time2(orders = "dmY") %>% as.Date()
-      ),
-      aarmd = str_c(year(dato), "M", str_pad(month(dato), 
-                                             width = 2,
-                                             side = "left",
-                                             pad = "0")
-      ),
-      type = .x
-      ) %>% 
-      filter(str_detect(value, "Bestand")) %>% 
-      filter(dato == max(dato)) %>% 
-      pull(aarmd, name = type)) %>% unlist()
+                    ~dir(str_c("S:/CKA/Databank/006 Bilstatistik/", .x)) %>% 
+                      enframe() %>% 
+                      mutate(dato = coalesce(parse_date_time2(value, orders = "dmY") %>% as.Date(),
+                                             map_chr(value, ~strsplit(.x, ', ', fixed = TRUE)[[1]][2]) %>% 
+                                               map_chr(~strsplit(.x, '- ', fixed = TRUE)[[1]][2]) %>% 
+                                               parse_date_time2(orders = "dmY") %>% as.Date()
+                      ),
+                      aarmd = str_c(year(dato), "M", str_pad(month(dato), 
+                                                             width = 2,
+                                                             side = "left",
+                                                             pad = "0")
+                      ),
+                      type = .x
+                      ) %>% 
+                      filter(str_detect(value, "Bestand")) %>% 
+                      filter(dato == max(dato)) %>% 
+                      pull(aarmd, name = type)) %>% unlist()
 
 ladest_peri <- read_excel( "S:/CKA/Databank/002 Ladeinfrastruktur/kommuner_ladeeffekt.xlsx",
-                      skip = 2, .name_repair = ~str_replace_all(.x, " |-", "_") %>% 
-                        str_to_upper()) %>% 
+                           skip = 2, .name_repair = ~str_replace_all(.x, " |-", "_") %>% 
+                             str_to_upper()) %>% 
   bind_rows(read_excel( "S:/CKA/Databank/002 Ladeinfrastruktur/kommuner_ladeeffekt_prew.xlsx",
                         skip = 2, .name_repair = ~str_replace_all(.x, " |-", "_") %>% 
                           str_to_upper())) %>% 
@@ -62,7 +62,7 @@ ladest_peri <- read_excel( "S:/CKA/Databank/002 Ladeinfrastruktur/kommuner_ladee
          type = "Ladestander") %>% 
   filter(dato == max(dato)) %>% 
   distinct(type, aarmd) %>% deframe() 
-  
+
 seneste_peri <- c(dst_pers_peri, bilstat_peri, ladest_peri)
 
 
@@ -84,9 +84,9 @@ render_fkt <- function(rapport, senest_peri_nu){
 rapporter_navn <- log$type %>% unique()
 
 map(rapporter_navn, function(x){
-      if(log_seneste_peri[x]!=seneste_peri[x]){
-  tryCatch(render_fkt(x, seneste_peri[x]))
-} else{str_c("Der er ikke ny månede for ", x)}})
+  if(log_seneste_peri[x]!=seneste_peri[x]){
+    tryCatch(render_fkt(x, seneste_peri[x]))
+  } else{str_c("Der er ikke ny månede for ", x)}})
 
 
 
