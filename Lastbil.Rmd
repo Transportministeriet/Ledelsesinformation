@@ -59,7 +59,7 @@ library(zoo)
 library(htmltools)
 
 
-
+  
 lang <- getOption("highcharter.lang")
 lang$decimalPoint <- ","
 lang$thousandsSep <- "."
@@ -622,6 +622,14 @@ nyreg_data_1 |>
   hc_legend(reversed =TRUE) %>% 
   hc_tooltip(shared = TRUE,
                    pointFormat = "<b>{series.name}</b>: {point.percentage:.1f} pct. ({point.y:,.0f} lastbiler) <br>") %>%
+  # hc_subtitle(
+  #           point = list(x = 0.5, y = 0.0, xAxis = 0, yAxis = 0), # Position relative to chart
+  #   text =  "Kilde: Bilstatistik",
+  #   align = "bottom",
+  #    verticalAlign = "bottom",  # Place at the bottom of the chart area
+  #   y = 20,  # Adjust this value to fine-tune the position below the legend
+  #   style = list(fontSize = "12px", fontStyle = "italic")
+  # ) %>%
   format_chart("<b>Figur 1.</b> Udvikling i nyregistreringer af lastbiler fordelt på drivmiddel")
 
 
@@ -629,7 +637,24 @@ nyreg_data_1 |>
 ```
 
 
-Det er dog særligt lette lastbiler, med en vægt på 4.250 kg. og under der omstilles. I `r as.character(nyeste_aar)` har ellastbiler udgjort `r elsalg_seneste_lette/totalsalg_seneste_lette*100` pct. af nyregistreringerne for lette lastbiler, jævnfør figur 2.1. Til sammenligning har ellastbiler i indeværende år udgjort `r elsalg_seneste_tunge/totalsalg_seneste_tunge*100` pct. af nyregistreringerne for lastbiler med en vægt over 4.250 kg., jævnfør figur 2.2.
+
+```{r, results='asis'}
+
+graa_2 = "#EDF1F4"
+
+formatted_text <- div(
+ style = sprintf("background-color: %s; padding: 5px 20px; border: 1px solid #ddd; 
+                   font-family: inherit; font-size: inherit; 
+                   max-width: 700px; margin: auto;", graa_2),
+          h3("Faktaboks", style = "margin-top: 0.5;"), #
+           p("I indeværende notat defineres lastbiler med en vægt på 4.250 kg. og derunder som lette lastbiler.
+    Lastbiler med en vægt over 4.250 kg. defineres som tunge lsatbiler. Det bør bemærkes, at der i andre sammenhæng kan forekomme andre definitnioner af henholdsvis lette og tunge lastibler."))
+  
+  
+browsable(formatted_text)
+```
+Det er primært de lette lastbiler, der omstilles til eldrift. I `r as.character(nyeste_aar)`  udgjorde ellastbiler `r elsalg_seneste_lette/totalsalg_seneste_lette*100` pct. af alle nyregistreringer inden for kategorien lette lastbiler, jf. figur 2.1. For tunge lastbiler udgjorde ellastbiler i samme periode kun `r elsalg_seneste_tunge/totalsalg_seneste_tunge*100` pct. af nyregistreringerne, jf. figur 2.2.
+
 
 ```{r}
 
@@ -644,11 +669,26 @@ figur2_lette <- nyreg_data_1_lette |>
         )) |> 
   hc_colors(as.character(trm_colors(farver[c(2, 4)]))) |>  # Use only "blaa" and "groen" (the second and fourth colors)
   hc_yAxis(title = list(text = "Pct."), max = 100) |> 
-  hc_xAxis(title = list(text = NULL), categories = fct_sort) %>% 
-  hc_legend(reversed =TRUE) %>% 
-  hc_chart(marginBottom = 110)  %>%
-  hc_tooltip(shared = TRUE,
+  hc_xAxis(title = list(text = NULL), categories = fct_sort,
+           labels = list(rotation = -30)  # Tilt the labels by -45 degrees (you can adjust the angle)
+  ) %>% 
+hc_legend(reversed = TRUE, 
+            layout = "horizontal", 
+            align = "center", 
+            verticalAlign = "bottom",
+            itemStyle = list(fontSize = "11px"),
+            itemDistance = 2 )%>% 
+  hc_chart(marginBottom = 176)  %>%
+ hc_tooltip(shared = TRUE,
   pointFormat = "<b>{series.name}</b>: {point.percentage:.1f} pct. (<b>{point.antal:,.0f}</b> lastbiler)<br>") %>%
+  hc_subtitle(
+            point = list(x = 0.5, y = 0.0, xAxis = 0, yAxis = 0), # Position relative to chart
+    text = "Note: Lette lastibler dækker over lastbiler med en på vægt på 4.250 kg. og nedefter. Tunge lastbiler dækker over lastbiler med en vægt over 4.250 kg.",
+    align = "bottom",
+     verticalAlign = "bottom",  # Place at the bottom of the chart area
+    y = 10,  # Adjust this value to fine-tune the position below the legend
+    style = list(fontSize = "12px", fontStyle = "italic")
+  ) %>%
  format_chart("<b>Figur 2.1</b> Drivmidlernes andel af nyregistreringer for lette lastbiler")
 
 
@@ -661,36 +701,53 @@ figur2_tunge <- nyreg_data_1_tunge |>
   hc_plotOptions(column = list(stacking = "normal"), style = list(fontFamily = "Georgia")) |> 
   hc_colors(c(trm_colors(farver))) |> 
   hc_yAxis(title = list(text = "Pct."), max = 100) |> 
-   hc_xAxis(title = list(text = NULL), categories = fct_sort) %>% 
+   hc_xAxis(title = list(text = NULL), categories = fct_sort,
+           labels = list(rotation = -30)  # Tilt the labels by -45 degrees (you can adjust the angle)
+  ) %>% 
  hc_legend(reversed = TRUE, 
             layout = "horizontal", 
             align = "center", 
             verticalAlign = "bottom",
-            itemStyle = list(fontSize = "11px"))%>%
-    hc_chart(marginBottom = 110)  %>%# Reduce font size if necessary %>%  # Adding spacing between items
+            itemStyle = list(fontSize = "11px"),
+               itemDistance = 2) %>%  # Add spacing between legend items%>%
+    hc_chart(marginBottom = 160)  %>%# Reduce font size if necessary %>%  # Adding spacing between items
   hc_tooltip(shared = TRUE,
-                        pointFormat = "<b>{series.name}</b>: {point.percentage:.1f} pct. (<b>{point.antal:,.0f}</b> lastbiler)<br>") %>%
+  pointFormat = "<b>{series.name}</b>: {point.percentage:.1f} pct. (<b>{point.antal:,.0f}</b> lastbiler)<br>") %>%
+  hc_subtitle(
+            point = list(x = 0.5, y = 0.0, xAxis = 0, yAxis = 0), # Position relative to chart
+   text = "Note: Lette lastibler dækker over lastbiler med en på vægt på 4.250 kg. og nedefter. Tunge lastbiler dækker over lastbiler med en vægt over 4.250 kg.",
+   align = "bottom",
+     verticalAlign = "bottom",  # Place at the bottom of the chart area
+    y = 10,  # Adjust this value to fine-tune the position below the legend
+    style = list(fontSize = "12px", fontStyle = "italic")
+  ) %>%
   format_chart("<b>Figur 2.2</b> Drivmidlernes andel af nyregistreringer for tunge lastbiler")
 
 
+
+#<br>  Kilde: Bilstatistik bør indsættes i text på et senere tidspunkt 
 
 
 # Create a HTML structure with two columns
 html <- tagList(
   div(style = "display: flex; justify-content: space-between;",
       div(style = "width: 48%;", figur2_lette),
-      div(style = "width: 48%;", figur2_tunge)
-  )
-)
+      div(style = "width: 48%;", figur2_tunge)))
 
 # Render it in the browser
 browsable(html)
+
+
+lette_andel_af_bestand <- bestand_seneste_lette/(bestand_seneste_tunge+bestand_seneste_lette)*100
+ellette_andel_af_elbestand <- elbestand_seneste_lette/(elbestand_seneste_tunge+elbestand_seneste_lette)*100
+
+
 
 ```
 
 Diesel er stadig det dominernde drivmiddel i bestanden af lastbiler. Bestanden af lastbiler har generelt været svagt stigende siden 1. januar 2021, hvor den samlede bestand var `r bestand_2021`, mens  bestanden ultimo `r format(ISOdate(2000, nummer_sidste_md, 1), "%B")` `r as.character(nyeste_aar)` var `r bestand_seneste` lastbiler. 
 
-Omend bestanden af tunge lastbiler er væsentligt større end bestanden af lette lastbiler, er det værd at bemærke, at bestanden af lette lastbiler har været stigende siden 2022. Ellastbiler udgjorde ved udgangen af oktober måned `r elbestand_seneste_lette/bestand_seneste_lette*100` pct. af den samlede bestand af lette lastbiler, jævnfør figur 3.1. I modsætning hertil udgjorde ellastbiler blot `r elbestand_seneste_tunge/bestand_seneste_tunge*100` pct. af den samlede bestand af tunge lastbiler, jævnfør figur 3.2.
+Omend bestanden af lette lastbiler blot udgør `r lette_andel_af_bestand` pct. af den samlede bestand af lastbiler, er det værd at bemærke, at bestanden af elastbiler er i vækst, og at det er særligt er lette ellastbiler, der kommer til. Ellastbiler udgjorde ved udgangen af oktober måned `r elbestand_seneste_lette/bestand_seneste_lette*100` pct. af den samlede bestand af lette lastbiler, jævnfør figur 3.1. I modsætning hertil udgjorde ellastbiler blot `r elbestand_seneste_tunge/bestand_seneste_tunge*100` pct. af den samlede bestand af tunge lastbiler, jævnfør figur 3.2. Lette elastbiler udgør således `r ellette_andel_af_elbestand` pct. af den samlede bestand af ellastbiler. 
 
 
 ```{r}
@@ -703,18 +760,31 @@ figur3_lette <-bestand_data_1_lette |>
   hc_yAxis(
     title = list(text = "Antal"),
     labels = list(formatter = JS("function() {
-      return this.value >= 1000 ? (this.value / 1000).toFixed(0) : this.value;
+     return this.value >= 1000 ? (this.value / 1000).toFixed(0) : this.value;
     }")),
     stackLabels = list(enabled = TRUE, verticalAlign = 'top',
                              crop = FALSE, overflow = 'none')
   ) |> 
-  hc_xAxis(title = list(text = NULL))|>
+  hc_xAxis(title = list(text = NULL),
+           labels = list(rotation = -30))|>
   hc_tooltip(shared=TRUE,
  pointFormat = "<b>{series.name}</b>: {point.percentage:.1f} pct. ({point.y:,.0f} lastbiler) <br>") %>%
+   hc_subtitle(
+            point = list(x = 0.5, y = 0.0, xAxis = 0, yAxis = 0), # Position relative to chart
+    text = "Note: Lette lastibler dækker over lastbiler med en på vægt på 4.250 kg. og nedefter. Tunge lastbiler dækker over lastbiler med en vægt over 4.250 kg.",
+    align = "bottom",
+     verticalAlign = "bottom",  # Place at the bottom of the chart area
+    y = 15,  # Adjust this value to fine-tune the position below the legend
+    style = list(fontSize = "12px", fontStyle = "italic")) %>%
   format_chart("<b>Figur 3.1</b> Udviklingen i den samlede bestand af lette lastbiler") %>% 
-      hc_chart(marginBottom = 110)  %>%# Reduce font size if necessary %>%  # Adding spacing between items
-  hc_legend(reversed =TRUE)
-
+hc_legend(reversed = TRUE, 
+            layout = "horizontal", 
+            align = "center", 
+            verticalAlign = "bottom",
+            itemStyle = list(fontSize = "11px"),
+               itemDistance = 2) %>%  # Add spacing between legend items%>%
+    hc_chart(marginBottom = 160)# Reduce font size if necessary %>%  # Adding spacing between items
+  
 figur3_tunge <-bestand_data_1_tunge |> 
   hchart('column', hcaes(x = AAR, y = ANTAL, group = DRIV ), borderColor = 0) |> 
   hc_plotOptions(column = list(stacking = "normal")) |> 
@@ -727,13 +797,26 @@ figur3_tunge <-bestand_data_1_tunge |>
     stackLabels = list(enabled = TRUE, verticalAlign = 'top',
                              crop = FALSE, overflow = 'none')
   ) |> 
-  hc_xAxis(title = list(text = NULL))|>
+  hc_xAxis(title = list(text = NULL),
+           labels = list(rotation=-30))|>
     hc_tooltip(shared=TRUE,
  pointFormat = "<b>{series.name}</b>: {point.percentage:.1f} pct. ({point.y:,.0f} lastbiler) <br>") %>%
-  format_chart("<b>Figur 3.2</b> Udviklingen i den samlede bestand af tunge lastbiler") %>% 
-      hc_chart(marginBottom = 110)  %>%# Reduce font size if necessary %>%  # Adding spacing between items
-  hc_legend(reversed =TRUE)
-
+  format_chart("<b>Figur 3.2</b> Udviklingen i den samlede bestand af tunge lastbiler") %>%    
+  hc_subtitle(
+            point = list(x = 0.5, y = 0.0, xAxis = 0, yAxis = 0), # Position relative to chart
+    text = "Note: Lette lastibler dækker over lastbiler med en på vægt på 4.250 kg. og nedefter. Tunge lastbiler dækker over lastbiler med en vægt over 4.250 kg.",
+    align = "bottom",
+     verticalAlign = "bottom",  # Place at the bottom of the chart area
+    y = 15,  # Adjust this value to fine-tune the position below the legend
+    style = list(fontSize = "12px", fontStyle = "italic")) %>%
+hc_legend(reversed = TRUE, 
+            layout = "horizontal", 
+            align = "center", 
+            verticalAlign = "bottom",
+            itemStyle = list(fontSize = "11px"),
+               itemDistance = 2) %>%  # Add spacing between legend items%>%
+    hc_chart(marginBottom = 160) 
+  
 # Create a HTML structure with two columns
 html <- tagList(
   div(style = "display: flex; justify-content: space-between;",
@@ -767,11 +850,11 @@ bestand_data_1 %>%
          .keep = "none") %>%
   bind_rows(KF_tal) |> 
   hchart('column', hcaes(x = x_axis, y = ANTAL, group=oprindelse), color = trm_colors(c("blaa", "orange")), borderColor = 0) |>
-  hc_yAxis(title = list(text = "Antal"),
-           labels = list(
-             formatter = JS("function() {
-      return this.value >= 1000 ? (this.value / 1000).toFixed(0) : this.value;
-    }"))) |>   
+  hc_yAxis(title = list(text = "Antal")) |>
+    #        labels = list(
+    # #          formatter = JS("function() {
+    # #   return this.value >= 1000 ? (this.value / 1000).toFixed(0) : this.value;
+    # # }"))) |>   
 
   hc_xAxis(title = list(text = NULL)) |>
   hc_plotOptions(column = list(pointWidth =100)) %>%
@@ -846,14 +929,9 @@ map(udvalgte_kat, ~{nyreg_data_underkat |>
   hw_grid(rowheight = 400) %>% htmltools::browsable()
 
 
-
-
-
-
-
-
 # TODO: Der er noget tekst jeg ikke kan se
 ```
+
 
 
 Bestanden af gasrenovationslastbiler toppede i 2022 og har været svagt faldende siden. I samme periode er ellastbiler gået fra at udgøre 2,1 pct. 1. januar 2022 til at udgøre `r bestand_data_underkat_txt_el$RENOVATIONSAGGREGAT` pct. i `r seneste_md` `r as.character(nyeste_aar)`.

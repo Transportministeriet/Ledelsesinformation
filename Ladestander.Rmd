@@ -175,20 +175,20 @@ alle_ladere_seneste_md <- alle_ladere_seneste_md_t %>%
 
 ```{r}
 
-add_to_excel("breaking_data.xlsx", sheet_navn = "Figur 1", select(alle_ladere_u_effekt, -YEARMONTHSHORT),
-             overwrite = T)
-
-# til_text <- elbil_lader_komgrp |>
-#   slice_tail(n=37)
-
-add_to_excel("breaking_data.xlsx", sheet_navn = "Figur 2", elbil_lader_komgrp, overwrite = T)
-
-start_pr_elbil <- elbil_lader_komgrp |> 
-  head(1)
-
-sl_pr_elbil <- elbil_lader_komgrp |> 
-  slice_tail(n=1)
-
+# add_to_excel("breaking_data.xlsx", sheet_navn = "Figur 1", select(alle_ladere_u_effekt, -YEARMONTHSHORT),
+#              overwrite = T)
+# 
+# # til_text <- elbil_lader_komgrp |>
+# #   slice_tail(n=37)
+# 
+# add_to_excel("breaking_data.xlsx", sheet_navn = "Figur 2", elbil_lader_komgrp, overwrite = T)
+# 
+# start_pr_elbil <- elbil_lader_komgrp |> 
+#   head(1)
+# 
+# sl_pr_elbil <- elbil_lader_komgrp |> 
+#   slice_tail(n=1)
+# 
 
 ```
 
