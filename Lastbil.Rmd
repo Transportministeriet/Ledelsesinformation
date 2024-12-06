@@ -592,19 +592,25 @@ Ellastbilers andel af det samlede antal nyregistreringer har været svagt stigen
 farver <- c("graa",  "blaa", "orange","groen") %>% factor(., levels = .)
 
 
-format_chart <- function(x, titel) {hc_chart(x, spacingTop = 40,
+format_chart <- function(x, titel, note = NULL) {
+  hc_chart(x, spacingTop = 40,
            style = list(fontFamily= 'Georgia')) %>% 
-      hc_title(text =titel,
-           margin = 20,
-           align = "left",
-           x = 25,
-           y = -10,
-    style = list(useHTML = TRUE))|>
-     hc_exporting(
-    enabled = TRUE, # always enabled
-    filename = paste0("Lastbil_", str_extract(titel, "Figur \\d+"))
-    )}
-
+    hc_title(text =titel,
+             margin = 20,
+             align = "left",
+             x = 25,
+             y = -10,
+             style = list(useHTML = TRUE))|>
+    hc_exporting(
+      enabled = TRUE, # always enabled
+      filename = paste0("Lastbil_", str_extract(titel, "Figur \\d+"))) |> 
+        hc_subtitle(point = list(x = 0.5, y = 0.0, xAxis = 0, yAxis = 0), # Position relative to chart
+                    text = note,
+                    align = "bottom",
+                    verticalAlign = "bottom",  # Place at the bottom of the chart area
+                    y = 10,  # Adjust this value to fine-tune the position below the legend
+                    style = list(fontSize = "12px", fontStyle = "italic")
+        )}
 
 nyreg_data_1 |> 
   filter(str_detect(AAR, "\\(", negate = T)) |>
@@ -630,7 +636,7 @@ nyreg_data_1 |>
   #   y = 20,  # Adjust this value to fine-tune the position below the legend
   #   style = list(fontSize = "12px", fontStyle = "italic")
   # ) %>%
-  format_chart("<b>Figur 1.</b> Udvikling i nyregistreringer af lastbiler fordelt på drivmiddel")
+  format_chart("<b>Figur 1.</b> Udvikling i nyregistreringer af lastbiler fordelt på drivmiddel", "Kilde: Bilstatistik")
 
 
 
@@ -681,15 +687,8 @@ hc_legend(reversed = TRUE,
   hc_chart(marginBottom = 176)  %>%
  hc_tooltip(shared = TRUE,
   pointFormat = "<b>{series.name}</b>: {point.percentage:.1f} pct. (<b>{point.antal:,.0f}</b> lastbiler)<br>") %>%
-  hc_subtitle(
-            point = list(x = 0.5, y = 0.0, xAxis = 0, yAxis = 0), # Position relative to chart
-    text = "Note: Lette lastibler dækker over lastbiler med en på vægt på 4.250 kg. og nedefter. Tunge lastbiler dækker over lastbiler med en vægt over 4.250 kg.",
-    align = "bottom",
-     verticalAlign = "bottom",  # Place at the bottom of the chart area
-    y = 10,  # Adjust this value to fine-tune the position below the legend
-    style = list(fontSize = "12px", fontStyle = "italic")
-  ) %>%
- format_chart("<b>Figur 2.1</b> Drivmidlernes andel af nyregistreringer for lette lastbiler")
+ format_chart("<b>Figur 2.1</b> Drivmidlernes andel af nyregistreringer for lette lastbiler", 
+              note = "Note: Lette lastibler dækker over lastbiler med en på vægt på 4.250 kg. og nedefter. Tunge lastbiler dækker over lastbiler med en vægt over 4.250 kg.")
 
 
 
@@ -713,15 +712,8 @@ figur2_tunge <- nyreg_data_1_tunge |>
     hc_chart(marginBottom = 160)  %>%# Reduce font size if necessary %>%  # Adding spacing between items
   hc_tooltip(shared = TRUE,
   pointFormat = "<b>{series.name}</b>: {point.percentage:.1f} pct. (<b>{point.antal:,.0f}</b> lastbiler)<br>") %>%
-  hc_subtitle(
-            point = list(x = 0.5, y = 0.0, xAxis = 0, yAxis = 0), # Position relative to chart
-   text = "Note: Lette lastibler dækker over lastbiler med en på vægt på 4.250 kg. og nedefter. Tunge lastbiler dækker over lastbiler med en vægt over 4.250 kg.",
-   align = "bottom",
-     verticalAlign = "bottom",  # Place at the bottom of the chart area
-    y = 10,  # Adjust this value to fine-tune the position below the legend
-    style = list(fontSize = "12px", fontStyle = "italic")
-  ) %>%
-  format_chart("<b>Figur 2.2</b> Drivmidlernes andel af nyregistreringer for tunge lastbiler")
+  format_chart("<b>Figur 2.2</b> Drivmidlernes andel af nyregistreringer for tunge lastbiler", 
+              note = "Note: Lette lastibler dækker over lastbiler med en på vægt på 4.250 kg. og nedefter. Tunge lastbiler dækker over lastbiler med en vægt over 4.250 kg.")
 
 
 
@@ -769,14 +761,8 @@ figur3_lette <-bestand_data_1_lette |>
            labels = list(rotation = -30))|>
   hc_tooltip(shared=TRUE,
  pointFormat = "<b>{series.name}</b>: {point.percentage:.1f} pct. ({point.y:,.0f} lastbiler) <br>") %>%
-   hc_subtitle(
-            point = list(x = 0.5, y = 0.0, xAxis = 0, yAxis = 0), # Position relative to chart
-    text = "Note: Lette lastibler dækker over lastbiler med en på vægt på 4.250 kg. og nedefter. Tunge lastbiler dækker over lastbiler med en vægt over 4.250 kg.",
-    align = "bottom",
-     verticalAlign = "bottom",  # Place at the bottom of the chart area
-    y = 15,  # Adjust this value to fine-tune the position below the legend
-    style = list(fontSize = "12px", fontStyle = "italic")) %>%
-  format_chart("<b>Figur 3.1</b> Udviklingen i den samlede bestand af lette lastbiler") %>% 
+  format_chart("<b>Figur 3.1</b> Udviklingen i den samlede bestand af lette lastbiler", 
+              note = "Note: Lette lastibler dækker over lastbiler med en på vægt på 4.250 kg. og nedefter. Tunge lastbiler dækker over lastbiler med en vægt over 4.250 kg.") %>% 
 hc_legend(reversed = TRUE, 
             layout = "horizontal", 
             align = "center", 
@@ -801,14 +787,8 @@ figur3_tunge <-bestand_data_1_tunge |>
            labels = list(rotation=-30))|>
     hc_tooltip(shared=TRUE,
  pointFormat = "<b>{series.name}</b>: {point.percentage:.1f} pct. ({point.y:,.0f} lastbiler) <br>") %>%
-  format_chart("<b>Figur 3.2</b> Udviklingen i den samlede bestand af tunge lastbiler") %>%    
-  hc_subtitle(
-            point = list(x = 0.5, y = 0.0, xAxis = 0, yAxis = 0), # Position relative to chart
-    text = "Note: Lette lastibler dækker over lastbiler med en på vægt på 4.250 kg. og nedefter. Tunge lastbiler dækker over lastbiler med en vægt over 4.250 kg.",
-    align = "bottom",
-     verticalAlign = "bottom",  # Place at the bottom of the chart area
-    y = 15,  # Adjust this value to fine-tune the position below the legend
-    style = list(fontSize = "12px", fontStyle = "italic")) %>%
+  format_chart("<b>Figur 3.2</b> Udviklingen i den samlede bestand af tunge lastbiler", 
+              note = "Note: Lette lastibler dækker over lastbiler med en på vægt på 4.250 kg. og nedefter. Tunge lastbiler dækker over lastbiler med en vægt over 4.250 kg.") %>%    
 hc_legend(reversed = TRUE, 
             layout = "horizontal", 
             align = "center", 
