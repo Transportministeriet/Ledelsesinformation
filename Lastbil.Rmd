@@ -75,7 +75,8 @@ sti_kf <- "S:/CKA/Databank/007 Klimafremskrivning"
 sti <- "S:/CKA/Databank/006 Bilstatistik/Lastbil"
 
 bestand_data <- dir(sti) %>% 
-  str_subset("Bestand") |>
+  str_subset("Bestand") |> 
+  str_subset("lette|tunge", negate = T) |>
   (\(y) map_dfr(y, ~read_excel(str_c(sti,"/", .x), skip = 9,
                                .name_repair = ~str_to_upper(.x) %>% 
                                  str_replace_all(c(" |\\,|\\.|-|\\/|\\(|\\)"="_", "Å"="AA", "Æ"="AE", "Ø"="OE", "__"="_") )) %>% 
@@ -133,6 +134,7 @@ bestand_data_udv <- bestand_data %>%
   
 nyreg_data <- dir(sti) %>% 
   str_subset("Nyregistreringer") |>
+  str_subset("lette|tunge", negate = T) |>
   (\(y) map_dfr(y, ~read_excel(str_c(sti,"/", .x), skip = 9,
                                .name_repair = ~str_to_upper(.x) %>% 
                                  str_replace_all(c(" |\\,|\\.|-|\\/|\\(|\\)"="_", "Å"="AA", "Æ"="AE", "Ø"="OE", "__"="_") )) %>% 
