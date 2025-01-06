@@ -244,9 +244,9 @@ Dermed er det samlede antal offentligt tilgængelige ladepunkter steget til godt
 ```{r}
 
 
-farver <- c("graa",  "blaa", "groen")
+farver <- c("graa", "blaa", "groen")
 
-format_chart <- function(x, titel) {hc_chart(x, spacingTop = 40,
+format_chart <- function(x, titel, note) {hc_chart(x, spacingTop = 40,
            style = list(fontFamily= 'Georgia')) %>% 
       hc_title(text =titel,
            margin = 20,
@@ -256,7 +256,15 @@ format_chart <- function(x, titel) {hc_chart(x, spacingTop = 40,
     style = list(useHTML = TRUE))|> 
   hc_exporting(
     enabled = TRUE, # always enabled
-    filename = paste0("Ladestander_", str_extract(titel, "Figur \\d+")))}
+    filename = paste0("Ladestander_", str_extract(titel, "Figur \\d+")))|> 
+    hc_subtitle(point = list(x = 0.5, y = 0.0, xAxis = 0, yAxis = 0), # Position relative to chart
+                text = note,
+                align = "bottom",
+                verticalAlign = "bottom",  # Place at the bottom of the chart area
+                y = 10,  # Adjust this value to fine-tune the position below the legend
+                style = list(fontSize = "12px", fontStyle = "italic")
+    )}
+
 
 
 lvls_fig_1 <- figur_1$DATE %>% unique()
@@ -279,7 +287,7 @@ highchart() %>%
   hc_legend(reversed = TRUE) %>% 
   hc_xAxis(categories = lvls_fig_1,
            title = list(text = NULL)) %>% 
-  format_chart(titel =str_glue("<b>Figur 1.</b> Udvikling i antallet af offentligt tilgængelige ladepunkter, 2020-{aar}" ))
+  format_chart(titel =str_glue("<b>Figur 1.</b> Udvikling i antallet af offentligt tilgængelige ladepunkter, 2020-{aar}" ), "Kilde: ChargeX")
 
 ```
 
@@ -311,7 +319,7 @@ figur_2 %>%
            title = list(text = NULL)) %>% 
   hc_legend(reversed =TRUE) %>% 
   hc_tooltip(shared = TRUE)  %>% 
-  format_chart(titel =str_glue("<b>Figur 2.</b> Udvikling i antallet af offentligt tilgængelige ladepunkter fordelt på ladeeffekt" ))
+  format_chart(titel =str_glue("<b>Figur 2.</b> Udvikling i antallet af offentligt tilgængelige ladepunkter fordelt på ladeeffekt" ),  "Kilde: ChargeX")
 
 
 ```
@@ -337,7 +345,8 @@ figur_3 %>%
    hc_tooltip(shared = TRUE,
     pointFormat = "<b>Elbiler pr. ladepunkt</b>: {point.y:,.2f} <br>"
   ) %>% 
-  format_chart(titel =str_glue("<b>Figur 3.</b> Antallet elbiler pr. offentligt tilgængeligt ladepunkt" ))
+  format_chart(titel =str_glue("<b>Figur 3.</b> Antallet elbiler pr. offentligt tilgængeligt ladepunkt" ),
+                "Kilde: ChargeX & Danmarks Statistik")
 
 ```
 
