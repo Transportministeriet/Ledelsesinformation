@@ -1,0 +1,301 @@
+---
+title: "Klimafremskrivning 24"
+output: 
+  flexdashboard::flex_dashboard:
+    social: menu
+    source_code: embed
+---
+
+```{r include=FALSE}
+
+library(tidyverse)
+library(flexdashboard)
+library(data.table)
+library(highcharter)
+library(TRMvisual)
+
+sti <- "S:/CKA/Databank/007 Klimafremskrivning/tidy_datasaet/"
+
+data <- dir(sti) %>% 
+  str_subset(".csv") |> 
+  (\(y) map(y, ~fread(str_c(sti,.x)) %>% 
+              mutate(drivmiddel =case_when(drivmiddel =="BEV"~"El",
+                                           drivmiddel =="PHEV"~"Plug-in-hybrid",
+                                           drivmiddel =="Total"~"Drivmidler i alt",
+                                           drivmiddel =="Øvrige"~"Oevrige",
+                                           T ~drivmiddel) |>
+                       str_squish() %>% 
+           factor(levels = rev(c("El", "Plug-in-hybrid","Brint",
+                             "Benzin", "Diesel", "Gas", "Oevrige",
+                             "Drivmidler i alt")))
+           )) %>% 
+     set_names(str_remove_all(y, "_kf24.csv")))()
+
+farver <- c(trm_colors(c("groen",  "orange", "blaa", "gul", "graa")), "#d49e02", "#0087b3") 
+names(farver) <- c("El", "Plug-in-hybrid","Benzin", "Diesel", "Oevrige", "Brint", "Gas")
+
+
+
+til_fig_udl <- data[["udledninger"]] %>% 
+  filter(type!="Total") %>% 
+  mutate(type = str_replace_all(type, "definieret", "defineret") %>% 
+           factor(levels = rev(c( "Grænsehandel","Personbiler", "Varebiler", "Lastbiler","Busser","Motorcykler",
+                             "Banetransport",
+                             "Indenrigs søfart",
+                             "Lufttransport, indenrigs",  "Grønland & Færøerne",
+                             "Øvrige Transport",  "Sektor detaljer ikke defineret"))))
+
+farver_udl <- c( "#0087b3",trm_colors(c( "blaa", "orange", "groen", "gul", "lyseblaa")),
+                trm_colors("blaa"),
+                trm_colors("blaa"),
+                trm_colors(c("blaa", "orange")),
+                trm_colors(c("blaa", "graa")))
+                
+names(farver_udl) <- c( "Grænsehandel","Personbiler", "Varebiler", "Lastbiler","Busser","Motorcykler",
+                             "Banetransport",
+                             "Indenrigs søfart",
+                             "Lufttransport, indenrigs",  "Grønland & Færøerne",
+                             "Øvrige Transport",  "Sektor detaljer ikke defineret")
+
+
+til_fig_udl_tot <- data[["udledninger"]] %>% 
+  filter(type=="Total") %>% 
+  mutate(sektor = factor(sektor, levels = rev(c( "Vejtransport", "Banetransport", "Luftfart", "Søfart", "Øvrige transport" )))) %>% 
+  arrange(sektor, aar)
+
+farver_udl_tot <- trm_colors(c("groen", "gul","graa", "orange", "blaa"))
+  
+
+til_fig <- map_dfr(c("bestand", "salg"), ~data[[.x]] %>% 
+                      mutate(type_KF = .x)) %>% 
+  # add_column(summarise(.,n_driv = n_distinct(drivmiddel),
+  #                      .by = "type")) %>% 
+  filter(!(underkat=="Total" & drivmiddel=="Drivmidler i alt")) %>% 
+  summarise(vaerdi = sum(vaerdi),
+            .by = c("type_KF", "type", "drivmiddel", "aar"))
+
+
+best_fig_fkt <- function(input, input_type){
+  
+  input1 <- til_fig %>% 
+    filter(type==input, type_KF==input_type ) %>% 
+    arrange(drivmiddel, aar)
+  
+  farver_end <- input1 %>% inner_join(enframe(farver, name = "drivmiddel", value = "farve")) %>% distinct(drivmiddel, farve) %>% deframe() %>% unname() %>% as.character()
+
+  
+  input1 %>% 
+    hchart('area', hcaes(x = aar, y =vaerdi, group = drivmiddel  ), borderColor = 0, 
+           marker = FALSE,style = list(useHTML = TRUE, font = "Georgia")) %>%
+    hc_plotOptions(series = list(stacking = "normal", lineWidth = 0)) %>% 
+    # },
+    # select: {
+    #   enabled: false
+    # }
+    hc_colors(farver_end) |>
+    # hc_colors(c(trm_colors(farver))) |>
+    hc_yAxis(title = list(text = "Antal"),
+             labels = list(formatter = JS("function() {
+      return this.value.toLocaleString();
+    }"))) |> 
+    hc_xAxis(title = list(text = "")) %>% 
+    hc_tooltip(shared = TRUE,
+               pointFormat = "<b>{series.name}</b>: køretøjer {point.y:,.0f}  ({point.percentage:.1f} pct.)) <br>"
+    ) %>% 
+    hc_legend(reversed =TRUE) %>%
+    hc_tooltip(shared = TRUE)  %>% 
+    trm_hc_format(titel =str_glue("<b>{input}" ))
+}
+
+
+
+udl_fig_fkt <- function(input){
+  
+  input1 <- til_fig_udl %>% 
+    filter(sektor==input) %>% 
+    arrange(type, aar)
+  
+  farver_end <- input1 %>% inner_join(enframe(farver_udl, name = "type", value = "farve")) %>% distinct(type, farve) %>% deframe() %>% unname() %>% as.character()
+  
+  
+  input1 %>% 
+    hchart('area', hcaes(x = aar, y =vaerdi, group = type  ), borderColor = 0, 
+           marker = FALSE,style = list(useHTML = TRUE, font = "Georgia")) %>%
+    hc_plotOptions(series = list(stacking = "normal", lineWidth = 0)) %>% 
+    # },
+    # select: {
+    #   enabled: false
+    # }
+    hc_colors(farver_end) |>
+    # hc_colors(c(trm_colors(farver))) |>
+    hc_yAxis(title = list(text = "Antal"),
+             labels = list(formatter = JS("function() {
+      return this.value.toLocaleString();
+    }"))) |> 
+    hc_xAxis(title = list(text = "")) %>% 
+    hc_tooltip(shared = TRUE) %>% 
+    hc_legend(reversed =TRUE) %>%
+    hc_tooltip(shared = TRUE)  %>% 
+    trm_hc_format(titel =str_glue("<b>{input}" ))
+}
+
+
+
+```
+
+
+
+Udledninger {data-orientation=rows data-icon="fa-list"}
+===================================== 
+
+
+Row {data-height=650}
+-------------------------------------
+
+```{r}
+
+til_fig_udl_tot %>% 
+    hchart('area', hcaes(x = aar, y =vaerdi/1000000, group = sektor  ), borderColor = 0, 
+           marker = FALSE,style = list(useHTML = TRUE, font = "Georgia")) %>%
+    hc_plotOptions(series = list(stacking = "normal", lineWidth = 0)) %>% 
+    # },
+    # select: {
+    #   enabled: false
+    # }
+    hc_colors(farver_udl_tot) |>
+    # hc_colors(c(trm_colors(farver))) |>
+    hc_yAxis(title = list(text = "Antal (Mio.)"),
+             labels = list(formatter = JS("function() {
+      return this.value.toLocaleString();
+    }"))) |> 
+    hc_xAxis(title = list(text = "")) %>% 
+    hc_tooltip(shared = TRUE,
+               pointFormat = "<b>{series.name}</b>: {point.y:,.1f} mio. t. CO2 ({point.percentage:.1f} pct.) <br>"
+    ) %>% 
+    hc_legend(reversed =TRUE) %>%
+    hc_tooltip(shared = TRUE)  %>% 
+    trm_hc_format(titel ="<b>Samlede udledninger")
+
+```
+
+
+
+Row {data-height=350}
+-------------------------------------
+
+```{r}
+udl_fig_fkt("Vejtransport")
+```
+    
+        
+```{r}
+udl_fig_fkt("Banetransport")
+```
+
+Row {data-height=350}
+-------------------------------------
+
+```{r}
+udl_fig_fkt("Søfart")
+```
+    
+        
+```{r}
+udl_fig_fkt("Luftfart")
+```
+
+Row 
+-------------------------------------
+
+```{r}
+udl_fig_fkt("Øvrige transport")
+```
+    
+        
+
+Bestand {data-orientation=rows}
+===================================== 
+
+
+Row
+-------------------------------------
+
+```{r}
+best_fig_fkt("Personbiler", "bestand")
+```
+    
+        
+```{r}
+best_fig_fkt("Varebiler", "bestand")
+```
+
+Row
+-------------------------------------
+
+```{r}
+
+best_fig_fkt("Lastbiler", "bestand")
+
+```
+    
+```{r}
+
+best_fig_fkt("Busser", "bestand")
+
+```
+    
+Row
+-------------------------------------
+
+```{r}
+
+best_fig_fkt("Motorcykler", "bestand")
+
+```
+   
+    
+Salg {data-orientation=rows}
+===================================== 
+    
+    
+Row
+-------------------------------------
+
+```{r}
+
+# map( unique(til_fig_best %>% pull(type)),
+#      ~best_fig_fkt(.x))
+
+best_fig_fkt("Personbiler", "salg")
+
+```
+    
+        
+```{r}
+best_fig_fkt("Varebiler", "salg")
+```
+
+Row 
+-------------------------------------
+
+```{r}
+
+best_fig_fkt("Lastbiler", "salg")
+
+```
+    
+```{r}
+
+best_fig_fkt("Busser", "salg")
+
+```
+    
+Row 
+-------------------------------------
+
+```{r}
+
+best_fig_fkt("Motorcykler", "salg")
+
+```
+   
