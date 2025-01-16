@@ -1,6 +1,8 @@
 ---
 title: "Ladeinfrastruktur"
-output: html_document
+output: 
+  html_document:
+    css: styles.css
 date: 'Opdateret `r format(Sys.Date(), "%d. %B %Y")`'
 ---
 
@@ -8,22 +10,6 @@ date: 'Opdateret `r format(Sys.Date(), "%d. %B %Y")`'
 extrafont::loadfonts()
 ```
 
-
-```{css, echo=FALSE}
-
-.main-container {
-  max-width: 700px !important;
-  margin: auto;
-}
-body{
-  font-family: Georgia;
-  font-size: 12pt;
-}
-.highcharts-background {
-    fill: #EDF1F4;
-
-}
-```
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = FALSE)

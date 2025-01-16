@@ -1,0 +1,15 @@
+
+.main-container {
+  max-width: 700px !important;
+  margin: auto;
+  font-family: Georgia;
+}
+
+body {
+  font-family: Georgia;
+  font-size: 12pt;
+}
+
+.highcharts-background {
+  fill: #EDF1F4;
+}

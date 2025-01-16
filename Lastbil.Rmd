@@ -1,33 +1,13 @@
 ---
 title: "Lastbiler"
-output: html_document
+output: 
+  html_document:
+    css: styles.css
 date: 'Opdateret `r format(Sys.Date(), "%d. %B %Y")`'
-mainfont: Georgia
-fontsize: 10.5pt
 ---
 
 ```{r, echo=FALSE, warning=FALSE, message=FALSE}
 extrafont::loadfonts()
-```
-
-
-```{css, echo=FALSE}
-
-.main-container {
-  max-width: 700px !important;
-  margin: auto;
-  font-family: Georgia;
-}
-body{
-  font-family: Georgia;
-  font-size: 12pt;
-}
-.highcharts-background {
-    fill: #EDF1F4;
-
-}
-
-
 ```
 
 
