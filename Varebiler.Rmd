@@ -1,0 +1,220 @@
+---
+title: "Varebiler"
+output:
+  html_document:
+    css: styles.css
+date: 'Opdateret `r format(Sys.Date(), "%d. %B %Y")`'
+---
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
+extrafont::loadfonts()
+```
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, warning=FALSE, message = FALSE )
+
+library(tidyverse)
+library(readxl)
+library(sf)
+library(TRMvisual)
+library(extrafont)
+library(statbank)
+library(highcharter)
+library(knitr)
+library(extrafont)
+library(ggpp)
+library(officer)
+library(lubridate)
+library(plotly)
+library(scales)
+library(downloadthis)
+
+
+lang <- getOption("highcharter.lang")
+lang$decimalPoint <- ","
+lang$thousandsSep <- "."
+lang$numericSymbols <- highcharter::JS("null") # optional: remove the SI prefixes
+options(highcharter.lang = lang)
+
+
+options(scipen = 100, digits = 2, OutDec = ",")
+Sys.setenv(Lang = "da")
+
+knit_hooks$set(inline = function(x) {
+  if(is.numeric(x)){
+  return(prettyNum(x, big.mark=".", digits = 2))
+  } else{
+    return(x)
+  }
+})
+
+if(month(Sys.Date())==1){
+  stjerne <- ""
+  stjerne_tekst <- ""
+} else{
+    stjerne <- "*"
+    stjerne_tekst <- "*År til dato"
+  }
+
+sti_kf <- "S:/CKA/Databank/007 Klimafremskrivning"
+
+data_bil <- tbl_dst("BIL54", "da") |> 
+  filter(BILTYPE %in% c("4000102000"), OMRÅDE == "000", 
+         BRUG %in% c("1000")) |> 
+  use_labels() |> 
+  collect() |> 
+  select(-c("OMRÅDE", "BRUG")) %>% 
+  mutate(DRIV = ifelse(str_detect(DRIV, "hybrid"), "Plug-in-hybrid", DRIV),
+         DRIV = ifelse(DRIV %in% c("Drivmidler i alt", "Benzin", "Diesel", "El", "Plug-in-hybrid"),
+                       DRIV,
+                       "Øvrige drivmidler")) %>% 
+  summarise(INDHOLD=sum(INDHOLD),
+            .by = c("DRIV","TID"))
+
+data_husholdning <- tbl_dst("BIL54", "da") |> 
+  filter(BILTYPE %in% c("4000102000"), OMRÅDE == "000", 
+         BRUG %in% c("1100")) |> 
+  use_labels() |> 
+  collect() |> 
+  select(-c("OMRÅDE", "BRUG")) %>% 
+  mutate(DRIV = ifelse(str_detect(DRIV, "hybrid"), "Plug-in-hybrid", DRIV),
+         DRIV = ifelse(DRIV %in% c("Drivmidler i alt", "Benzin", "Diesel", "El", "Plug-in-hybrid"),
+                       DRIV,
+                       "Øvrige drivmidler")) %>% 
+  summarise(INDHOLD=sum(INDHOLD),
+            .by = c("DRIV","TID"))
+
+data_erhverv <- tbl_dst("BIL54", "da") |> 
+  filter(BILTYPE %in% c("4000102000"), OMRÅDE == "000", 
+         BRUG %in% c("1200")) |> 
+  use_labels() |> 
+  collect() |> 
+  select(-c("OMRÅDE", "BRUG")) %>% 
+  mutate(DRIV = ifelse(str_detect(DRIV, "hybrid"), "Plug-in-hybrid", DRIV),
+         DRIV = ifelse(DRIV %in% c("Drivmidler i alt", "Benzin", "Diesel", "El", "Plug-in-hybrid"),
+                       DRIV,
+                       "Øvrige drivmidler")) %>% 
+  summarise(INDHOLD=sum(INDHOLD),
+            .by = c("DRIV","TID"))
+
+
+data_bil_1 <- data_bil |>
+  mutate(
+    AAR = round(as.numeric(str_sub(TID, end = 4)) + (as.numeric(str_sub(TID, start = -2)) - 1) / 12, 3),
+    DATE = as.Date(str_c(str_sub(TID, end = 4), "-", str_sub(TID, start = -2), "-01")),
+    DATE_1 = DATE %m+% months(1),
+    UDV_BIL = INDHOLD - lag(INDHOLD),
+    .by =  "DRIV"
+  )
+
+data_nysalg <- tbl_dst("BIL53", "da") |> 
+  filter(BILTYPE %in% c("4000102000"), OMRÅDE == "000", 
+         BRUG %in% c("1000")) |> 
+  use_labels() |> 
+  collect() |> 
+  select(-c("OMRÅDE", "BRUG")) %>% 
+  mutate(DRIV = ifelse(str_detect(DRIV, "hybrid"), "Plug-in-hybrid", DRIV),
+         DRIV = ifelse(DRIV %in% c("Drivmidler i alt", "Benzin", "Diesel", "El", "Plug-in-hybrid"),
+                       DRIV,
+                       "Øvrige drivmidler")) %>% 
+  summarise(INDHOLD=sum(INDHOLD),
+            .by = c("DRIV","TID"))
+
+data_nysalg_husholdning <- tbl_dst("BIL53", "da") |> 
+  filter(BILTYPE %in% c("4000102000"), OMRÅDE == "000", 
+         BRUG %in% c("1100")) |> 
+  use_labels() |> 
+  collect() |> 
+  select(-c("OMRÅDE", "BRUG")) %>% 
+  mutate(DRIV = ifelse(str_detect(DRIV, "hybrid"), "Plug-in-hybrid", DRIV),
+         DRIV = ifelse(DRIV %in% c("Drivmidler i alt", "Benzin", "Diesel", "El", "Plug-in-hybrid"),
+                       DRIV,
+                       "Øvrige drivmidler")) %>% 
+  summarise(INDHOLD=sum(INDHOLD),
+            .by = c("DRIV","TID"))
+
+data_nysalg_erhverv <- tbl_dst("BIL53", "da") |> 
+  filter(BILTYPE %in% c("4000102000"), OMRÅDE == "000", 
+         BRUG %in% c("1200")) |> 
+  use_labels() |> 
+  collect() |> 
+  select(-c("OMRÅDE", "BRUG")) %>% 
+  mutate(DRIV = ifelse(str_detect(DRIV, "hybrid"), "Plug-in-hybrid", DRIV),
+         DRIV = ifelse(DRIV %in% c("Drivmidler i alt", "Benzin", "Diesel", "El", "Plug-in-hybrid"),
+                       DRIV,
+                       "Øvrige drivmidler")) %>% 
+  summarise(INDHOLD=sum(INDHOLD),
+            .by = c("DRIV","TID"))
+
+Nummer_sidste_md <- data_nysalg |> 
+  slice_tail(n=1) |> 
+  pull(TID) |> 
+  (\(y) ifelse(str_sub(y, start = -2, end = -2) == "0", str_sub(y, start = -1), str_sub(y, start = -2)))()
+
+
+nyeste_aar <- data_nysalg |> 
+  slice_tail(n=1) |> 
+  pull(TID) |> 
+  (\(y) str_c(str_sub(y, end = 4)))()
+
+
+max_aar <- as.numeric(nyeste_aar)
+# legend_sort <- c("El", "Plug-in-hybrid", "Diesel","Benzin","Øvrige drivmidler", "Drivmidler i alt")
+legend_sort <- c("Øvrige drivmidler", "Benzin", "Diesel", "Plug-in-hybrid", "El" , "Drivmidler i alt")
+
+data_nysalg_1 <- data_nysalg |> 
+  mutate(AAR = str_sub(TID, end = 4)) |> 
+  (\(y) bind_rows(group_by(y, AAR, DRIV) |> 
+                    summarise(INDHOLD = sum(INDHOLD),
+                              .groups = "drop_last") |> 
+                    mutate(A_INDHOLD = round(INDHOLD/sum(INDHOLD, na.rm = T)*100 ,1)) |> 
+                    ungroup(), 
+                  filter(y, TID==max(TID)) |> 
+                              summarise(AAR = str_c(str_sub(TID, end = 4), " (",
+                                                    format(ISOdate(2000, str_sub(TID, start = -2), 1), "%B"),")"),
+                                        INDHOLD = sum(INDHOLD),
+                                        .by = "DRIV") |> 
+                              mutate(A_INDHOLD = round(INDHOLD/sum(INDHOLD, na.rm = T)*100, 1)) |> 
+                              ungroup()))() |> 
+  mutate(DRIV = factor(DRIV, levels = legend_sort))
+
+
+data_nysalg_3<- data_nysalg |> 
+  mutate(DRIV = ifelse(str_detect(DRIV, "hybrid"), "Plug-in-hybrid", DRIV),
+         AAR = str_sub(TID)) |> 
+         group_by(AAR, DRIV) |> 
+                    summarise(INDHOLD = sum(INDHOLD),
+                              .groups = "drop_last") |> 
+                    mutate(A_INDHOLD = round(INDHOLD/sum(INDHOLD)*100 ,1)) |> 
+                    ungroup()|> 
+mutate(DRIV = factor(DRIV, levels =legend_sort))
+
+data_nysalg_2 <- data_nysalg |> 
+  mutate(DRIV = ifelse(str_detect(DRIV, "hybrid"), "Plug-in-hybrid", DRIV),
+         AAR = str_sub(TID, end = 4)) |> 
+  group_by(AAR, DRIV) |> 
+  summarise(INDHOLD = sum(INDHOLD, na.rm = T),
+            .groups = "drop_last") |> 
+  mutate(A_INDHOLD = round(INDHOLD/sum(INDHOLD)*100 ,1)) |> 
+  ungroup() |> 
+  mutate(DRIV = factor(DRIV, levels =legend_sort),
+         year = as.numeric(AAR))
+
+
+data_nysalg_3 <- data_nysalg_3 %>%
+  mutate(year = year(ymd(paste0(AAR, "01"))),
+         month = month(ymd(paste0(AAR, "01")))) %>%
+  mutate(formatted_date = paste(format(ISOdate(2000, month, 1), "%B"), year)) # Use the Danish month names and the year to create the desired format
+
+Måned_max_EL_andel <- data_nysalg_3 %>%
+  filter(DRIV=="El") %>%
+  slice(which.max(A_INDHOLD)) %>%
+  pull(formatted_date)
+  
+
+Værdi_max_EL_andel <- data_nysalg_3 %>%
+  filter(DRIV=="El") %>%
+  slice(which.max(A_INDHOLD)) %>%
+  pull(A_INDHOLD)
+  
+
+```
