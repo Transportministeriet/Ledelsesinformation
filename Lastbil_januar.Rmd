@@ -1,9 +1,9 @@
 ---
 title: "Lastbiler"
-output: html_document
+output: 
+  html_document:
+    css: styles.css
 date: 'Opdateret `r format(Sys.Date(), "%d. %B %Y")`'
-mainfont: Georgia
-fontsize: 10.5pt
 ---
 
 ```{r, echo=FALSE, warning=FALSE, message=FALSE}
@@ -11,30 +11,8 @@ extrafont::loadfonts()
 ```
 
 
-```{css, echo=FALSE}
-
-.main-container {
-  max-width: 700px !important;
-  margin: auto;
-  font-family: Georgia;
-}
-body{
-  font-family: Georgia;
-  font-size: 12pt;
-}
-.highcharts-background {
-    fill: #EDF1F4;
-
-}
-
-
-```
-
-
-
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = FALSE)
-
 
 # ---- INDLEDNING ----
 
@@ -77,6 +55,13 @@ knit_hooks$set(inline = function(x) {
   }
 })
 
+if(month(Sys.Date())==1){
+  stjerne <- ""
+  stjerne_tekst <- ""
+} else{
+    stjerne <- "*"
+    stjerne_tekst <- "*År til dato"
+  }
 
 sti_kf <- "S:/CKA/Databank/007 Klimafremskrivning"
 sti <- "S:/CKA/Databank/006 Bilstatistik/Lastbil"
@@ -655,6 +640,7 @@ I løbet af `r as.character(nyeste_aar)` er der nyregistreret `r totalsalg_senes
 
 
 ```{r}
+#Figur 1. Udvikling i nyregistreringer af lastbiler fordelt på drivmiddel
 
 farver <- c("graa",  "blaa", "orange","groen") %>% factor(., levels = .)
 
@@ -668,24 +654,25 @@ nyreg_data_1 |>
   hc_colors(c(trm_colors(farver))) |> 
   hc_yAxis(title = list(text = "Antal"),
            labels = list(format = "{value:,.0f}"),
-    stackLabels = list(enabled = TRUE, verticalAlign = 'top',
-                             crop = FALSE, overflow = 'none')) |> 
+           stackLabels = list(enabled = TRUE, verticalAlign = 'top',
+                              crop = FALSE, overflow = 'none')) |> 
   hc_xAxis(title = list(text = NULL)
-# labels = list(
-#   formatter = JS("
-#     function() {
-#       if (this.isLast) {
-#         return this.value + '*'; // Add a '*' to the last category
-#       }
-#       return this.value;
-#     }
-#    "))
-   ) %>% 
+           # labels = list(
+           #   formatter = JS("
+           #     function() {
+           #       if (this.isLast) {
+           #         return this.value + '*'; // Add a '*' to the last category
+           #       }
+           #       return this.value;
+           #     }
+           #    "))
+  ) %>% 
   hc_legend(reversed =TRUE) %>% 
   hc_tooltip(shared = TRUE,
-                   pointFormat = "<b>{series.name}</b>: {point.percentage:.1f} pct. ({point.y:,.0f} lastbiler) <br>") %>%
+             pointFormat = "<b>{series.name}</b>: {point.percentage:.1f} pct. ({point.y:,.0f} lastbiler) <br>") %>%
   trm_hc_format("<b>Figur 1.</b> Udvikling i nyregistreringer af lastbiler fordelt på drivmiddel",
-                note = "Kilde: Bilstatistik")
+                note = str_glue("Kilde: Bilstatistik<br>{stjerne_tekst}"))
+
 
 
 
@@ -694,30 +681,29 @@ nyreg_data_1 |>
 Ellastbilers andel af det samlede antal nyregistreringer har været svagt stigende siden 2021.  I  `r str_c(seneste_md)` måned udgjorde ellastbiler  `r seneste_md_tal` pct. af de samlede nyregistreringer, hvor ellastbiler i gennemsnit hidtil har  udgjort  `r elsalg_seneste/totalsalg_seneste*100` pct. af de samlede nyregistreringer i `r as.character(nyeste_aar)`. Til sammenligning udgjorde ellastbiler `r elsalg_naestseneste/totalsalg_naestseneste*100` pct. af de samlede nyregistreringer i `r as.character(nyeste_aar-1)`. 
 
 ```{r}
-
+#Figur 2. Drivmidlernes andel af nyregistreringer
 
 fct_sort_stjerne <- nyreg_data_1$AAR %>% unique()
 
-
 nyreg_data_1 |> 
-filter(!str_detect(AAR, "9")) |># Exclude rows where AAR CONTATINS "9"
+  filter(!str_detect(AAR, "9")) |># Exclude rows where AAR CONTATINS "9"
   mutate(AAR = factor(AAR, levels = fct_sort_stjerne),
-                           antal = ANTAL) %>%  # Add ANTAL column for use in the tooltip
+         antal = ANTAL) %>%  # Add ANTAL column for use in the tooltip
   hchart('column', hcaes(x = AAR, y =A_NYREG , group = DRIV ), borderColor = 0) |> 
   hc_plotOptions(column = list(stacking = "normal"), style = list(
-          fontFamily = "Georgia"
-        )) |> 
+    fontFamily = "Georgia"
+  )) |> 
   hc_colors(c(trm_colors(farver))) |> 
   hc_yAxis(title = list(text = "Pct."), max = 100) |> 
   hc_xAxis(title = list(text = NULL), categories = fct_sort_stjerne,
            labels = list(rotation = -30)  # Tilt the labels by -45 degrees (you can adjust the angle)
   ) %>% 
   hc_legend(reversed =TRUE) %>%
- hc_tooltip(shared = TRUE,
-  pointFormat = "<b>{series.name}</b>: {point.percentage:.1f} pct. (<b>{point.antal:,.0f}</b> lastbiler)<br>") %>%
- trm_hc_format("<b>Figur 2</b> Drivmidlernes andel af nyregistreringer", 
-              note = "Kilde: Bilstatistik")
 
+  hc_tooltip(shared = TRUE,
+             pointFormat = "<b>{series.name}</b>: {point.percentage:.1f} pct. (<b>{point.antal:,.0f}</b> lastbiler)<br>") %>%
+  trm_hc_format("<b>Figur 2.</b> Drivmidlernes andel af nyregistreringer",
+                note = str_glue("Kilde: Bilstatistik<br>{stjerne_tekst}"))
 
 ```
 
@@ -727,6 +713,7 @@ filter(!str_detect(AAR, "9")) |># Exclude rows where AAR CONTATINS "9"
 
 
 ```{r, results='asis'}
+#Faktaboks
 
 graa_2 = "#EDF1F4"
 
@@ -749,59 +736,62 @@ Opdeles lastibler efter vægt, fremgår det, at det primært er de lette lastbil
 
 
 ```{r}
+#Figur 2.1 Drivmidlernes andel af nyregistreringer for lette lastbiler
 
 fct_sort <- nyreg_data_1_lette$AAR %>% unique()
 
 figur2_lette <- nyreg_data_1_lette |>
   filter(!str_detect(AAR, "9")) |># Exclude rows where AAR CONTATINS "9"
   mutate(AAR = factor(AAR, levels = fct_sort),
-                           antal = ANTAL) %>%  # Add ANTAL column for use in the tooltip
+         antal = ANTAL) %>%  # Add ANTAL column for use in the tooltip
   hchart('column', hcaes(x = AAR, y =A_NYREG , group = DRIV ), borderColor = 0) |> 
   hc_plotOptions(column = list(stacking = "normal"), style = list(
-          fontFamily = "Georgia"
-        )) |> 
+    fontFamily = "Georgia"
+  )) |> 
   hc_colors(as.character(trm_colors(farver[c(2, 4)]))) |>  # Use only "blaa" and "groen" (the second and fourth colors)
   hc_yAxis(title = list(text = "Pct."), max = 100) |> 
   hc_xAxis(title = list(text = NULL), categories = fct_sort,
            labels = list(rotation = -30)  # Tilt the labels by -45 degrees (you can adjust the angle)
   ) %>% 
-hc_legend(reversed = TRUE, 
+  hc_legend(reversed = TRUE, 
             layout = "horizontal", 
             align = "center", 
             verticalAlign = "bottom",
             itemStyle = list(fontSize = "11px"),
             itemDistance = 2 )%>% 
   hc_chart(marginBottom = 180)  %>%
- hc_tooltip(shared = TRUE,
-  pointFormat = "<b>{series.name}</b>: {point.percentage:.1f} pct. (<b>{point.antal:,.0f}</b> lastbiler)<br>") %>%
- trm_hc_format("<b>Figur 2.1</b> Drivmidlernes andel af nyregistreringer for lette lastbiler", 
-              note = "Kilde: Bilstatistik<br>Note: Lette lastibler dækker over lastbiler med en på vægt på 4.250 kg. og nedefter.")
+  hc_tooltip(shared = TRUE,
+             pointFormat = "<b>{series.name}</b>: {point.percentage:.1f} pct. (<b>{point.antal:,.0f}</b> lastbiler)<br>") %>%
+  trm_hc_format("<b>Figur 2.1</b> Drivmidlernes andel af nyregistreringer for lette lastbiler",
+                note = str_glue("Kilde: Bilstatistik<br>Note: Lette lastibler dækker over lastbiler med en på vægt på 4.250 kg. og nedefter.<br>{stjerne_tekst}"))
 
 
 
+#Figur 2.2 Drivmidlernes andel af nyregistreringer for tunge lastbiler
 
 figur2_tunge <- nyreg_data_1_tunge |>
-    filter(!str_detect(AAR, "9")) |># Exclude rows where AAR CONTATINS "9"
+  filter(!str_detect(AAR, "9")) |># Exclude rows where AAR CONTATINS "9"
   mutate(AAR = factor(AAR, levels = fct_sort),
-                  antal = ANTAL) %>%  # Add ANTAL column for use in the tooltip
+         antal = ANTAL) %>%  # Add ANTAL column for use in the tooltip
   hchart('column', hcaes(x = AAR, y = A_NYREG , group = DRIV), borderColor = 0) |> 
   hc_plotOptions(column = list(stacking = "normal"), style = list(fontFamily = "Georgia")) |> 
   hc_colors(c(trm_colors(farver))) |> 
   hc_yAxis(title = list(text = "Pct."), max = 100) |> 
-   hc_xAxis(title = list(text = NULL), categories = fct_sort,
+  hc_xAxis(title = list(text = NULL), categories = fct_sort,
            labels = list(rotation = -30)  # Tilt the labels by -45 degrees (you can adjust the angle)
   ) %>% 
- hc_legend(reversed = TRUE, 
+  hc_legend(reversed = TRUE, 
             layout = "horizontal", 
             align = "center", 
             verticalAlign = "bottom",
             itemStyle = list(fontSize = "11px"),
-               itemDistance = 2) %>%  # Add spacing between legend items%>%
-    hc_chart(marginBottom = 180)  %>%# Reduce font size if necessary %>%  # Adding spacing between items
+            itemDistance = 2) %>%  # Add spacing between legend items%>%
+  hc_chart(marginBottom = 180)  %>%# Reduce font size if necessary %>%  # Adding spacing between items
   hc_tooltip(shared = TRUE,
-  pointFormat = "<b>{series.name}</b>: {point.percentage:.1f} pct. (<b>{point.antal:,.0f}</b> lastbiler)<br>") %>%
-  trm_hc_format("<b>Figur 2.2</b> Drivmidlernes andel af nyregistreringer for tunge lastbiler", 
-              note = "Kilde: Bilstatistik<br>Note: Tunge lastbiler dækker over lastbiler med en vægt over 4.250 kg.")
+             pointFormat = "<b>{series.name}</b>: {point.percentage:.1f} pct. (<b>{point.antal:,.0f}</b> lastbiler)<br>") %>%
+  trm_hc_format("<b>Figur 2.2</b> Drivmidlernes andel af nyregistreringer for tunge lastbiler",
+                note = str_glue("Kilde: Bilstatistik<br>Note: Tunge lastbiler dækker over lastbiler med en vægt over 4.250 kg.<br>{stjerne_tekst}"))
+
 
 
 
@@ -842,21 +832,22 @@ bestand_data_1 |>
      return this.value >= 1000 ? (this.value / 1000).toFixed(0) : this.value;
     }")),
     stackLabels = list(enabled = TRUE, verticalAlign = 'top',
-                             crop = FALSE, overflow = 'none')
+                       crop = FALSE, overflow = 'none')
   ) |> 
   hc_xAxis(title = list(text = NULL),
            labels = list(rotation = -30))|>
   hc_tooltip(shared=TRUE,
- pointFormat = "<b>{series.name}</b>: {point.percentage:.1f} pct. ({point.y:,.0f} lastbiler) <br>") %>%
-  trm_hc_format("<b>Figur 3</b> Udviklingen i den samlede bestand af lastbiler", 
-              note = "Kilde: Bilstatistik") %>% 
-hc_legend(reversed = TRUE)
-  
+
+             pointFormat = "<b>{series.name}</b>: {point.percentage:.1f} pct. ({point.y:,.0f} lastbiler) <br>") %>%
+  trm_hc_format("<b>Figur 3</b> Udviklingen i den samlede bestand af lastbiler",
+                note = str_glue("Kilde: Bilstatistik"))%>% 
+  hc_legend(reversed = TRUE)
+
 ```
 Omend bestanden af lette lastbiler blot udgør `r lette_andel_af_bestand` pct. af den samlede bestand af lastbiler, er det værd at bemærke, at bestanden af lette lastbiler er i vækst, og at det er særligt er lette ellastbiler, der kommer til. Ved udgangen af oktober udgjorde ellastbiler `r elbestand_seneste_lette/bestand_seneste_lette*100` pct. af den samlede bestand af lette lastbiler, jf. figur 3.1. I modsætning hertil udgjorde ellastbiler blot `r elbestand_seneste_tunge/bestand_seneste_tunge*100` pct. af den samlede bestand af tunge lastbiler, jf. figur 3.2. Lette elastbiler udgør således `r ellette_andel_af_elbestand` pct. af den samlede bestand af ellastbiler. 
 
 ```{r}
-#Ny figur 3 opgørelse af årlig bestand
+#Figur 3.1. Udviklingen i den samlede bestand af lette lastbiler
 
 
 categories <- unique(bestand_data_1_lette$AAR)
@@ -874,36 +865,38 @@ figur3_lette <- bestand_data_1_lette |>
                        crop = FALSE, overflow = 'none')
   ) |> 
   hc_xAxis(
-        categories = categories,
+    categories = categories,
     title = list(text = NULL),
     labels = list(
       rotation = -30
       # ,
- # formatter = JS("
- #        function() {
- #          var categories = this.axis.categories; // Get the x-axis categories
- #          var secondToLastIndex = categories.length - 2; // Find the second-to-last index
- #          
- #          if (this.pos === secondToLastIndex) {
- #            return this.value + '*'; // Add '*' to the second-to-last category
- #          }
- #          
- #          return this.value;
- #        }
- #      ")
-  ) )|>
+      # formatter = JS("
+      #        function() {
+      #          var categories = this.axis.categories; // Get the x-axis categories
+      #          var secondToLastIndex = categories.length - 2; // Find the second-to-last index
+      #          
+      #          if (this.pos === secondToLastIndex) {
+      #            return this.value + '*'; // Add '*' to the second-to-last category
+      #          }
+      #          
+      #          return this.value;
+      #        }
+      #      ")
+    ) )|>
   hc_tooltip(shared=TRUE,
- pointFormat = "<b>{series.name}</b>: {point.percentage:.1f} pct. ({point.y:,.0f} lastbiler) <br>") %>%
-  trm_hc_format("<b>Figur 3.1</b> Udviklingen i den samlede bestand af lette lastbiler", 
-              note = "Kilde: Bilstatistik<br>Note: Lette lastibler dækker over lastbiler med en på vægt på 4.250 kg. og nedefter.") %>% 
-hc_legend(reversed = TRUE, 
+             pointFormat = "<b>{series.name}</b>: {point.percentage:.1f} pct. ({point.y:,.0f} lastbiler) <br>") %>%
+  trm_hc_format("<b>Figur 3.1</b> Udviklingen i den samlede bestand af lette lastbiler",
+                note = str_glue("Kilde: Bilstatistik<br>Note: Lette lastibler dækker over lastbiler med en på vægt på 4.250 kg. og nedefter."))%>% 
+  hc_legend(reversed = TRUE, 
             layout = "horizontal", 
             align = "center", 
             verticalAlign = "bottom",
             itemStyle = list(fontSize = "11px"),
-               itemDistance = 2) %>%  # Add spacing between legend items%>%
-    hc_chart(marginBottom = 180)# Reduce font size if necessary %>%  # Adding spacing between items
-  
+            itemDistance = 2) %>%  # Add spacing between legend items%>%
+  hc_chart(marginBottom = 180)# Reduce font size if necessary %>%  # Adding spacing between items
+
+#Figur 3.2. Udviklingen i den samlede bestand af tunge lastbiler
+
 figur3_tunge <-bestand_data_1_tunge |> 
   hchart('column', hcaes(x = AAR, y = ANTAL, group = DRIV ), borderColor = 0) |> 
   hc_plotOptions(column = list(stacking = "normal")) |> 
@@ -914,36 +907,37 @@ figur3_tunge <-bestand_data_1_tunge |>
       return this.value >= 1000 ? (this.value / 1000).toFixed(0) : this.value;
     }")),
     stackLabels = list(enabled = TRUE, verticalAlign = 'top',
-                             crop = FALSE, overflow = 'none')
+                       crop = FALSE, overflow = 'none')
   ) |> 
   hc_xAxis(    categories = categories,  # Set categories explicitly
-title = list(text = NULL),
-           labels = list(rotation=-30
-                         # ,
- # formatter = JS("
- #        function() {
- #          var categories = this.axis.categories; // Get the x-axis categories
- #          var secondToLastIndex = categories.length - 2; // Find the second-to-last index
- #          
- #          if (this.pos === secondToLastIndex) {
- #            return this.value + '*'; // Add '*' to the second-to-last category
- #          }
- #          
- #          return this.value;
- #        }
- #      ")
-    ) )|>
-    hc_tooltip(shared=TRUE,
- pointFormat = "<b>{series.name}</b>: {point.percentage:.1f} pct. ({point.y:,.0f} lastbiler) <br>") %>%
-  trm_hc_format("<b>Figur 3.2</b> Udviklingen i den samlede bestand af tunge lastbiler", 
-              note = "Kilde: Bilstatisitk<br>Note: Tunge lastbiler dækker over lastbiler med en vægt over 4.250 kg.") %>%   hc_legend(reversed = TRUE, 
+               title = list(text = NULL),
+               labels = list(rotation=-30
+                             # ,
+                             # formatter = JS("
+                             #        function() {
+                             #          var categories = this.axis.categories; // Get the x-axis categories
+                             #          var secondToLastIndex = categories.length - 2; // Find the second-to-last index
+                             #          
+                             #          if (this.pos === secondToLastIndex) {
+                             #            return this.value + '*'; // Add '*' to the second-to-last category
+                             #          }
+                             #          
+                             #          return this.value;
+                             #        }
+                             #      ")
+               ) )|>
+  hc_tooltip(shared=TRUE,
+             pointFormat = "<b>{series.name}</b>: {point.percentage:.1f} pct. ({point.y:,.0f} lastbiler) <br>") %>%
+  trm_hc_format("<b>Figur 3.2</b> Udviklingen i den samlede bestand af tunge lastbiler",
+                note = str_glue("Kilde: Bilstatisitk<br>Note: Tunge lastbiler dækker over lastbiler med en vægt over 4.250 kg."))%>%   
+  hc_legend(reversed = TRUE, 
             layout = "horizontal", 
             align = "center", 
             verticalAlign = "bottom",
             itemStyle = list(fontSize = "11px"),
-               itemDistance = 2) %>%  # Add spacing between legend items%>%
-    hc_chart(marginBottom = 180) 
-  
+            itemDistance = 2) %>%  # Add spacing between legend items%>%
+  hc_chart(marginBottom = 180) 
+
 # Create a HTML structure with two columns
 html <- tagList(
   div(style = "display: flex; justify-content: space-between;",
@@ -957,7 +951,7 @@ browsable(html)
 
 
 rest <- abs(KF_tal$ANTAL[[2]] - elbestand_seneste)
-  
+
 ```
 
 
@@ -966,6 +960,7 @@ Ifølge Klimastatus og -fremskrvining 2024 forventes der at være cirka `r KF_ta
 
 
 ```{r}
+#Figur 4. Status for antallet af ellastbiler i 2025 - oberserveret versus forventet
 
 KF_tal <- KF_tal %>%
   mutate (x_axis = str_replace(x_axis, " forventet", ""))     
@@ -997,8 +992,9 @@ bestand_data_1 %>%
     groupPadding = 0.52,    # Space between groups of bars
     pointPadding = 0.1    # Space between bars in the same group
   )) %>%
-  trm_hc_format(str_glue("<b>Figur 4.</b> Status for antallet af ellastbiler i 2025 - oberserveret versus forventet"),
-               note = "Kilde: Bilstatistik")
+  trm_hc_format("<b>Figur 4.</b> Status for antallet af ellastbiler i 2025 - oberserveret versus forventet",
+                note = str_glue("Kilde: Bilstatistik"))
+
 
 
 nyreg_data_underkat_txt_el <- nyreg_data_underkat %>% filter(AAR == nyeste_aar-1, DRIV == "El") %>% select(KASSORI, ANTAL) %>% deframe() %>% as.list()
@@ -1027,6 +1023,7 @@ med `r abs(nyeste_aars_udv[["Diesel"]])` i `r as.character(nyeste_aar)`, mens be
 
 
 ```{r}
+#Figur 5. Udviklingen i bestand af lastbiler fordelt på drivmidler. Januar - seneste_md
 
 bestand_data_udv$AAR <- bestand_data_udv$AAR - 1 
 
@@ -1041,9 +1038,9 @@ bestand_data_udv |>
       return this.value ? (this.value).toFixed(0) : this.value;
     }"))) |>
   hc_xAxis(title = list(text = NULL)) |>
-  
   hc_tooltip() %>% 
-  trm_hc_format(str_glue("<b>Figur 5.</b> Udviklingen i bestand af lastbiler fordelt på drivmidler. Januar - {seneste_md}"), note="Kilde: Bilstatisitk")
+  trm_hc_format(str_glue("<b>Figur 5.</b> Udviklingen i bestand af lastbiler fordelt på drivmidler. Januar - {seneste_md}"),
+                note = str_glue("Kilde: Bilstatistik"))
 
 # TODO: Kommentar fra Camilla: her er noget med fortegn
 
@@ -1067,29 +1064,33 @@ fct_sort_underkat <- nyreg_data_underkat$AAR %>% unique()
 
 
 map(udvalgte_kat, ~{nyreg_data_underkat |>
-        filter(KASSORI==.x) %>% 
-  mutate(AAR = factor(AAR, levels = fct_sort_underkat)) %>% 
-  hchart('column', hcaes(x = AAR, y =ANTAL, group = DRIV ), borderColor = 0) |> 
-  hc_plotOptions(column = list(stacking = "percent")) |> 
-  hc_colors(c(trm_colors(farver))) |> 
-  hc_yAxis(title = list(text = "Pct."), max = 100) |> 
-  hc_xAxis(categories = fct_sort_underkat, title = list(text = NULL)) %>% 
-   hc_legend(
-    layout = "horizontal",         # Arrange legends horizontally
-    align = "center",              # Align the legend in the center
-    verticalAlign = "bottom",      # Place the legend at the bottom
-    itemDistance = 1,             # Adjust space between items
-    itemWidth = 80,               # Set the width for each legend item
-    itemStyle = list(
-      fontSize = "12",
-          width = 60                  
-    )              # Set the legend width to fit 2 items per row)# Reduce space between legend items# Place legends at the bottom
-   # Reduce space between legend items# Place legends at the bottom
-) %>% 
-  hc_tooltip(shared = TRUE,
-    pointFormat = "<b>{series.name}</b>: {point.percentage:.1f} pct. ({point.y:,.0f} lastbiler) <br>"
-  )  %>% 
-  trm_hc_format(str_glue("<b>{str_replace_all(.x, c('_'=' ', 'OE'='Ø', 'AA'='Å', 'AE'='Æ')) %>% str_to_sentence()}<b>"), note="Kilde: Bilstatistik")}) |> 
+    filter(KASSORI==.x) %>% 
+    mutate(AAR = factor(AAR, levels = fct_sort_underkat)) %>% 
+    hchart('column', hcaes(x = AAR, y =ANTAL, group = DRIV ), borderColor = 0) |> 
+    hc_plotOptions(column = list(stacking = "percent")) |> 
+    hc_colors(c(trm_colors(farver))) |> 
+    hc_yAxis(title = list(text = "Pct."), max = 100) |> 
+    hc_xAxis(categories = fct_sort_underkat, title = list(text = NULL)) %>% 
+    hc_legend(
+      layout = "horizontal",         # Arrange legends horizontally
+      align = "center",              # Align the legend in the center
+      verticalAlign = "bottom",      # Place the legend at the bottom
+      itemDistance = 1,             # Adjust space between items
+      itemWidth = 80,               # Set the width for each legend item
+      itemStyle = list(
+        fontSize = "12",
+        width = 60                  
+      )              # Set the legend width to fit 2 items per row)# Reduce space between legend items# Place legends at the bottom
+      # Reduce space between legend items# Place legends at the bottom
+    ) %>% 
+    hc_tooltip(shared = TRUE,
+               pointFormat = "<b>{series.name}</b>: {point.percentage:.1f} pct. ({point.y:,.0f} lastbiler) <br>"
+    )  %>% 
+    trm_hc_format(
+      str_glue(str_glue("<b>{str_replace_all(.x, c('_'=' ', 'OE'='Ø', 'AA'='Å', 'AE'='Æ')) %>% str_to_sentence()}<b>")),
+      note = str_glue("Kilde: Bilstatistik<br>{stjerne_tekst}")
+    )
+}) |> 
   hw_grid(rowheight = 400) %>% htmltools::browsable()
 
 
@@ -1114,34 +1115,37 @@ fct_sort_underkat <-bestand_data_underkat$AAR %>% unique()
 
 
 map(udvalgte_kat, ~{bestand_data_underkat |> 
-  filter(KASSORI==.x) %>% 
-
-  hchart('column', hcaes(x = AAR, y = ANTAL, group = DRIV ), borderColor = 0) |> 
-  hc_plotOptions(column = list(stacking = "NULL")) |> 
-  hc_colors(c(trm_colors(farver))) |> 
-  hc_yAxis(
-    title = list(text = "Antal"),
-    labels = list(
-      format = "{value:,.0f}")
-  ) |> 
-  hc_xAxis(categories = fct_sort_underkat, title = list(text = NULL),
-           labels = list(
-             rotation = -45))      %>%
-  hc_tooltip(shared = TRUE,
-             pointFormat = "<b>{series.name}</b>: {point.y:,.0f} lastbiler ({point.percentage:.1f} pct.) <br>"
-  )  %>% 
- hc_legend(
-    layout = "horizontal",         # Arrange legends horizontally
-    align = "center",              # Align the legend in the center
-    verticalAlign = "bottom",      # Place the legend at the bottom
-  itemDistance = 1,             # Adjust space between items
-    itemWidth = 80,               # Set the width for each legend item
-    itemStyle = list(
-      fontSize = "12",
-          width = 60              # Set an appropriate font size
-    )              # Set the legend width to fit 2 items per row)# Reduce space between legend items# Place legends at the bottom
-  )%>% 
-  trm_hc_format(str_glue("<b>{str_replace_all(.x, c('_'=' ', 'OE'='Ø', 'AA'='Å', 'AE'='Æ')) %>% str_to_sentence()}<b>"),note="Kilde: Bilstatisitk")}) |> 
+    filter(KASSORI==.x) %>% 
+    
+    hchart('column', hcaes(x = AAR, y = ANTAL, group = DRIV ), borderColor = 0) |> 
+    hc_plotOptions(column = list(stacking = "NULL")) |> 
+    hc_colors(c(trm_colors(farver))) |> 
+    hc_yAxis(
+      title = list(text = "Antal"),
+      labels = list(
+        format = "{value:,.0f}")
+    ) |> 
+    hc_xAxis(categories = fct_sort_underkat, title = list(text = NULL),
+             labels = list(
+               rotation = -45))      %>%
+    hc_tooltip(shared = TRUE,
+               pointFormat = "<b>{series.name}</b>: {point.y:,.0f} lastbiler ({point.percentage:.1f} pct.) <br>"
+    )  %>% 
+    hc_legend(
+      layout = "horizontal",         # Arrange legends horizontally
+      align = "center",              # Align the legend in the center
+      verticalAlign = "bottom",      # Place the legend at the bottom
+      itemDistance = 1,             # Adjust space between items
+      itemWidth = 80,               # Set the width for each legend item
+      itemStyle = list(
+        fontSize = "12",
+        width = 60              # Set an appropriate font size
+      )              # Set the legend width to fit 2 items per row)# Reduce space between legend items# Place legends at the bottom
+    )%>% 
+    trm_hc_format(
+      str_glue(str_glue("<b>{str_replace_all(.x, c('_'=' ', 'OE'='Ø', 'AA'='Å', 'AE'='Æ')) %>% str_to_sentence()}<b>")),
+      note="Kilde: Bilstatisitk")
+  }) |> 
   hw_grid(rowheight = 400) %>% htmltools::browsable()
 
 
