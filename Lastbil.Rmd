@@ -607,33 +607,6 @@ I løbet af de første `r  nummer_sidste_md` måneder af `r as.character(nyeste_
 
 farver <- c("graa",  "blaa", "orange","groen") %>% factor(., levels = .)
 
-
-format_chart <- function(x, titel, note = NULL) {
-  hc_chart(x, spacingTop = 40,
-           style = list(fontFamily= 'Georgia')) %>% 
-    hc_title(text =titel,
-             margin = 20,
-             align = "left",
-             x = 25,
-             y = -10,
-             style = list(useHTML = TRUE))|>
-    hc_exporting(
-      enabled = TRUE, # always enabled
-      filename = paste0("Lastbil_", str_extract(titel, "Figur \\d+"))) |> 
-    hc_subtitle(point = list(x = 0.5, y = 0.0, xAxis = 0, yAxis = 0), # Position relative to chart
-                text = note,
-                align = "bottom",
-                verticalAlign = "bottom",  # Place at the bottom of the chart area
-                y = 10,  # Adjust this value to fine-tune the position below the legend
-                style = list(fontSize = "12px", fontStyle = "italic")
-    )}
-
-
-
-
-
-
-
 nyreg_data_1 |> 
   filter(!str_detect(AAR, "\\(|9")) |># Exclude rows where AAR contains "(" or "9"
   mutate(AAR = as.numeric(AAR)) %>% 
@@ -660,8 +633,8 @@ labels = list(
   hc_legend(reversed =TRUE) %>% 
   hc_tooltip(shared = TRUE,
                    pointFormat = "<b>{series.name}</b>: {point.percentage:.1f} pct. ({point.y:,.0f} lastbiler) <br>") %>%
-  format_chart("<b>Figur 1.</b> Udvikling i nyregistreringer af lastbiler fordelt på drivmiddel",
-               "Kilde: Bilstatistik<br>*År til dato")
+  trm_hc_format("<b>Figur 1.</b> Udvikling i nyregistreringer af lastbiler fordelt på drivmiddel",
+               note = "Kilde: Bilstatistik<br>*År til dato")
 
 
 
@@ -691,7 +664,7 @@ filter(!str_detect(AAR, "9")) |># Exclude rows where AAR CONTATINS "9"
   hc_legend(reversed =TRUE) %>%
  hc_tooltip(shared = TRUE,
   pointFormat = "<b>{series.name}</b>: {point.percentage:.1f} pct. (<b>{point.antal:,.0f}</b> lastbiler)<br>") %>%
- format_chart("<b>Figur 2</b> Drivmidlernes andel af nyregistreringer", 
+ trm_hc_format("<b>Figur 2</b> Drivmidlernes andel af nyregistreringer", 
               note = "Kilde: Bilstatistik<br>*År til dato")
 
 
@@ -750,7 +723,7 @@ hc_legend(reversed = TRUE,
   hc_chart(marginBottom = 180)  %>%
  hc_tooltip(shared = TRUE,
   pointFormat = "<b>{series.name}</b>: {point.percentage:.1f} pct. (<b>{point.antal:,.0f}</b> lastbiler)<br>") %>%
- format_chart("<b>Figur 2.1</b> Drivmidlernes andel af nyregistreringer for lette lastbiler", 
+ trm_hc_format("<b>Figur 2.1</b> Drivmidlernes andel af nyregistreringer for lette lastbiler", 
               note = "Kilde: Bilstatistik<br>*År til dato<br>Note: Lette lastibler dækker over lastbiler med en på vægt på 4.250 kg. og nedefter.")
 
 
@@ -776,7 +749,7 @@ figur2_tunge <- nyreg_data_1_tunge_stjerne |>
     hc_chart(marginBottom = 180)  %>%# Reduce font size if necessary %>%  # Adding spacing between items
   hc_tooltip(shared = TRUE,
   pointFormat = "<b>{series.name}</b>: {point.percentage:.1f} pct. (<b>{point.antal:,.0f}</b> lastbiler)<br>") %>%
-  format_chart("<b>Figur 2.2</b> Drivmidlernes andel af nyregistreringer for tunge lastbiler", 
+  trm_hc_format("<b>Figur 2.2</b> Drivmidlernes andel af nyregistreringer for tunge lastbiler", 
               note = "Kilde: Bilstatistik<br>*År til dato<br>Note: Tunge lastbiler dækker over lastbiler med en vægt over 4.250 kg.")
 
 
@@ -824,7 +797,7 @@ bestand_data_1_stjerne |>
            labels = list(rotation = -30))|>
   hc_tooltip(shared=TRUE,
  pointFormat = "<b>{series.name}</b>: {point.percentage:.1f} pct. ({point.y:,.0f} lastbiler) <br>") %>%
-  format_chart("<b>Figur 3</b> Udviklingen i den samlede bestand af lastbiler", 
+  trm_hc_format("<b>Figur 3</b> Udviklingen i den samlede bestand af lastbiler", 
               note = "Kilde: Bilstatistik<br>*År til dato") %>% 
 hc_legend(reversed = TRUE)
   
@@ -870,7 +843,7 @@ figur3_lette <- bestand_data_1_lette_stjerne |>
   ) )|>
   hc_tooltip(shared=TRUE,
  pointFormat = "<b>{series.name}</b>: {point.percentage:.1f} pct. ({point.y:,.0f} lastbiler) <br>") %>%
-  format_chart("<b>Figur 3.1</b> Udviklingen i den samlede bestand af lette lastbiler", 
+  trm_hc_format("<b>Figur 3.1</b> Udviklingen i den samlede bestand af lette lastbiler", 
               note = "Kilde: Bilstatistik<br>Note: Lette lastibler dækker over lastbiler med en på vægt på 4.250 kg. og nedefter.<br>*År til dato") %>% 
 hc_legend(reversed = TRUE, 
             layout = "horizontal", 
@@ -911,7 +884,7 @@ title = list(text = NULL),
     ) )|>
     hc_tooltip(shared=TRUE,
  pointFormat = "<b>{series.name}</b>: {point.percentage:.1f} pct. ({point.y:,.0f} lastbiler) <br>") %>%
-  format_chart("<b>Figur 3.2</b> Udviklingen i den samlede bestand af tunge lastbiler", 
+  trm_hc_format("<b>Figur 3.2</b> Udviklingen i den samlede bestand af tunge lastbiler", 
               note = "Kilde: Bilstatisitk<br>Note: Tunge lastbiler dækker over lastbiler med en vægt over 4.250 kg.<br>*År til dato") %>%    
 hc_legend(reversed = TRUE, 
             layout = "horizontal", 
@@ -974,7 +947,7 @@ bestand_data_1 %>%
     groupPadding = 0.52,    # Space between groups of bars
     pointPadding = 0.1    # Space between bars in the same group
   )) %>%
-  format_chart(str_glue("<b>Figur 4.</b> Status for antallet af ellastbiler i {nyeste_aar} - oberserveret versus forventet"),
+  trm_hc_format(str_glue("<b>Figur 4.</b> Status for antallet af ellastbiler i {nyeste_aar} - oberserveret versus forventet"),
                note = "Kilde: Bilstatistik")
 
 
@@ -1018,7 +991,7 @@ bestand_data_udv |>
   hc_xAxis(title = list(text = NULL)) |>
   
   hc_tooltip() %>% 
-  format_chart(str_glue("<b>Figur 5.</b> Udviklingen i bestand af lastbiler fordelt på drivmidler. Januar - {seneste_md}"), note="Kilde: Bilstatisitk")
+  trm_hc_format(str_glue("<b>Figur 5.</b> Udviklingen i bestand af lastbiler fordelt på drivmidler. Januar - {seneste_md}"), note="Kilde: Bilstatisitk")
 
 # TODO: Kommentar fra Camilla: her er noget med fortegn
 
@@ -1077,7 +1050,7 @@ map(udvalgte_kat, ~{nyreg_data_underkat |>
   hc_tooltip(shared = TRUE,
     pointFormat = "<b>{series.name}</b>: {point.percentage:.1f} pct. ({point.y:,.0f} lastbiler) <br>"
   )  %>% 
-  format_chart(str_glue("<b>{str_replace_all(.x, c('_'=' ', 'OE'='Ø', 'AA'='Å', 'AE'='Æ')) %>% str_to_sentence()}<b>"), note="Kilde: Bilstatistik<br>*År til dato")}) |> 
+  trm_hc_format(str_glue("<b>{str_replace_all(.x, c('_'=' ', 'OE'='Ø', 'AA'='Å', 'AE'='Æ')) %>% str_to_sentence()}<b>"), note="Kilde: Bilstatistik<br>*År til dato")}) |> 
   hw_grid(rowheight = 400) %>% htmltools::browsable()
 
 
@@ -1143,7 +1116,7 @@ map(udvalgte_kat, ~{bestand_data_underkat |>
           width = 60              # Set an appropriate font size
     )              # Set the legend width to fit 2 items per row)# Reduce space between legend items# Place legends at the bottom
   )%>% 
-  format_chart(str_glue("<b>{str_replace_all(.x, c('_'=' ', 'OE'='Ø', 'AA'='Å', 'AE'='Æ')) %>% str_to_sentence()}<b>"),note="Kilde: Bilstatisitk<br>*År til dato")}) |> 
+  trm_hc_format(str_glue("<b>{str_replace_all(.x, c('_'=' ', 'OE'='Ø', 'AA'='Å', 'AE'='Æ')) %>% str_to_sentence()}<b>"),note="Kilde: Bilstatisitk<br>*År til dato")}) |> 
   hw_grid(rowheight = 400) %>% htmltools::browsable()
 
 
