@@ -57,44 +57,30 @@ if(month(Sys.Date())==1){
 
 sti_kf <- "S:/CKA/Databank/007 Klimafremskrivning"
 
-data_bil <- tbl_dst("BIL54", "da") |> 
-  filter(BILTYPE %in% c("4000102000"), OMRÅDE == "000", 
-         BRUG %in% c("1000")) |> 
-  use_labels() |> 
-  collect() |> 
-  select(-c("OMRÅDE", "BRUG")) %>% 
-  mutate(DRIV = ifelse(str_detect(DRIV, "hybrid"), "Plug-in-hybrid", DRIV),
-         DRIV = ifelse(DRIV %in% c("Drivmidler i alt", "Benzin", "Diesel", "El", "Plug-in-hybrid"),
-                       DRIV,
-                       "Øvrige drivmidler")) %>% 
-  summarise(INDHOLD=sum(INDHOLD),
-            .by = c("DRIV","TID"))
+#Data til bestand
+# Laver variable til BRUG og datasæt
+brug_values <- c("1000", "1100", "1200")
+dataset_names <- c("data_bil", "data_husholdning", "data_erhverv")
 
-data_husholdning <- tbl_dst("BIL54", "da") |> 
-  filter(BILTYPE %in% c("4000102000"), OMRÅDE == "000", 
-         BRUG %in% c("1100")) |> 
-  use_labels() |> 
-  collect() |> 
-  select(-c("OMRÅDE", "BRUG")) %>% 
-  mutate(DRIV = ifelse(str_detect(DRIV, "hybrid"), "Plug-in-hybrid", DRIV),
-         DRIV = ifelse(DRIV %in% c("Drivmidler i alt", "Benzin", "Diesel", "El", "Plug-in-hybrid"),
-                       DRIV,
-                       "Øvrige drivmidler")) %>% 
-  summarise(INDHOLD=sum(INDHOLD),
-            .by = c("DRIV","TID"))
+# Laver data
+process_data <- function(brug_values) {
+  tbl_dst("BIL54", "da") %>% 
+    filter(BILTYPE %in% c("4000102000"), OMRÅDE == "000", BRUG %in% brug_values) %>% 
+    use_labels() %>% 
+    collect() %>% 
+    select(-c("OMRÅDE", "BRUG")) %>% 
+    mutate(DRIV = ifelse(str_detect(DRIV, "hybrid"), "Plug-in-hybrid", DRIV),
+           DRIV = ifelse(DRIV %in% c("Drivmidler i alt", "Benzin", "Diesel", "El", "Plug-in-hybrid"),
+                         DRIV,
+                         "Øvrige drivmidler")) %>% 
+    summarise(INDHOLD = sum(INDHOLD), .by = c("DRIV", "TID"))
+}
 
-data_erhverv <- tbl_dst("BIL54", "da") |> 
-  filter(BILTYPE %in% c("4000102000"), OMRÅDE == "000", 
-         BRUG %in% c("1200")) |> 
-  use_labels() |> 
-  collect() |> 
-  select(-c("OMRÅDE", "BRUG")) %>% 
-  mutate(DRIV = ifelse(str_detect(DRIV, "hybrid"), "Plug-in-hybrid", DRIV),
-         DRIV = ifelse(DRIV %in% c("Drivmidler i alt", "Benzin", "Diesel", "El", "Plug-in-hybrid"),
-                       DRIV,
-                       "Øvrige drivmidler")) %>% 
-  summarise(INDHOLD=sum(INDHOLD),
-            .by = c("DRIV","TID"))
+# Laver loop/map
+dataset <- map(brug_values, process_data)
+
+# Laver datasæt til objekter
+list2env(setNames(dataset, dataset_names), envir = .GlobalEnv)
 
 
 data_bil_1 <- data_bil |>
@@ -106,44 +92,30 @@ data_bil_1 <- data_bil |>
     .by =  "DRIV"
   )
 
-data_nysalg <- tbl_dst("BIL53", "da") |> 
-  filter(BILTYPE %in% c("4000102000"), OMRÅDE == "000", 
-         BRUG %in% c("1000")) |> 
-  use_labels() |> 
-  collect() |> 
-  select(-c("OMRÅDE", "BRUG")) %>% 
-  mutate(DRIV = ifelse(str_detect(DRIV, "hybrid"), "Plug-in-hybrid", DRIV),
-         DRIV = ifelse(DRIV %in% c("Drivmidler i alt", "Benzin", "Diesel", "El", "Plug-in-hybrid"),
-                       DRIV,
-                       "Øvrige drivmidler")) %>% 
-  summarise(INDHOLD=sum(INDHOLD),
-            .by = c("DRIV","TID"))
+#Data til nysalg
+# Laver variable til datasæt
+dataset_names_2 <- c("data_nysalg", "data_nysalg_husholdning", "data_nysalg_erhverv")
 
-data_nysalg_husholdning <- tbl_dst("BIL53", "da") |> 
-  filter(BILTYPE %in% c("4000102000"), OMRÅDE == "000", 
-         BRUG %in% c("1100")) |> 
-  use_labels() |> 
-  collect() |> 
-  select(-c("OMRÅDE", "BRUG")) %>% 
-  mutate(DRIV = ifelse(str_detect(DRIV, "hybrid"), "Plug-in-hybrid", DRIV),
-         DRIV = ifelse(DRIV %in% c("Drivmidler i alt", "Benzin", "Diesel", "El", "Plug-in-hybrid"),
-                       DRIV,
-                       "Øvrige drivmidler")) %>% 
-  summarise(INDHOLD=sum(INDHOLD),
-            .by = c("DRIV","TID"))
+# Laver data
+process_data_2 <- function(brug_values) {
+  tbl_dst("BIL53", "da") %>% 
+    filter(BILTYPE %in% c("4000102000"), OMRÅDE == "000", BRUG %in% brug_values) %>% 
+    use_labels() %>% 
+    collect() %>% 
+    select(-c("OMRÅDE", "BRUG")) %>% 
+    mutate(DRIV = ifelse(str_detect(DRIV, "hybrid"), "Plug-in-hybrid", DRIV),
+           DRIV = ifelse(DRIV %in% c("Drivmidler i alt", "Benzin", "Diesel", "El", "Plug-in-hybrid"),
+                         DRIV,
+                         "Øvrige drivmidler")) %>% 
+    summarise(INDHOLD = sum(INDHOLD), .by = c("DRIV", "TID"))
+}
 
-data_nysalg_erhverv <- tbl_dst("BIL53", "da") |> 
-  filter(BILTYPE %in% c("4000102000"), OMRÅDE == "000", 
-         BRUG %in% c("1200")) |> 
-  use_labels() |> 
-  collect() |> 
-  select(-c("OMRÅDE", "BRUG")) %>% 
-  mutate(DRIV = ifelse(str_detect(DRIV, "hybrid"), "Plug-in-hybrid", DRIV),
-         DRIV = ifelse(DRIV %in% c("Drivmidler i alt", "Benzin", "Diesel", "El", "Plug-in-hybrid"),
-                       DRIV,
-                       "Øvrige drivmidler")) %>% 
-  summarise(INDHOLD=sum(INDHOLD),
-            .by = c("DRIV","TID"))
+# Laver loop/map
+dataset_2 <- map(brug_values, process_data_2)
+
+# Laver datasæt til objekter
+list2env(setNames(dataset_2, dataset_names_2), envir = .GlobalEnv)
+
 
 Nummer_sidste_md <- data_nysalg |> 
   slice_tail(n=1) |> 
@@ -218,3 +190,4 @@ Værdi_max_EL_andel <- data_nysalg_3 %>%
   
 
 ```
+
