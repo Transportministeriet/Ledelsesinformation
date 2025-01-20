@@ -72,7 +72,8 @@ process_data <- function(brug_values) {
     mutate(DRIV = ifelse(str_detect(DRIV, "hybrid"), "Plug-in-hybrid", DRIV),
            DRIV = ifelse(DRIV %in% c("Drivmidler i alt", "Benzin", "Diesel", "El", "Plug-in-hybrid"),
                          DRIV,
-                         "Øvrige drivmidler")) %>% 
+                         "Øvrige drivmidler")) %>%
+    filter(DRIV != "Drivmidler i alt") %>%
     summarise(INDHOLD = sum(INDHOLD), .by = c("DRIV", "TID"))
 }
 
@@ -106,7 +107,8 @@ process_data_2 <- function(brug_values) {
     mutate(DRIV = ifelse(str_detect(DRIV, "hybrid"), "Plug-in-hybrid", DRIV),
            DRIV = ifelse(DRIV %in% c("Drivmidler i alt", "Benzin", "Diesel", "El", "Plug-in-hybrid"),
                          DRIV,
-                         "Øvrige drivmidler")) %>% 
+                         "Øvrige drivmidler")) %>%
+    filter(DRIV != "Drivmidler i alt") %>% 
     summarise(INDHOLD = sum(INDHOLD), .by = c("DRIV", "TID"))
 }
 
@@ -135,7 +137,7 @@ legend_sort <- c("Øvrige drivmidler", "Benzin", "Diesel", "Plug-in-hybrid", "El
 
 data_nysalg_1 <- data_nysalg |> 
   mutate(AAR = str_sub(TID, end = 4)) |> 
-  (\(y) bind_rows(group_by(y, AAR, DRIV) |> 
+  (\(y) bind_rows(group_by(y, AAR, DRIV) |>
                     summarise(INDHOLD = sum(INDHOLD),
                               .groups = "drop_last") |> 
                     mutate(A_INDHOLD = round(INDHOLD/sum(INDHOLD, na.rm = T)*100 ,1)) |> 
@@ -163,6 +165,7 @@ data_nysalg_3<- data_nysalg |>
 data_nysalg_2 <- data_nysalg |> 
   mutate(DRIV = ifelse(str_detect(DRIV, "hybrid"), "Plug-in-hybrid", DRIV),
          AAR = str_sub(TID, end = 4)) |> 
+  filter(DRIV != "Drivmidler i alt") %>% 
   group_by(AAR, DRIV) |> 
   summarise(INDHOLD = sum(INDHOLD, na.rm = T),
             .groups = "drop_last") |> 
@@ -193,8 +196,7 @@ Værdi_max_EL_andel <- data_nysalg_3 %>%
 
 ```{r}
 totalsalg <- data_nysalg_1 %>%
-  filter(AAR == nyeste_aar,
-         DRIV != "Drivmidler i alt") %>%
+  filter(AAR == nyeste_aar) %>%
   summarize(sum_indhold = sum(INDHOLD))
 
 
@@ -544,8 +546,7 @@ data_nysalg_2_stjerne <- data_nysalg_2 %>%
   mutate(AAR = ifelse(AAR == nyeste_aar, paste0(AAR, stjerne), AAR))
 
 data_nysalg_2_stjerne |> 
-  filter(as.numeric(str_sub(AAR, end = 4))>max(as.numeric(str_sub(AAR, end = 4)))-5,
-         DRIV != "Drivmidler i alt") |> 
+  filter(as.numeric(str_sub(AAR, end = 4))>max(as.numeric(str_sub(AAR, end = 4)))-5) |> 
   hchart('column', hcaes(x = AAR, y =INDHOLD, group = DRIV ), borderColor = 0) |> 
   hc_plotOptions(column = list(stacking = "normal")) |> 
   hc_colors(c(trm_colors(farver))) |> 
@@ -561,6 +562,29 @@ data_nysalg_2_stjerne |>
   trm_hc_format("<b>Figur 1.</b> Udvikling i nyregistreringer af varebiler fordelt på drivmiddel",
                 note = str_glue("Kilde: Danmarks Statistik<br>{stjerne_tekst}"))
 
+
+
+```
+
+El-varebilers andel af det samlede antal nyregistreringer har været stigende siden 2020. I 2020 udgjorde el-varebiler `r pull(ebil_andel_nysalget, "2020") ` pct. af de samlede nyregistreringer.  I `r nyeste_aar` har elbiler udgjort `r pull(ebil_andel_nysalget, nyeste_aar) ` pct. af de samlede nyregistreringer, jf. figur 2. I `r format(ISOdate(2000, Nummer_sidste_md, 1), "%B")` udgjorde elbiler `r ebil_andel_nysalget[length(ebil_andel_nysalget)] %>% as.numeric()` pct. af nyregistreringerne. Hidtil er den højeste andel nyregistrerede elbiler set i `r Måned_max_EL_andel`. 
+
+```{r}
+# Figur 2. Drivmidlernes andel af nyregistreringer for varebiler
+
+data_nysalg_1_stjerne <- data_nysalg_1 %>%
+  mutate(AAR = ifelse(AAR == nyeste_aar, paste0(AAR, stjerne), AAR))
+
+data_nysalg_1_stjerne |> 
+  filter(as.numeric(str_sub(AAR, end = 4))>max(as.numeric(str_sub(AAR, end = 4)))-5) |> 
+  hchart('column', hcaes(x = AAR, y =A_INDHOLD, group = DRIV ), borderColor = 0) |> 
+  hc_plotOptions(column = list(stacking = "normal")) |> 
+  hc_colors(c(trm_colors(farver))) |> 
+  hc_yAxis(title = list(text = "Pct."), max = 100) |> 
+  hc_xAxis(title = list(text = NULL)) %>% 
+  hc_legend(reversed =TRUE) %>% 
+  hc_tooltip(shared = TRUE) %>% 
+  trm_hc_format("<b>Figur 2.</b> Drivmidlernes andel af nyregistreringer for varebiler",
+               note = str_glue("Kilde: Danmarks Statistik<br>{stjerne_tekst}"))
 
 
 ```
