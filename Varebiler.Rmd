@@ -193,7 +193,8 @@ Værdi_max_EL_andel <- data_nysalg_3 %>%
 
 ```{r}
 totalsalg <- data_nysalg_1 %>%
-  filter(AAR == nyeste_aar) %>%
+  filter(AAR == nyeste_aar,
+         DRIV != "Drivmidler i alt") %>%
   summarize(sum_indhold = sum(INDHOLD))
 
 
@@ -377,6 +378,189 @@ max_year_P_I_H<- data_fig_4 %>%
   filter(DRIV_1 == "Plug-in-hybrid") %>%
   slice(which.max(UDV_ANTAL_BIL)) %>%
   pull(AAR)
+
+
+```
+
+```{r}
+
+sidste_par_aar <- data_bil_1 |> 
+  filter(year(DATE)>(max(year(DATE))-6) & year(DATE)<max(year(DATE)) & DRIV!="Øvrige drivmidler") |> 
+  (\(y) bind_rows(y |> filter(year(DATE)==max(year(DATE))) |> 
+                    mutate(MD = month(DATE), DRIV, UDV_BIL, TYPE = as.character(max_aar-1),
+                           .keep = "none"),
+                  y |> 
+                    mutate(MD = month(DATE)) |> 
+                    summarise(UDV_BIL = round(mean(UDV_BIL), 0), TYPE = str_c(max_aar-5,"-", max_aar-1, " (gennemsnit)"),
+                              .by = c("MD", "DRIV"))
+  ))()
+
+dette_par_aar <- data_bil_1 |> 
+  filter(year(DATE)==max(year(DATE))) |> 
+  mutate(MD = month(DATE), DRIV, UDV_BIL, TYPE = as.character(max_aar), .keep = "none")
+
+
+# danish_month_names_long <- c("Januar", "Februar", "Marts", "April", "Maj", "Juni", "Juli", "August", "September", "Oktober", "November", "December")
+
+
+
+Samlet_par_aar <- rbind(sidste_par_aar, dette_par_aar)
+
+Samlet_par_aar <- Samlet_par_aar %>%
+  mutate(
+    MD = factor(MD, levels = 1:12, labels = format(ISOdate(2000, 1:12, 1), "%B")),
+    AAR = as.numeric(TYPE),
+    MDAAR = paste(MD, AAR, sep = " ")
+  )
+
+
+max_måned_afvikling_b <- Samlet_par_aar %>%
+  filter(DRIV == "Benzin") %>%
+  slice(which.min(UDV_BIL)) %>%
+  pull(MDAAR)
+
+
+kombineret_par_aar <- dette_par_aar |> 
+  left_join(sidste_par_aar |> 
+              rename(UDV_BIL_sid_aar=UDV_BIL) |> 
+              filter(TYPE==as.character(max_aar-1)) |> 
+              select(-TYPE) %>% 
+              distinct(), 
+            by = join_by(DRIV, MD)) |>
+  mutate(ant_gode_md = (UDV_BIL - UDV_BIL_sid_aar)<0) |> 
+  summarise(ant_gode_md = sum(ant_gode_md),
+            .by ="DRIV") %>% 
+  left_join( tibble(ant_gode_md = c(0:12),
+                    bogstav_tal = c("nul", "en", "to", "tre", "fire", "fem", "seks", "syv", "otte", "ni", "ti", "elleve", "tolv")))
+
+md_d_afvikles_hurtigere<-kombineret_par_aar[kombineret_par_aar$DRIV=="Diesel", "bogstav_tal"]
+
+md_b_afvikles_hurtigere<-kombineret_par_aar[kombineret_par_aar$DRIV=="Benzin", "bogstav_tal"]
+
+md_e_udvikles_hurtigere<-kombineret_par_aar[kombineret_par_aar$DRIV=="El", "bogstav_tal"]
+
+```
+
+```{r}
+
+figur_1 <- data_nysalg_2 %>% 
+  select(år=AAR, 
+         drivmiddel=DRIV,
+         antal =INDHOLD)
+
+
+figur_2 <- data_nysalg_1 %>%
+  select(år=AAR, 
+         drivmiddel=DRIV,
+         andel =INDHOLD)
+
+figur_3 <- ny_figur_3_1 |> 
+  filter(DRIV != "Drivmidler i alt" ) |>
+  filter(aar != 2018) %>% 
+  select(år = rigtigt_år, 
+         drivmiddel=DRIV,
+         antal =INDHOLD
+  ) %>% 
+  arrange(år, drivmiddel)
+
+figur_4 <- bind_rows(DST_tal, KF_tal) %>% 
+  select(titel = x_axis, kilde = oprindelse, antal = INDHOLD)
+
+figur_5 <- data_fig_4 |> 
+  filter(!is.na(UDV_ANTAL_BIL)) |> 
+  select(år = AAR, 
+         drivmiddel=DRIV_1,
+         Antal = INDHOLD,
+         udvikling =UDV_ANTAL_BIL
+  )
+
+
+figur_6 <- bind_rows(sidste_par_aar, dette_par_aar) |> 
+  mutate(år = TYPE, 
+         måned = factor(format(ISOdate(2000, MD, 1), "%B"), levels = format(ISOdate(2000, 1:12, 1), "%B")),
+         drivmiddel=DRIV,
+         udvikling =UDV_BIL,
+         .keep = "none"
+  ) %>% 
+  arrange(år,drivmiddel, måned)
+
+
+
+```
+
+Dette er Transportministeriets interne statusnotat for nyregistreringer og bestand af varebiler. Det viser bl.a. udviklingen i antallet af varebiler fordelt på drivmiddeltyper. Notatet opdateres månedsvis og er baseret på data fra Danmarks Statistik.  
+
+Data fra rapporten kan hentes her:
+```{r}
+list("Figur 1" = figur_1, "Figur 2" = figur_2, "Figur 3" = figur_3, 
+     "Figur 4" = figur_4, "Figur 5" = figur_5, "Figur 6" = figur_6) %>%
+  download_this(
+    output_name = "Data til rapport om status på elbilsudvikling",
+    output_extension = ".xlsx",
+    button_label = "Download datasæt",
+    button_type = "info",
+    has_icon = TRUE,
+    icon = "fa fa-save"
+  )
+```
+
+
+### Status på udviklingen af bestanden
+I perioden fra 2021 til 2023 faldt antallet af nyregistreringer, mens det er steget igen i 2024. I `r nyeste_aar` er der hidtil `r pull(totalsalg)` nyregistrerede varebiler, hvoraf `r pull(ebil_total_nysalget, nyeste_aar)` var elbiler. Til sammenligning  var der i `r as.character(max_aar-1)` registrerede `r pull(ebil_total_nysalget, as.character(max_aar-1))` nye el-varebiler. 
+
+```{r}
+#FIGUR 1. Udvikling i nyregistreringer af varebiler fordelt på drivmiddel
+
+farver <- c("groen",  "orange", "blaa", "gul", "graa") %>% factor(., levels = .) %>% sort(decreasing = T)
+
+
+format_chart <- function(x, titel, note = NULL) {
+  library(stringr)
+  library(highcharter)
+  
+  x %>%
+    hc_chart(spacingTop = 40,
+             style = list(fontFamily = 'Georgia')) %>%
+    hc_title(text = titel,
+             margin = 20,
+             align = "left",
+             x = 25,
+             y = -10,
+             style = list(useHTML = TRUE)) %>%
+    hc_exporting(
+      enabled = TRUE, # always enabled
+      filename = paste0("Varebil_", str_extract(titel, "Figur \\d+"))
+    ) %>%
+    hc_subtitle(point = list(x = 0.5, y = 0.0, xAxis = 0, yAxis = 0), # Position relative to chart
+                text = note,
+                align = "bottom",
+                verticalAlign = "bottom",  # Place at the bottom
+                y = 10,  # Adjust position
+                style = list(fontSize = "12px", fontStyle = "italic")
+    )
+}
+
+data_nysalg_2_stjerne <- data_nysalg_2 %>%
+  mutate(AAR = ifelse(AAR == nyeste_aar, paste0(AAR, stjerne), AAR))
+
+data_nysalg_2_stjerne |> 
+  filter(as.numeric(str_sub(AAR, end = 4))>max(as.numeric(str_sub(AAR, end = 4)))-5,
+         DRIV != "Drivmidler i alt") |> 
+  hchart('column', hcaes(x = AAR, y =INDHOLD, group = DRIV ), borderColor = 0) |> 
+  hc_plotOptions(column = list(stacking = "normal")) |> 
+  hc_colors(c(trm_colors(farver))) |> 
+  hc_yAxis(title = list(text = "Antal (tusind)"),
+           labels = list(formatter = JS("function() {
+      return this.value >= 1000 ? (this.value / 1000).toFixed(0) : this.value;
+    }")),
+    stackLabels = list(enabled = TRUE, verticalAlign = 'top',
+                       crop = FALSE, overflow = 'none')) |> 
+  hc_xAxis(title = list(text = NULL)) %>% 
+  hc_legend(reversed =TRUE) %>% 
+  hc_tooltip(shared = TRUE) %>% 
+  trm_hc_format("<b>Figur 1.</b> Udvikling i nyregistreringer af varebiler fordelt på drivmiddel",
+                note = str_glue("Kilde: Danmarks Statistik<br>{stjerne_tekst}"))
+
 
 
 ```
