@@ -678,6 +678,4 @@ bind_rows(DST_tal, KF_tal) |>
   trm_hc_format(str_glue("<b>Figur 4.</b> Status for antallet af elbiler i {nyeste_aar}"),
                 note = "Kilde: Danmarks Statistik & Klimastatus for Fremskrivning 2024")
 
-
-
 ```
