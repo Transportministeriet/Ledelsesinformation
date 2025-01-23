@@ -588,3 +588,57 @@ data_nysalg_1_stjerne |>
 
 
 ```
+
+Den 1. januar 2020 var den samlede bestand `r pull(bestand_2020)` varebiler. Fra januar 2020 til `r max_måned` `r nyeste_aar` er bestanden faldet med `r format(vækst_siden_2020, decimal.mark = ",")` pct., så den danske bestand af varebiler ultimo `r max_måned` var `r pull(bestand_2023_seneste)` varebiler. I `r max_måned` `r nyeste_aar` udgjorde el-varebiler `r round(DST_tal$INDHOLD[[2]]/bestand_2023_seneste*100,1)` pct. af den samlede bestand.
+
+```{r}
+#Ny figur 3 opgørelse af årlig bestand
+
+ny_figur_3_1 |> 
+  filter(DRIV != "Drivmidler i alt" ) |>
+  filter(aar != 2018) |>
+  hchart('column', hcaes(x = rigtigt_år, y = INDHOLD, group = DRIV ), borderColor = 0) |> 
+  hc_plotOptions(column = list(stacking = "normal")) |> 
+  hc_colors(c(trm_colors(farver))) |> 
+  hc_yAxis(
+    title = list(text = "Antal"),
+    tickInterval = 100000
+  ) |> 
+  # hc_xAxis(title = list(text = NULL))|>
+#   hc_xAxis(title = list(text = NULL),
+# labels = list(
+#   formatter = JS("
+#     function() {
+#       if (this.isLast) {
+#         return this.value + '*'; // Add a '*' to the last category
+#       }
+#       return this.value;
+#     }
+#   "))
+#              ) %>% 
+ hc_xAxis(
+    title = list(text = NULL),
+    labels = list(
+      formatter = JS(
+        glue::glue("
+          function() {{
+            if (this.isLast) {{
+              return this.value + '{stjerne}'; // Add the dynamic stjerne
+            }}
+            return this.value;
+          }}
+        ")
+      )
+    )
+  ) |> 
+  hc_tooltip(
+    pointFormat = "{series.name}: <b>{point.y:.2f}<b> millioner biler <br>
+    <b>{point.percentage:.1f}<b> pct. af den samlede bestand"
+  )  %>% 
+  hc_legend(reversed =TRUE) %>% 
+  trm_hc_format("<b>Figur 3.</b> Bestand af varebiler",
+               note = "Kilde: Danmarks Statistik")
+
+rest <- KF_tal$INDHOLD[[2]] - DST_tal$INDHOLD[[2]]
+
+```
