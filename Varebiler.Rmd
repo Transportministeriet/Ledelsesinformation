@@ -597,30 +597,30 @@ Den 1. januar 2020 var den samlede bestand `r pull(bestand_2020)` varebiler. Fra
 ny_figur_3_1 |> 
   filter(DRIV != "Drivmidler i alt" ) |>
   filter(aar != 2018) |>
-  hchart('column', hcaes(x = rigtigt_år, y = INDHOLD, group = DRIV ), borderColor = 0) |> 
+  hchart('column', hcaes(x = rigtigt_år, y = INDHOLD/1000, group = DRIV ), borderColor = 0) |> 
   hc_plotOptions(column = list(stacking = "normal")) |> 
   hc_colors(c(trm_colors(farver))) |> 
   hc_yAxis(
-    title = list(text = "Antal"),
-    tickInterval = 100000
+    title = list(text = "Antal (tusind)"),
+    tickInterval = 100
   ) |> 
   # hc_xAxis(title = list(text = NULL))|>
-#   hc_xAxis(title = list(text = NULL),
-# labels = list(
-#   formatter = JS("
-#     function() {
-#       if (this.isLast) {
-#         return this.value + '*'; // Add a '*' to the last category
-#       }
-#       return this.value;
-#     }
-#   "))
+  #   hc_xAxis(title = list(text = NULL),
+  # labels = list(
+  #   formatter = JS("
+  #     function() {
+  #       if (this.isLast) {
+  #         return this.value + '*'; // Add a '*' to the last category
+  #       }
+  #       return this.value;
+  #     }
+  #   "))
 #              ) %>% 
- hc_xAxis(
-    title = list(text = NULL),
-    labels = list(
-      formatter = JS(
-        glue::glue("
+hc_xAxis(
+  title = list(text = NULL),
+  labels = list(
+    formatter = JS(
+      glue::glue("
           function() {{
             if (this.isLast) {{
               return this.value + '{stjerne}'; // Add the dynamic stjerne
@@ -628,17 +628,56 @@ ny_figur_3_1 |>
             return this.value;
           }}
         ")
-      )
     )
-  ) |> 
+  )
+) |> 
   hc_tooltip(
-    pointFormat = "{series.name}: <b>{point.y:.2f}<b> millioner biler <br>
-    <b>{point.percentage:.1f}<b> pct. af den samlede bestand"
+    formatter = JS("
+    function() {
+      var scaledValue = this.y * 1000; // Scale the value
+      return this.series.name + ': <b>' + Highcharts.numberFormat(scaledValue, 0, ',', '.') + '</b> varebiler<br>' +
+             '<b>' + Highcharts.numberFormat(this.percentage, 1, ',', '.') + '</b> pct. af den samlede bestand';
+    }
+  ")
   )  %>% 
   hc_legend(reversed =TRUE) %>% 
   trm_hc_format("<b>Figur 3.</b> Bestand af varebiler",
-               note = "Kilde: Danmarks Statistik")
+                note = "Kilde: Danmarks Statistik")
 
 rest <- KF_tal$INDHOLD[[2]] - DST_tal$INDHOLD[[2]]
+
+```
+
+Jævnfør Klimastatus og -fremskrivning 2024 vil der ved udgangen af 2025 være `r KF_tal$INDHOLD[[2]]` el-varebiler i Danmark. Bestanden pr. `r str_remove_all(DST_tal$x_axis[[2]], " observeret")` var `r DST_tal$INDHOLD[[2]]` el-varebiler, jf. figur 4. Differencen mellem det nuværende antal el-varebiler og det forventede antal el-varebiler ved udgangen af 2025 er således `r rest`.
+
+```{r}
+#Figur 4. Status for antallet af el-varebiler i nyeste aar
+
+bind_rows(DST_tal, KF_tal) |> 
+  hchart('column', hcaes(x = x_axis, y = INDHOLD, group=oprindelse), color = trm_colors(c("blaa", "orange")), borderColor = 0) |>
+  hc_yAxis(title = list(text = "Antal (tusind)"),
+           labels = list(
+             formatter = JS("function() {
+      return this.value >= 1000 ? (this.value / 1000).toFixed(0) : this.value;
+    }"))) |> 
+  hc_xAxis(
+    title = list(text = NULL),
+    
+    labels = list(
+      align = "center",    # Align labels to center under the bars
+      rotation = 0         # Keep labels horizontal (adjust if needed)
+    ),
+    tickmarkPlacement = "on"  # Ensures bars are centered on ticks
+  ) |>
+  
+  hc_plotOptions(column = list(
+    pointWidth = 100,       # Bar width
+    groupPadding = 0.52,    # Space between groups of bars
+    pointPadding = 0.1    # Space between bars in the same group
+  )) %>%
+  trm_hc_format(str_glue("<b>Figur 4.</b> Status for antallet af elbiler i {nyeste_aar}"),
+                note = "Kilde: Danmarks Statistik & Klimastatus for Fremskrivning 2024")
+
+
 
 ```
