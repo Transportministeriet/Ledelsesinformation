@@ -27,6 +27,7 @@ library(lubridate)
 library(plotly)
 library(scales)
 library(downloadthis)
+library(htmltools)
 
 
 lang <- getOption("highcharter.lang")
@@ -109,40 +110,40 @@ data_bil_1 <- data_bil |>
 
 #Data til nysalg
 data_nysalg <- tbl_dst("BIL53", "da") %>% 
-    filter(BILTYPE %in% c("4000102000"), OMRÅDE == "000", BRUG %in% "1000") %>% 
-    use_labels() %>% 
-    collect() %>% 
-    select(-c("OMRÅDE", "BRUG")) %>% 
-    mutate(DRIV = ifelse(str_detect(DRIV, "hybrid"), "Plug-in-hybrid", DRIV),
-           DRIV = ifelse(DRIV %in% c("Drivmidler i alt", "Benzin", "Diesel", "El", "Plug-in-hybrid"),
-                         DRIV,
-                         "Øvrige drivmidler")) %>%
-    filter(DRIV != "Drivmidler i alt") %>% 
-    summarise(INDHOLD = sum(INDHOLD), .by = c("DRIV", "TID"))
+  filter(BILTYPE %in% c("4000102000"), OMRÅDE == "000", BRUG %in% "1000") %>% 
+  use_labels() %>% 
+  collect() %>% 
+  select(-c("OMRÅDE", "BRUG")) %>% 
+  mutate(DRIV = ifelse(str_detect(DRIV, "hybrid"), "Plug-in-hybrid", DRIV),
+         DRIV = ifelse(DRIV %in% c("Drivmidler i alt", "Benzin", "Diesel", "El", "Plug-in-hybrid"),
+                       DRIV,
+                       "Øvrige drivmidler")) %>%
+  filter(DRIV != "Drivmidler i alt") %>% 
+  summarise(INDHOLD = sum(INDHOLD), .by = c("DRIV", "TID"))
 
 data_nysalg_husholdning <- tbl_dst("BIL53", "da") %>% 
-    filter(BILTYPE %in% c("4000102000"), OMRÅDE == "000", BRUG %in% "1100") %>% 
-    use_labels() %>% 
-    collect() %>% 
-    select(-c("OMRÅDE", "BRUG")) %>% 
-    mutate(DRIV = ifelse(str_detect(DRIV, "hybrid"), "Plug-in-hybrid", DRIV),
-           DRIV = ifelse(DRIV %in% c("Drivmidler i alt", "Benzin", "Diesel", "El", "Plug-in-hybrid"),
-                         DRIV,
-                         "Øvrige drivmidler")) %>%
-    filter(DRIV != "Drivmidler i alt") %>% 
-    summarise(INDHOLD = sum(INDHOLD), .by = c("DRIV", "TID"))
+  filter(BILTYPE %in% c("4000102000"), OMRÅDE == "000", BRUG %in% "1100") %>% 
+  use_labels() %>% 
+  collect() %>% 
+  select(-c("OMRÅDE", "BRUG")) %>% 
+  mutate(DRIV = ifelse(str_detect(DRIV, "hybrid"), "Plug-in-hybrid", DRIV),
+         DRIV = ifelse(DRIV %in% c("Drivmidler i alt", "Benzin", "Diesel", "El", "Plug-in-hybrid"),
+                       DRIV,
+                       "Øvrige drivmidler")) %>%
+  filter(DRIV != "Drivmidler i alt") %>% 
+  summarise(INDHOLD = sum(INDHOLD), .by = c("DRIV", "TID"))
 
 data_nysalg_erhverv <- tbl_dst("BIL53", "da") %>% 
-    filter(BILTYPE %in% c("4000102000"), OMRÅDE == "000", BRUG %in% "1200") %>% 
-    use_labels() %>% 
-    collect() %>% 
-    select(-c("OMRÅDE", "BRUG")) %>% 
-    mutate(DRIV = ifelse(str_detect(DRIV, "hybrid"), "Plug-in-hybrid", DRIV),
-           DRIV = ifelse(DRIV %in% c("Drivmidler i alt", "Benzin", "Diesel", "El", "Plug-in-hybrid"),
-                         DRIV,
-                         "Øvrige drivmidler")) %>%
-    filter(DRIV != "Drivmidler i alt") %>% 
-    summarise(INDHOLD = sum(INDHOLD), .by = c("DRIV", "TID"))
+  filter(BILTYPE %in% c("4000102000"), OMRÅDE == "000", BRUG %in% "1200") %>% 
+  use_labels() %>% 
+  collect() %>% 
+  select(-c("OMRÅDE", "BRUG")) %>% 
+  mutate(DRIV = ifelse(str_detect(DRIV, "hybrid"), "Plug-in-hybrid", DRIV),
+         DRIV = ifelse(DRIV %in% c("Drivmidler i alt", "Benzin", "Diesel", "El", "Plug-in-hybrid"),
+                       DRIV,
+                       "Øvrige drivmidler")) %>%
+  filter(DRIV != "Drivmidler i alt") %>% 
+  summarise(INDHOLD = sum(INDHOLD), .by = c("DRIV", "TID"))
 
 
 Nummer_sidste_md <- data_nysalg |> 
@@ -177,7 +178,23 @@ data_nysalg_1 <- data_nysalg |>
                     ungroup()))() |> 
   mutate(DRIV = factor(DRIV, levels = legend_sort))
 
-data_nysalg_1 <- data_nysalg |> 
+data_nysalg_hus_1 <- data_nysalg_husholdning |> 
+  mutate(AAR = str_sub(TID, end = 4)) |> 
+  (\(y) bind_rows(group_by(y, AAR, DRIV) |>
+                    summarise(INDHOLD = sum(INDHOLD),
+                              .groups = "drop_last") |> 
+                    mutate(A_INDHOLD = round(INDHOLD/sum(INDHOLD, na.rm = T)*100 ,1)) |> 
+                    ungroup(), 
+                  filter(y, TID==max(TID)) |> 
+                    summarise(AAR = str_c(str_sub(TID, end = 4), " (",
+                                          format(ISOdate(2000, str_sub(TID, start = -2), 1), "%B"),")"),
+                              INDHOLD = sum(INDHOLD),
+                              .by = "DRIV") |> 
+                    mutate(A_INDHOLD = round(INDHOLD/sum(INDHOLD, na.rm = T)*100, 1)) |> 
+                    ungroup()))() |> 
+  mutate(DRIV = factor(DRIV, levels = legend_sort))
+
+data_nysalg_erhverv_1 <- data_nysalg_erhverv |> 
   mutate(AAR = str_sub(TID, end = 4)) |> 
   (\(y) bind_rows(group_by(y, AAR, DRIV) |>
                     summarise(INDHOLD = sum(INDHOLD),
@@ -641,7 +658,7 @@ data_nysalg_1_stjerne |>
   hc_legend(reversed =TRUE) %>% 
   hc_tooltip(shared = TRUE) %>% 
   trm_hc_format("<b>Figur 2.</b> Drivmidlernes andel af nyregistreringer for varebiler",
-               note = str_glue("Kilde: Danmarks Statistik<br>{stjerne_tekst}"))
+                note = str_glue("Kilde: Danmarks Statistik<br>{stjerne_tekst}"))
 
 
 ```
@@ -758,7 +775,7 @@ data_fig_4_stjerne |>
     }"))) |> 
   hc_xAxis(title = list(text = NULL)) %>%
   trm_hc_format(str_glue("<b>Figur 5.</b> Udvikling i antallet af varebiler fra januar til {format(ISOdate(2000, as.numeric(Nummer_sidste_md), 1), '%B')}" ),
-               note = str_glue("Kilde: Danmarks Statistik<br>{stjerne_tekst}"))
+                note = str_glue("Kilde: Danmarks Statistik<br>{stjerne_tekst}"))
 
 ```
 
@@ -813,3 +830,73 @@ expr <- parse(text = str_c(
 eval(expr) 
 
 ```
+
+
+```{r}
+#Figur 7.1 Husholdningens andel af nyregistreringer for varebiler
+fct_sort_hus <- data_nysalg_hus_1$AAR %>% unique()
+
+figur7.1 <- data_nysalg_hus_1 |>
+  filter(!AAR %in% c("2018", "2019"), DRIV != "Øvrige drivmidler") |># Exclude rows where AAR CONTATINS "9"
+  mutate(AAR = factor(AAR, levels = fct_sort_hus),
+         antal = INDHOLD) %>%  # Add ANTAL column for use in the tooltip
+  hchart('column', hcaes(x = AAR, y =A_INDHOLD , group = DRIV ), borderColor = 0) |> 
+  hc_plotOptions(column = list(stacking = "normal"), style = list(
+    fontFamily = "Georgia"
+  )) |> 
+  hc_colors(as.character(trm_colors(farver[c(2, 3, 4, 5)]))) |>
+  hc_yAxis(title = list(text = "Pct."), max = 100) |> 
+  hc_xAxis(title = list(text = NULL), categories = fct_sort_hus,
+           labels = list(rotation = -30)  # Tilt the labels by -45 degrees (you can adjust the angle)
+  ) %>% 
+  hc_legend(reversed = TRUE, 
+            layout = "horizontal", 
+            align = "center", 
+            verticalAlign = "bottom",
+            itemStyle = list(fontSize = "11px"),
+            itemDistance = 2 )%>% 
+  hc_chart(marginBottom = 180)  %>%
+  hc_tooltip(shared = TRUE,             pointFormat = "<b>{series.name}</b>: {point.percentage:.1f} pct. (<b>{point.antal:,.0f}</b> lastbiler)<br>") %>%
+  trm_hc_format("<b>Figur 7.1</b> Husholdningens andel af nyregistreringer for varebiler",
+                note = str_glue("Kilde: Danmarks Statistik <br> {stjerne_tekst}"))
+
+
+#Figur 7.2 Erhvervets andel af nyregistreringer for varebiler
+
+fct_sort_erhverv <- data_nysalg_erhverv_1$AAR %>% unique()
+
+figur7.2 <- data_nysalg_erhverv_1 |>
+  filter(!AAR %in% c("2018", "2019"), DRIV != "Øvrige drivmidler") |># Exclude rows where AAR CONTATINS "9"
+  mutate(AAR = factor(AAR, levels = fct_sort_erhverv),
+         antal = INDHOLD) %>%  # Add ANTAL column for use in the tooltip
+  hchart('column', hcaes(x = AAR, y =A_INDHOLD , group = DRIV ), borderColor = 0) |> 
+  hc_plotOptions(column = list(stacking = "normal"), style = list(
+    fontFamily = "Georgia"
+  )) |> 
+  hc_colors(as.character(trm_colors(farver[c(2, 3, 4, 5)]))) |> 
+  hc_yAxis(title = list(text = "Pct."), max = 100) |> 
+  hc_xAxis(title = list(text = NULL), categories = fct_sort_erhverv,
+           labels = list(rotation = -30)  # Tilt the labels by -45 degrees (you can adjust the angle)
+  ) %>% 
+  hc_legend(reversed = TRUE, 
+            layout = "horizontal", 
+            align = "center", 
+            verticalAlign = "bottom",
+            itemStyle = list(fontSize = "11px"),
+            itemDistance = 2 )%>% 
+  hc_chart(marginBottom = 180)  %>%
+  hc_tooltip(shared = TRUE,
+             pointFormat = "<b>{series.name}</b>: {point.percentage:.1f} pct. (<b>{point.antal:,.0f}</b> lastbiler)<br>") %>%
+  trm_hc_format("<b>Figur 7.2</b> Erhvervets andel af nyregistreringer for varebiler",
+                note = str_glue("Kilde: Danmarks Statistik <br> {stjerne_tekst}"))
+
+# Create a HTML structure with two columns
+html <- tagList(
+  div(style = "display: flex; justify-content: space-between;",
+      div(style = "width: 48%;", figur7.1),
+      div(style = "width: 48%;", figur7.2)))
+
+# Render it in the browser
+browsable(html)
+```
+
