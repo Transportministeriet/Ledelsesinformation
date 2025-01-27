@@ -423,12 +423,23 @@ dette_par_aar <- data_bil_1.1 |>
   filter(year(DATE)==max(year(DATE))) |> 
   mutate(MD = month(DATE), DRIV, UDV_BIL, TYPE = as.character(max_aar), .keep = "none")
 
+sidste_par_aar_1.1 <- data_bil_1.1 |> 
+  filter(year(DATE)>(max(year(DATE))-6) & year(DATE)<max(year(DATE)) & DRIV!="Øvrige drivmidler") |> 
+  (\(y) bind_rows(y |> filter(year(DATE)==max(year(DATE))) |> 
+                    mutate(MD = month(DATE), DRIV, UDV_BIL, TYPE = as.character(max_aar-1),
+                           .keep = "none"),
+                  y |> 
+                    mutate(MD = month(DATE)) |> 
+                    summarise(UDV_BIL = round(mean(UDV_BIL), 0), TYPE = str_c(max_aar-5,"-", max_aar-1, " (gennemsnit)"),
+                              .by = c("MD", "DRIV"))
+  ))()
+
 
 # danish_month_names_long <- c("Januar", "Februar", "Marts", "April", "Maj", "Juni", "Juli", "August", "September", "Oktober", "November", "December")
 
 
 
-Samlet_par_aar <- rbind(sidste_par_aar, dette_par_aar)
+Samlet_par_aar <- rbind(sidste_par_aar_1.1, dette_par_aar)
 
 Samlet_par_aar <- Samlet_par_aar %>%
   mutate(
@@ -442,17 +453,6 @@ max_måned_afvikling_b <- Samlet_par_aar %>%
   filter(DRIV == "Benzin") %>%
   slice(which.min(UDV_BIL)) %>%
   pull(MDAAR)
-
-sidste_par_aar_1.1 <- data_bil_1.1 |> 
-  filter(year(DATE)>(max(year(DATE))-6) & year(DATE)<max(year(DATE)) & DRIV!="Øvrige drivmidler") |> 
-  (\(y) bind_rows(y |> filter(year(DATE)==max(year(DATE))) |> 
-                    mutate(MD = month(DATE), DRIV, UDV_BIL, TYPE = as.character(max_aar-1),
-                           .keep = "none"),
-                  y |> 
-                    mutate(MD = month(DATE)) |> 
-                    summarise(UDV_BIL = round(mean(UDV_BIL), 0), TYPE = str_c(max_aar-5,"-", max_aar-1, " (gennemsnit)"),
-                              .by = c("MD", "DRIV"))
-  ))()
 
 
 
@@ -473,7 +473,21 @@ md_d_afvikles_hurtigere <- kombineret_par_aar[kombineret_par_aar$DRIV=="Diesel",
 
 md_b_afvikles_hurtigere <- kombineret_par_aar[kombineret_par_aar$DRIV=="Benzin", "bogstav_tal"]
 
-md_e_udvikles_hurtigere <- kombineret_par_aar[kombineret_par_aar$DRIV=="El", "bogstav_tal"]
+md_e_afvikles_hurtigere <- kombineret_par_aar[kombineret_par_aar$DRIV=="El", "bogstav_tal"]
+
+md_e_udvikles_hurtigere <- 12 - kombineret_par_aar %>%
+  filter(DRIV == "El") %>%
+  pull(ant_gode_md)
+
+bogstav_tal <- tibble(
+  number = c(0:12),
+  text = c("nul", "en", "to", "tre", "fire", "fem", "seks", "syv", "otte", "ni", "ti", "elleve", "tolv")
+)
+
+md_e_udvikles_hurtigere <- bogstav_tal %>%
+  filter(number == md_e_udvikles_hurtigere) %>%
+  pull(text)
+
 
 ```
 
@@ -739,7 +753,7 @@ data_fig_4_stjerne |>
 
 ```
 
-Figur 6 viser udvikligen i bestanden over måneder. I `r md_d_afvikles_hurtigere` ud af årets første `r month(max(dat_fig_3$DATE))` måneder er  bestanden af diesel-varebiler blevet afviklet hurtigere, end det var tilfældet i `r as.character(næst_nyeste_aar)`. Bestanden af benzin-varebiler er afviklet hurtigere i `r md_b_afvikles_hurtigere`  ud af de første  `r month(max(dat_fig_3$DATE))` måneder af 2023. Hidtil er `r max_måned_afvikling_b` den måned, hvor bestanden af benzinbiler er faldet mest. 
+Figur 6 viser udvikligen i bestanden over måneder. I `r md_d_afvikles_hurtigere` ud af årets første `r month(max(dat_fig_3$DATE))` måneder er  bestanden af diesel-varebiler blevet afviklet hurtigere, end det var tilfældet i `r as.character(næst_nyeste_aar)`. Bestanden af benzin-varebiler er afviklet hurtigere i `r md_b_afvikles_hurtigere`  ud af de første  `r month(max(dat_fig_3$DATE))` måneder af 2023. Hidtil er `r max_måned_afvikling_b` den måned, hvor bestanden af benzinbiler er faldet mest. Bastanden af el-varebiler har i `r md_e_udvikles_hurtigere` ud af årets første `r month(max(dat_fig_3$DATE))` måneder udviklet sig mere, end det var tilfældet i `r as.character(næst_nyeste_aar)`.
 
 **Figur 6. Udvikling pr måned i antallet af biler fordelt på drivmiddel**
 ```{r}
