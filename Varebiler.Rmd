@@ -58,34 +58,35 @@ if(month(Sys.Date())==1){
 sti_kf <- "S:/CKA/Databank/007 Klimafremskrivning"
 
 #Data til bestand
-# Laver variable til BRUG og datasæt
-brug_values <- c("1000", "1100", "1200")
-dataset_names <- c("data_bil", "data_husholdning", "data_erhverv")
-
-# Laver data
-process_data <- function(brug_values) {
-  tbl_dst("BIL54", "da") %>% 
-    filter(BILTYPE %in% c("4000102000"), OMRÅDE == "000", BRUG %in% brug_values) %>% 
-    use_labels() %>% 
-    collect() %>% 
-    select(-c("OMRÅDE", "BRUG")) %>% 
-    mutate(DRIV = ifelse(str_detect(DRIV, "hybrid"), "Plug-in-hybrid", DRIV),
-           DRIV = ifelse(DRIV %in% c("Drivmidler i alt", "Benzin", "Diesel", "El", "Plug-in-hybrid"),
-                         DRIV,
-                         "Øvrige drivmidler")) %>%
-    filter(DRIV != "Drivmidler i alt") %>%
-    summarise(INDHOLD = sum(INDHOLD), .by = c("DRIV", "TID"))
-}
-
-# Laver loop/map
-dataset <- map(brug_values, process_data)
-
-# Laver datasæt til objekter
-list2env(setNames(dataset, dataset_names), envir = .GlobalEnv)
-
-data_bil_ny <- tbl_dst("BIL54", "da") |> 
+data_bil <- tbl_dst("BIL54", "da") |> 
   filter(BILTYPE %in% c("4000102000"), OMRÅDE == "000", 
          BRUG %in% c("1000")) |> 
+  use_labels() |> 
+  collect() |> 
+  select(-c("OMRÅDE", "BRUG")) %>% 
+  mutate(DRIV = ifelse(str_detect(DRIV, "hybrid"), "Plug-in-hybrid", DRIV),
+         DRIV = ifelse(DRIV %in% c("Drivmidler i alt", "Benzin", "Diesel", "El", "Plug-in-hybrid"),
+                       DRIV,
+                       "Øvrige drivmidler")) %>% 
+  summarise(INDHOLD=sum(INDHOLD),
+            .by = c("DRIV","TID"))
+
+data_husholdning <- tbl_dst("BIL54", "da") |> 
+  filter(BILTYPE %in% c("4000102000"), OMRÅDE == "000", 
+         BRUG %in% c("1100")) |> 
+  use_labels() |> 
+  collect() |> 
+  select(-c("OMRÅDE", "BRUG")) %>% 
+  mutate(DRIV = ifelse(str_detect(DRIV, "hybrid"), "Plug-in-hybrid", DRIV),
+         DRIV = ifelse(DRIV %in% c("Drivmidler i alt", "Benzin", "Diesel", "El", "Plug-in-hybrid"),
+                       DRIV,
+                       "Øvrige drivmidler")) %>% 
+  summarise(INDHOLD=sum(INDHOLD),
+            .by = c("DRIV","TID"))
+
+data_erhverv <- tbl_dst("BIL54", "da") |> 
+  filter(BILTYPE %in% c("4000102000"), OMRÅDE == "000", 
+         BRUG %in% c("1200")) |> 
   use_labels() |> 
   collect() |> 
   select(-c("OMRÅDE", "BRUG")) %>% 
@@ -106,23 +107,9 @@ data_bil_1 <- data_bil |>
     .by =  "DRIV"
   )
 
-data_bil_1.1 <- data_bil_ny |>
-  mutate(
-    AAR = round(as.numeric(str_sub(TID, end = 4)) + (as.numeric(str_sub(TID, start = -2)) - 1) / 12, 3),
-    DATE = as.Date(str_c(str_sub(TID, end = 4), "-", str_sub(TID, start = -2), "-01")),
-    DATE_1 = DATE %m+% months(1),
-    UDV_BIL = INDHOLD - lag(INDHOLD),
-    .by =  "DRIV"
-  )
-
 #Data til nysalg
-# Laver variable til datasæt
-dataset_names_2 <- c("data_nysalg", "data_nysalg_husholdning", "data_nysalg_erhverv")
-
-# Laver data
-process_data_2 <- function(brug_values) {
-  tbl_dst("BIL53", "da") %>% 
-    filter(BILTYPE %in% c("4000102000"), OMRÅDE == "000", BRUG %in% brug_values) %>% 
+data_nysalg <- tbl_dst("BIL53", "da") %>% 
+    filter(BILTYPE %in% c("4000102000"), OMRÅDE == "000", BRUG %in% "1000") %>% 
     use_labels() %>% 
     collect() %>% 
     select(-c("OMRÅDE", "BRUG")) %>% 
@@ -132,13 +119,30 @@ process_data_2 <- function(brug_values) {
                          "Øvrige drivmidler")) %>%
     filter(DRIV != "Drivmidler i alt") %>% 
     summarise(INDHOLD = sum(INDHOLD), .by = c("DRIV", "TID"))
-}
 
-# Laver loop/map
-dataset_2 <- map(brug_values, process_data_2)
+data_nysalg_husholdning <- tbl_dst("BIL53", "da") %>% 
+    filter(BILTYPE %in% c("4000102000"), OMRÅDE == "000", BRUG %in% "1100") %>% 
+    use_labels() %>% 
+    collect() %>% 
+    select(-c("OMRÅDE", "BRUG")) %>% 
+    mutate(DRIV = ifelse(str_detect(DRIV, "hybrid"), "Plug-in-hybrid", DRIV),
+           DRIV = ifelse(DRIV %in% c("Drivmidler i alt", "Benzin", "Diesel", "El", "Plug-in-hybrid"),
+                         DRIV,
+                         "Øvrige drivmidler")) %>%
+    filter(DRIV != "Drivmidler i alt") %>% 
+    summarise(INDHOLD = sum(INDHOLD), .by = c("DRIV", "TID"))
 
-# Laver datasæt til objekter
-list2env(setNames(dataset_2, dataset_names_2), envir = .GlobalEnv)
+data_nysalg_erhverv <- tbl_dst("BIL53", "da") %>% 
+    filter(BILTYPE %in% c("4000102000"), OMRÅDE == "000", BRUG %in% "1200") %>% 
+    use_labels() %>% 
+    collect() %>% 
+    select(-c("OMRÅDE", "BRUG")) %>% 
+    mutate(DRIV = ifelse(str_detect(DRIV, "hybrid"), "Plug-in-hybrid", DRIV),
+           DRIV = ifelse(DRIV %in% c("Drivmidler i alt", "Benzin", "Diesel", "El", "Plug-in-hybrid"),
+                         DRIV,
+                         "Øvrige drivmidler")) %>%
+    filter(DRIV != "Drivmidler i alt") %>% 
+    summarise(INDHOLD = sum(INDHOLD), .by = c("DRIV", "TID"))
 
 
 Nummer_sidste_md <- data_nysalg |> 
@@ -156,6 +160,22 @@ nyeste_aar <- data_nysalg |>
 max_aar <- as.numeric(nyeste_aar)
 # legend_sort <- c("El", "Plug-in-hybrid", "Diesel","Benzin","Øvrige drivmidler", "Drivmidler i alt")
 legend_sort <- c("Øvrige drivmidler", "Benzin", "Diesel", "Plug-in-hybrid", "El" , "Drivmidler i alt")
+
+data_nysalg_1 <- data_nysalg |> 
+  mutate(AAR = str_sub(TID, end = 4)) |> 
+  (\(y) bind_rows(group_by(y, AAR, DRIV) |>
+                    summarise(INDHOLD = sum(INDHOLD),
+                              .groups = "drop_last") |> 
+                    mutate(A_INDHOLD = round(INDHOLD/sum(INDHOLD, na.rm = T)*100 ,1)) |> 
+                    ungroup(), 
+                  filter(y, TID==max(TID)) |> 
+                    summarise(AAR = str_c(str_sub(TID, end = 4), " (",
+                                          format(ISOdate(2000, str_sub(TID, start = -2), 1), "%B"),")"),
+                              INDHOLD = sum(INDHOLD),
+                              .by = "DRIV") |> 
+                    mutate(A_INDHOLD = round(INDHOLD/sum(INDHOLD, na.rm = T)*100, 1)) |> 
+                    ungroup()))() |> 
+  mutate(DRIV = factor(DRIV, levels = legend_sort))
 
 data_nysalg_1 <- data_nysalg |> 
   mutate(AAR = str_sub(TID, end = 4)) |> 
@@ -419,27 +439,16 @@ sidste_par_aar <- data_bil_1 |>
                               .by = c("MD", "DRIV"))
   ))()
 
-dette_par_aar <- data_bil_1.1 |> 
+dette_par_aar <- data_bil_1 |> 
   filter(year(DATE)==max(year(DATE))) |> 
   mutate(MD = month(DATE), DRIV, UDV_BIL, TYPE = as.character(max_aar), .keep = "none")
-
-sidste_par_aar_1.1 <- data_bil_1.1 |> 
-  filter(year(DATE)>(max(year(DATE))-6) & year(DATE)<max(year(DATE)) & DRIV!="Øvrige drivmidler") |> 
-  (\(y) bind_rows(y |> filter(year(DATE)==max(year(DATE))) |> 
-                    mutate(MD = month(DATE), DRIV, UDV_BIL, TYPE = as.character(max_aar-1),
-                           .keep = "none"),
-                  y |> 
-                    mutate(MD = month(DATE)) |> 
-                    summarise(UDV_BIL = round(mean(UDV_BIL), 0), TYPE = str_c(max_aar-5,"-", max_aar-1, " (gennemsnit)"),
-                              .by = c("MD", "DRIV"))
-  ))()
 
 
 # danish_month_names_long <- c("Januar", "Februar", "Marts", "April", "Maj", "Juni", "Juli", "August", "September", "Oktober", "November", "December")
 
 
 
-Samlet_par_aar <- rbind(sidste_par_aar_1.1, dette_par_aar)
+Samlet_par_aar <- rbind(sidste_par_aar, dette_par_aar)
 
 Samlet_par_aar <- Samlet_par_aar %>%
   mutate(
@@ -457,7 +466,7 @@ max_måned_afvikling_b <- Samlet_par_aar %>%
 
 
 kombineret_par_aar <- dette_par_aar |> 
-  left_join(sidste_par_aar_1.1 |> 
+  left_join(sidste_par_aar |> 
               rename(UDV_BIL_sid_aar=UDV_BIL) |> 
               filter(TYPE==as.character(max_aar-1)) |> 
               select(-TYPE) %>% 
@@ -614,7 +623,7 @@ data_nysalg_2_stjerne |>
 
 ```
 
-El-varebilers andel af det samlede antal nyregistreringer har været stigende siden 2020. I 2020 udgjorde el-varebiler `r pull(ebil_andel_nysalget, "2020") ` pct. af de samlede nyregistreringer.  I `r nyeste_aar` har elbiler udgjort `r pull(ebil_andel_nysalget, nyeste_aar) ` pct. af de samlede nyregistreringer, jf. figur 2. I `r format(ISOdate(2000, Nummer_sidste_md, 1), "%B")` udgjorde elbiler `r ebil_andel_nysalget[length(ebil_andel_nysalget)] %>% as.numeric()` pct. af nyregistreringerne. Hidtil er den højeste andel nyregistrerede elbiler set i `r Måned_max_EL_andel`. 
+El-varebilers andel af det samlede antal nyregistreringer har været stigende siden 2020. I 2020 udgjorde el-varebiler `r pull(ebil_andel_nysalget, "2020") ` pct. af de samlede nyregistreringer.  I `r nyeste_aar` har el-varebiler udgjort `r pull(ebil_andel_nysalget, nyeste_aar) ` pct. af de samlede nyregistreringer, jf. figur 2. I `r format(ISOdate(2000, Nummer_sidste_md, 1), "%B")` udgjorde el-varebiler `r ebil_andel_nysalget[length(ebil_andel_nysalget)] %>% as.numeric()` pct. af nyregistreringerne. Hidtil er den højeste andel nyregistrerede elbiler set i `r Måned_max_EL_andel`. 
 
 ```{r}
 # Figur 2. Drivmidlernes andel af nyregistreringer for varebiler
@@ -728,7 +737,7 @@ bind_rows(DST_tal, KF_tal) |>
 
 ```
 
-Alt imens bestanden af el-varebiler er under en positiv udvikling, er bestanden af fossil-varebiler forsat under en negativ udvikling. I de første `r month(max(dat_fig_3$DATE))` måneder af 2020 var der en nettoafgang på `r abs(tal_fos_2019)`, hvor der i de første `r month(max(dat_fig_3$DATE))` måneder af `r nyeste_aar` var en nettoafgang på `r abs(tal_fos_2023)` varebiler. Det skyldes særligt, at bestanden af diesel- og benzin-varebiler har været faldende siden august 2020.
+Alt imens bestanden af el-varebiler er under en positiv udvikling, er bestanden af fossil-varebiler forsat under en negativ udvikling. I de første `r month(max(dat_fig_3$DATE))` måneder af 2020 var der en nettoafgang på `r abs(tal_fos_2019)`, hvor der i de første `r month(max(dat_fig_3$DATE))` måneder af `r nyeste_aar` var en nettoafgang på `r abs(tal_fos_2023)` fossil-varebiler. Det skyldes særligt, at bestanden af diesel- og benzin-varebiler har været faldende siden august 2020.
 
 Af figuren fremgår det yderligere, at væksten i bestanden af plug-in-bybrid biler foreløbig er toppet i `r sprintf("%.0f", max_year_P_I_H)`.
 
@@ -780,8 +789,8 @@ if(Nummer_sidste_md!="1") marker_v <- ", marker = FALSE"
 #   hw_grid(rowheight = 400) %>% htmltools::browsable()"))
 
 expr <- parse(text = str_c(
-  "map(sidste_par_aar_1.1$DRIV |> unique(), 
-    ~{hchart(sidste_par_aar_1.1 |> filter(DRIV == .x), 'line', hcaes(x = month.abb[MD], y = UDV_BIL, group = TYPE ), marker = FALSE) |> 
+  "map(sidste_par_aar$DRIV |> unique(), 
+    ~{hchart(sidste_par_aar |> filter(DRIV == .x), 'line', hcaes(x = month.abb[MD], y = UDV_BIL, group = TYPE ), marker = FALSE) |> 
         hc_colors(c(trm_colors(c('graa', 'orange')))) |> 
         hc_add_series(filter(dette_par_aar, DRIV == .x), type = 'line', marker = FALSE, hcaes(x = month.abb[MD], y = UDV_BIL), color = trm_colors(c('blaa')), name = max_aar) |> 
         hc_title(text = .x) |> 
@@ -804,4 +813,3 @@ expr <- parse(text = str_c(
 eval(expr) 
 
 ```
-
