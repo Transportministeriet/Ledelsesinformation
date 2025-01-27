@@ -83,8 +83,30 @@ dataset <- map(brug_values, process_data)
 # Laver datasæt til objekter
 list2env(setNames(dataset, dataset_names), envir = .GlobalEnv)
 
+data_bil_ny <- tbl_dst("BIL54", "da") |> 
+  filter(BILTYPE %in% c("4000102000"), OMRÅDE == "000", 
+         BRUG %in% c("1000")) |> 
+  use_labels() |> 
+  collect() |> 
+  select(-c("OMRÅDE", "BRUG")) %>% 
+  mutate(DRIV = ifelse(str_detect(DRIV, "hybrid"), "Plug-in-hybrid", DRIV),
+         DRIV = ifelse(DRIV %in% c("Drivmidler i alt", "Benzin", "Diesel", "El", "Plug-in-hybrid"),
+                       DRIV,
+                       "Øvrige drivmidler")) %>% 
+  summarise(INDHOLD=sum(INDHOLD),
+            .by = c("DRIV","TID"))
+
 
 data_bil_1 <- data_bil |>
+  mutate(
+    AAR = round(as.numeric(str_sub(TID, end = 4)) + (as.numeric(str_sub(TID, start = -2)) - 1) / 12, 3),
+    DATE = as.Date(str_c(str_sub(TID, end = 4), "-", str_sub(TID, start = -2), "-01")),
+    DATE_1 = DATE %m+% months(1),
+    UDV_BIL = INDHOLD - lag(INDHOLD),
+    .by =  "DRIV"
+  )
+
+data_bil_1.1 <- data_bil_ny |>
   mutate(
     AAR = round(as.numeric(str_sub(TID, end = 4)) + (as.numeric(str_sub(TID, start = -2)) - 1) / 12, 3),
     DATE = as.Date(str_c(str_sub(TID, end = 4), "-", str_sub(TID, start = -2), "-01")),
@@ -397,7 +419,7 @@ sidste_par_aar <- data_bil_1 |>
                               .by = c("MD", "DRIV"))
   ))()
 
-dette_par_aar <- data_bil_1 |> 
+dette_par_aar <- data_bil_1.1 |> 
   filter(year(DATE)==max(year(DATE))) |> 
   mutate(MD = month(DATE), DRIV, UDV_BIL, TYPE = as.character(max_aar), .keep = "none")
 
@@ -421,9 +443,21 @@ max_måned_afvikling_b <- Samlet_par_aar %>%
   slice(which.min(UDV_BIL)) %>%
   pull(MDAAR)
 
+sidste_par_aar_1.1 <- data_bil_1.1 |> 
+  filter(year(DATE)>(max(year(DATE))-6) & year(DATE)<max(year(DATE)) & DRIV!="Øvrige drivmidler") |> 
+  (\(y) bind_rows(y |> filter(year(DATE)==max(year(DATE))) |> 
+                    mutate(MD = month(DATE), DRIV, UDV_BIL, TYPE = as.character(max_aar-1),
+                           .keep = "none"),
+                  y |> 
+                    mutate(MD = month(DATE)) |> 
+                    summarise(UDV_BIL = round(mean(UDV_BIL), 0), TYPE = str_c(max_aar-5,"-", max_aar-1, " (gennemsnit)"),
+                              .by = c("MD", "DRIV"))
+  ))()
+
+
 
 kombineret_par_aar <- dette_par_aar |> 
-  left_join(sidste_par_aar |> 
+  left_join(sidste_par_aar_1.1 |> 
               rename(UDV_BIL_sid_aar=UDV_BIL) |> 
               filter(TYPE==as.character(max_aar-1)) |> 
               select(-TYPE) %>% 
@@ -435,11 +469,11 @@ kombineret_par_aar <- dette_par_aar |>
   left_join( tibble(ant_gode_md = c(0:12),
                     bogstav_tal = c("nul", "en", "to", "tre", "fire", "fem", "seks", "syv", "otte", "ni", "ti", "elleve", "tolv")))
 
-md_d_afvikles_hurtigere<-kombineret_par_aar[kombineret_par_aar$DRIV=="Diesel", "bogstav_tal"]
+md_d_afvikles_hurtigere <- kombineret_par_aar[kombineret_par_aar$DRIV=="Diesel", "bogstav_tal"]
 
-md_b_afvikles_hurtigere<-kombineret_par_aar[kombineret_par_aar$DRIV=="Benzin", "bogstav_tal"]
+md_b_afvikles_hurtigere <- kombineret_par_aar[kombineret_par_aar$DRIV=="Benzin", "bogstav_tal"]
 
-md_e_udvikles_hurtigere<-kombineret_par_aar[kombineret_par_aar$DRIV=="El", "bogstav_tal"]
+md_e_udvikles_hurtigere <- kombineret_par_aar[kombineret_par_aar$DRIV=="El", "bogstav_tal"]
 
 ```
 
@@ -704,3 +738,56 @@ data_fig_4_stjerne |>
                note = str_glue("Kilde: Danmarks Statistik<br>{stjerne_tekst}"))
 
 ```
+
+Figur 6 viser udvikligen i bestanden over måneder. I `r md_d_afvikles_hurtigere` ud af årets første `r month(max(dat_fig_3$DATE))` måneder er  bestanden af diesel-varebiler blevet afviklet hurtigere, end det var tilfældet i `r as.character(næst_nyeste_aar)`. Bestanden af benzin-varebiler er afviklet hurtigere i `r md_b_afvikles_hurtigere`  ud af de første  `r month(max(dat_fig_3$DATE))` måneder af 2023. Hidtil er `r max_måned_afvikling_b` den måned, hvor bestanden af benzinbiler er faldet mest. 
+
+**Figur 6. Udvikling pr måned i antallet af biler fordelt på drivmiddel**
+```{r}
+# Figur 6. Udvikling pr måned i antallet af varebiler fordelt på drivmiddel
+
+marker_v <- " "
+
+if(Nummer_sidste_md!="1") marker_v <- ", marker = FALSE"
+
+# expr <- parse(text =str_c("map(sidste_par_aar$DRIV |> unique(),
+#     ~{hchart(sidste_par_aar |> filter(DRIV == .x), 'line', hcaes(x = month.abb[MD], y = UDV_BIL, group = TYPE ), marker = F) |>
+#         hc_colors(c(trm_colors(c('graa', 'orange')))) |>
+#         hc_add_series(filter(dette_par_aar, DRIV == .x), type = 'line'" , marker_v,", hcaes(x = month.abb[MD], y = UDV_BIL), color = trm_colors(c('blaa')), name =max_aar) |>
+#         hc_title(text = .x) |>
+#         hc_yAxis(title = list(text = 'Antal'),
+#                  labels = list(
+#       format = \"{value:,.0f}\"),
+#                    style = list(fontSize = '12px')
+#                  ) |>
+#         hc_xAxis(title = list(text = NULL)) %>%
+#     format_chart(str_glue('<b>{str_replace_all(.x, \"_\", \" \") %>%
+#                           str_to_sentence()}<b>'))
+#     }) |>
+#   hw_grid(rowheight = 400) %>% htmltools::browsable()"))
+
+expr <- parse(text = str_c(
+  "map(sidste_par_aar_1.1$DRIV |> unique(), 
+    ~{hchart(sidste_par_aar_1.1 |> filter(DRIV == .x), 'line', hcaes(x = month.abb[MD], y = UDV_BIL, group = TYPE ), marker = FALSE) |> 
+        hc_colors(c(trm_colors(c('graa', 'orange')))) |> 
+        hc_add_series(filter(dette_par_aar, DRIV == .x), type = 'line', marker = FALSE, hcaes(x = month.abb[MD], y = UDV_BIL), color = trm_colors(c('blaa')), name = max_aar) |> 
+        hc_title(text = .x) |> 
+        hc_yAxis(title = list(text = 'Antal'),
+                 labels = list(
+      format = \"{value:,.0f}\"),
+                   style = list(fontSize = '12px')
+                 ) |> 
+       hc_xAxis(title = list(text = NULL)) |> 
+        trm_hc_format(
+      str_glue('<b>{.x}</b>'),
+      note = str_glue('Kilde: Danmarks Statistik')
+        )
+    }) |> 
+  hw_grid(rowheight = 400) %>% htmltools::browsable()"
+))
+
+
+
+eval(expr) 
+
+```
+
