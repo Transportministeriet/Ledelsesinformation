@@ -675,7 +675,32 @@ bind_rows(DST_tal, KF_tal) |>
     groupPadding = 0.52,    # Space between groups of bars
     pointPadding = 0.1    # Space between bars in the same group
   )) %>%
-  trm_hc_format(str_glue("<b>Figur 4.</b> Status for antallet af elbiler i {nyeste_aar}"),
+  trm_hc_format(str_glue("<b>Figur 4.</b> Status for antallet af e-varelbiler i {nyeste_aar}"),
                 note = "Kilde: Danmarks Statistik & Klimastatus for Fremskrivning 2024")
+
+```
+
+Alt imens bestanden af el-varebiler er under en positiv udvikling, er bestanden af fossil-varebiler forsat under en negativ udvikling. I de første `r month(max(dat_fig_3$DATE))` måneder af 2020 var der en nettoafgang på `r abs(tal_fos_2019)`, hvor der i de første `r month(max(dat_fig_3$DATE))` måneder af `r nyeste_aar` var en nettoafgang på `r abs(tal_fos_2023)` varebiler. Det skyldes særligt, at bestanden af diesel- og benzin-varebiler har været faldende siden august 2020.
+
+Af figuren fremgår det yderligere, at væksten i bestanden af plug-in-bybrid biler foreløbig er toppet i `r sprintf("%.0f", max_year_P_I_H)`.
+
+```{r}
+# Figur 5. Udvikling i antallet af varebiler fra januar til nyeste måned
+
+data_fig_4_stjerne <- data_fig_4 %>%
+  mutate(AAR = ifelse(AAR == nyeste_aar, paste0(AAR, stjerne), AAR))
+
+data_fig_4_stjerne |> 
+  filter(!is.na(DRIV_1), !is.na(UDV_ANTAL_BIL)) |> 
+  hchart('column', hcaes(x = AAR, y = UDV_ANTAL_BIL, group = DRIV_1 ), borderColor = 0) |> 
+  hc_colors(c(trm_colors(c("groen", "orange", "blaa" ,"lyseblaa")))) |> 
+  hc_yAxis(title = list(text = "Antal (tusind)"),
+           labels = list(
+             formatter = JS("function() {
+      return this.value ? (this.value / 1000).toFixed(0) : this.value;
+    }"))) |> 
+  hc_xAxis(title = list(text = NULL)) %>%
+  trm_hc_format(str_glue("<b>Figur 5.</b> Udvikling i antallet af varebiler fra januar til {format(ISOdate(2000, as.numeric(Nummer_sidste_md), 1), '%B')}" ),
+               note = str_glue("Kilde: Danmarks Statistik<br>{stjerne_tekst}"))
 
 ```
