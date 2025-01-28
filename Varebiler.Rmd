@@ -108,6 +108,54 @@ data_bil_1 <- data_bil |>
     .by =  "DRIV"
   )
 
+data_bil_hus_1 <- data_husholdning |>
+  mutate(
+    AAR = round(as.numeric(str_sub(TID, end = 4)) + (as.numeric(str_sub(TID, start = -2)) - 1) / 12, 3),
+    DATE = as.Date(str_c(str_sub(TID, end = 4), "-", str_sub(TID, start = -2), "-01")),
+    DATE_1 = DATE %m+% months(1),
+    UDV_BIL = INDHOLD - lag(INDHOLD),
+    .by =  "DRIV"
+  )
+
+data_bil_hus_1_ny <- data_bil_hus_1 %>%
+  mutate(AAR = as.numeric(substr(as.character(AAR), 1, 4))) %>%
+  filter(DRIV != "Drivmidler i alt") %>%  # Remove total category
+  group_by(AAR, DRIV) %>%
+  filter(!is.na(INDHOLD)) %>%  # Remove NAs before applying last()
+  summarise(ANTAL = last(INDHOLD), .groups = "drop")  # Get last INDHOLD per year
+
+data_bil_hus_1_ny <- data_bil_hus_1_ny %>%
+  group_by(AAR) %>%
+  mutate(A_BESTAND = (ANTAL / sum(ANTAL)) * 100,
+         DRIV = factor(DRIV, levels = c("Benzin", "Diesel", "Plug-in-hybrid" ,"El"))) %>%
+  ungroup() %>% 
+  filter(!AAR %in% c(2018, 2019), 
+         DRIV != "Øvrige drivmidler")
+
+data_bil_erhverv_1 <- data_erhverv |>
+  mutate(
+    AAR = round(as.numeric(str_sub(TID, end = 4)) + (as.numeric(str_sub(TID, start = -2)) - 1) / 12, 3),
+    DATE = as.Date(str_c(str_sub(TID, end = 4), "-", str_sub(TID, start = -2), "-01")),
+    DATE_1 = DATE %m+% months(1),
+    UDV_BIL = INDHOLD - lag(INDHOLD),
+    .by =  "DRIV"
+  )
+
+data_bil_erhverv_1_ny <- data_bil_erhverv_1 %>%
+  mutate(AAR = as.numeric(substr(as.character(AAR), 1, 4))) %>%
+  filter(DRIV != "Drivmidler i alt") %>%  # Remove total category
+  group_by(AAR, DRIV) %>%
+  filter(!is.na(INDHOLD)) %>%  # Remove NAs before applying last()
+  summarise(ANTAL = last(INDHOLD), .groups = "drop")  # Get last INDHOLD per year
+
+data_bil_erhverv_1_ny <- data_bil_erhverv_1_ny %>%
+  group_by(AAR) %>%
+  mutate(A_BESTAND = (ANTAL / sum(ANTAL)) * 100,
+         DRIV = factor(DRIV, levels = c("Benzin", "Diesel", "Plug-in-hybrid" ,"El"))) %>%
+  ungroup() %>% 
+  filter(!AAR %in% c(2018, 2019), 
+         DRIV != "Øvrige drivmidler")
+
 #Data til nysalg
 data_nysalg <- tbl_dst("BIL53", "da") %>% 
   filter(BILTYPE %in% c("4000102000"), OMRÅDE == "000", BRUG %in% "1000") %>% 
@@ -749,7 +797,7 @@ bind_rows(DST_tal, KF_tal) |>
     groupPadding = 0.52,    # Space between groups of bars
     pointPadding = 0.1    # Space between bars in the same group
   )) %>%
-  trm_hc_format(str_glue("<b>Figur 4.</b> Status for antallet af e-varelbiler i {nyeste_aar}"),
+  trm_hc_format(str_glue("<b>Figur 4.</b> Status for antallet af el-varelbiler i {nyeste_aar}"),
                 note = "Kilde: Danmarks Statistik & Klimastatus for Fremskrivning 2024")
 
 ```
@@ -825,9 +873,9 @@ expr <- parse(text = str_c(
   hw_grid(rowheight = 400) %>% htmltools::browsable()"
 ))
 
-
-
 eval(expr) 
+
+
 
 ```
 
@@ -898,5 +946,112 @@ html <- tagList(
 
 # Render it in the browser
 browsable(html)
+```
+
+
+```{r}
+#Figur 8.1. Udviklingen i den samlede bestand af varebiler i husholdningen
+
+categories_hus <- unique(data_bil_hus_1_ny$AAR)
+
+figur8.1 <- data_bil_hus_1_ny |> 
+  hchart('column', hcaes(x = AAR, y = ANTAL, group = DRIV), borderColor = 0) |> 
+  hc_plotOptions(column = list(stacking = "normal")) |> 
+  hc_colors(as.character(trm_colors(farver[c(2, 3, 4, 5)]))) |>
+  hc_yAxis(
+    title = list(text = "Antal"),
+    labels = list(formatter = JS("function() {
+      return this.value >= 1000 ? (this.value / 1000).toFixed(0) : this.value;
+    }")),
+    stackLabels = list(enabled = TRUE, verticalAlign = 'top',
+                       crop = FALSE, overflow = 'none')
+  ) |> 
+  hc_xAxis(
+    categories_hus = categories_hus,
+    title = list(text = NULL),
+    labels = list(
+      rotation = -30
+      # ,
+      # formatter = JS("
+      #        function() {
+      #          var categories_hus = this.axis.categories; // Get the x-axis categories
+      #          var secondToLastIndex = categories.length - 2; // Find the second-to-last index
+      #          
+      #          if (this.pos === secondToLastIndex) {
+      #            return this.value + '*'; // Add '*' to the second-to-last category
+      #          }
+      #          
+      #          return this.value;
+      #        }
+      #      ")
+    ) )|>
+  hc_tooltip(shared=TRUE,
+             pointFormat = "<b>{series.name}</b>: {point.percentage:.1f} pct. ({point.y:,.0f} varebiler) <br>") %>%
+  trm_hc_format("<b>Figur 8.1</b> Udviklingen i den samlede bestand af varebiler i husholdningen",
+                note = str_glue("Kilde: Danmarks Statistik"))%>% 
+  hc_legend(reversed = TRUE, 
+            layout = "horizontal", 
+            align = "center", 
+            verticalAlign = "bottom",
+            itemStyle = list(fontSize = "11px"),
+            itemDistance = 2) %>%  # Add spacing between legend items%>%
+  hc_chart(marginBottom = 180)# Reduce font size if necessary %>%  # Adding spacing between items
+
+
+#Figur 8.2. Udviklingen i den samlede bestand af varebiler i husholdningen
+
+categories_erhverv <- unique(data_bil_erhverv_1_ny$AAR)
+
+figur8.2 <- data_bil_erhverv_1_ny |> 
+  hchart('column', hcaes(x = AAR, y = ANTAL, group = DRIV), borderColor = 0) |> 
+  hc_plotOptions(column = list(stacking = "normal")) |> 
+  hc_colors(as.character(trm_colors(farver[c(2, 3, 4, 5)]))) |> 
+  hc_yAxis(
+    title = list(text = "Antal"),
+    labels = list(formatter = JS("function() {
+      return this.value >= 1000 ? (this.value / 1000).toFixed(0) : this.value;
+    }")),
+    stackLabels = list(enabled = TRUE, verticalAlign = 'top',
+                       crop = FALSE, overflow = 'none')
+  ) |> 
+  hc_xAxis(
+    categories_erhverv = categories_erhverv,
+    title = list(text = NULL),
+    labels = list(
+      rotation = -30
+      # ,
+      # formatter = JS("
+      #        function() {
+      #          var categories_erhverv = this.axis.categories; // Get the x-axis categories
+      #          var secondToLastIndex = categories.length - 2; // Find the second-to-last index
+      #          
+      #          if (this.pos === secondToLastIndex) {
+      #            return this.value + '*'; // Add '*' to the second-to-last category
+      #          }
+      #          
+      #          return this.value;
+      #        }
+      #      ")
+    ) )|>
+  hc_tooltip(shared=TRUE,
+             pointFormat = "<b>{series.name}</b>: {point.percentage:.1f} pct. ({point.y:,.0f} varebiler) <br>") %>%
+  trm_hc_format("<b>Figur 8.2</b> Udviklingen i den samlede bestand af varebiler i erhvervet",
+                note = str_glue("Kilde: Danmarks Statistik"))%>% 
+  hc_legend(reversed = TRUE, 
+            layout = "horizontal", 
+            align = "center", 
+            verticalAlign = "bottom",
+            itemStyle = list(fontSize = "11px"),
+            itemDistance = 2) %>%  # Add spacing between legend items%>%
+  hc_chart(marginBottom = 180)# Reduce font size if necessary %>%  # Adding spacing between items
+
+# Create a HTML structure with two columns
+html2 <- tagList(
+  div(style = "display: flex; justify-content: space-between;",
+      div(style = "width: 48%;", figur8.1),
+      div(style = "width: 48%;", figur8.2)))
+
+# Render it in the browser
+browsable(html2)
 ```
 
