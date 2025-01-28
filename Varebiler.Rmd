@@ -108,6 +108,13 @@ data_bil_1 <- data_bil |>
     .by =  "DRIV"
   )
 
+data_bil_1_ny <- data_bil_1 %>%
+  mutate(AAR = as.numeric(substr(as.character(AAR), 1, 4))) %>%
+  filter(DRIV != "Drivmidler i alt") %>%  # Remove total category
+  group_by(AAR, DRIV) %>%
+  filter(!is.na(INDHOLD)) %>%  # Remove NAs before applying last()
+  summarise(ANTAL = last(INDHOLD), .groups = "drop")  # Get last INDHOLD per year
+
 data_bil_hus_1 <- data_husholdning |>
   mutate(
     AAR = round(as.numeric(str_sub(TID, end = 4)) + (as.numeric(str_sub(TID, start = -2)) - 1) / 12, 3),
@@ -306,6 +313,81 @@ totalsalg <- data_nysalg_1 %>%
   filter(AAR == nyeste_aar) %>%
   summarize(sum_indhold = sum(INDHOLD))
 
+eltotalsalg <- data_nysalg_1 %>%
+  filter(AAR == nyeste_aar, DRIV == "El") %>%
+  summarize(sum_indhold = sum(INDHOLD))
+
+fostotalsalg <- data_nysalg_1 %>%
+  filter(AAR == nyeste_aar, DRIV %in% c("Benzin", "Diesel")) %>%
+  summarize(sum_indhold = sum(INDHOLD))
+
+totalsalg_hus <- data_nysalg_hus_1 %>%
+  filter(AAR == nyeste_aar) %>%
+  summarize(sum_indhold = sum(INDHOLD))
+
+eltotalsalg_hus <- data_nysalg_hus_1 %>%
+  filter(AAR == nyeste_aar, DRIV == "El") %>%
+  summarize(sum_indhold = sum(INDHOLD))
+
+fostotalsalg_hus <- data_nysalg_hus_1 %>%
+  filter(AAR == nyeste_aar, DRIV %in% c("Benzin", "Diesel")) %>%
+  summarize(sum_indhold = sum(INDHOLD))
+
+totalsalg_erhverv <- data_nysalg_erhverv_1 %>%
+  filter(AAR == nyeste_aar) %>%
+  summarize(sum_indhold = sum(INDHOLD))
+
+eltotalsalg_erhverv <- data_nysalg_erhverv_1 %>%
+  filter(AAR == nyeste_aar, DRIV == "El") %>%
+  summarize(sum_indhold = sum(INDHOLD))
+
+fostotalsalg_erhverv <- data_nysalg_erhverv_1 %>%
+  filter(AAR == nyeste_aar, DRIV %in% c("Benzin", "Diesel")) %>%
+  summarize(sum_indhold = sum(INDHOLD))
+
+totalbestand <- data_bil_1_ny %>%
+  filter(AAR == nyeste_aar) %>%
+  summarize(sum_antal = sum(ANTAL))
+
+eltotalbestand <- data_bil_1_ny %>%
+  filter(AAR == nyeste_aar, DRIV == "El") %>%
+  summarize(sum_antal = sum(ANTAL))
+
+fostotalbestand <- data_bil_1_ny %>%
+  filter(AAR == nyeste_aar, DRIV %in% c("Benzin", "Diesel")) %>%
+  summarize(sum_antal = sum(ANTAL))
+
+totalbestand_hus <- data_bil_hus_1_ny %>%
+  filter(AAR == nyeste_aar) %>%
+  summarize(sum_antal = sum(ANTAL))
+
+totalbestand_20_hus <- data_bil_hus_1_ny %>%
+  filter(AAR == 2020) %>%
+  summarize(sum_antal = sum(ANTAL))
+
+eltotalbestand_hus <- data_bil_hus_1_ny %>%
+  filter(AAR == nyeste_aar, DRIV == "El") %>%
+  summarize(sum_antal = sum(ANTAL))
+
+fostotalbestand_hus <- data_bil_hus_1_ny %>%
+  filter(AAR == nyeste_aar, DRIV %in% c("Benzin", "Diesel")) %>%
+  summarize(sum_antal = sum(ANTAL))
+
+totalbestand_erhverv <- data_bil_erhverv_1_ny %>%
+  filter(AAR == nyeste_aar) %>%
+  summarize(sum_antal = sum(ANTAL))
+
+totalbestand_20_erhverv <- data_bil_erhverv_1_ny %>%
+  filter(AAR == 2020) %>%
+  summarize(sum_antal = sum(ANTAL))
+
+eltotalbestand_erhverv <- data_bil_erhverv_1_ny %>%
+  filter(AAR == nyeste_aar, DRIV == "El") %>%
+  summarize(sum_antal = sum(ANTAL))
+
+fostotalbestand_erhverv <- data_bil_erhverv_1_ny %>%
+  filter(AAR == nyeste_aar, DRIV %in% c("Benzin", "Diesel")) %>%
+  summarize(sum_antal = sum(ANTAL))
 
 fbil_andel_nysalget19 <- data_nysalg_1 %>%
   filter(AAR ==2019) %>%
@@ -612,7 +694,7 @@ figur_6 <- bind_rows(sidste_par_aar, dette_par_aar) |>
 
 ```
 
-Dette er Transportministeriets interne statusnotat for nyregistreringer og bestand af varebiler. Det viser bl.a. udviklingen i antallet af varebiler fordelt på drivmiddeltyper. Notatet opdateres månedsvis og er baseret på data fra Danmarks Statistik.  
+Dette er Transportministeriets interne statusnotat for nyregistreringer og bestanden af varebiler. Det viser bl.a. udviklingen i antallet af varebiler fordelt på drivmiddeltyper. Notatet opdateres månedligt og er baseret på data fra Danmarks Statistik.  
 
 Data fra rapporten kan hentes her:
 ```{r}
@@ -630,12 +712,12 @@ list("Figur 1" = figur_1, "Figur 2" = figur_2, "Figur 3" = figur_3,
 
 
 ### Status på udviklingen af bestanden
-I perioden fra 2021 til 2023 faldt antallet af nyregistreringer, mens det er steget igen i 2024. I `r nyeste_aar` er der hidtil `r pull(totalsalg)` nyregistrerede varebiler, hvoraf `r pull(ebil_total_nysalget, nyeste_aar)` var elbiler. Til sammenligning  var der i `r as.character(max_aar-1)` registrerede `r pull(ebil_total_nysalget, as.character(max_aar-1))` nye el-varebiler. 
+I perioden fra 2021 til 2023 faldt antallet af nyregistreringer, mens det er steget igen i 2024. I `r nyeste_aar` er der hidtil `r pull(totalsalg)` nyregistrerede varebiler, hvoraf `r pull(ebil_total_nysalget, nyeste_aar)` var elbiler. Til sammenligning  var der i `r as.character(max_aar-1)` registreret `r pull(ebil_total_nysalget, as.character(max_aar-1))` nye el-varebiler. 
 
 ```{r}
 #FIGUR 1. Udvikling i nyregistreringer af varebiler fordelt på drivmiddel
 
-farver <- c("groen",  "orange", "blaa", "gul", "graa") %>% factor(., levels = .) %>% sort(decreasing = T)
+farver <- c("graa", "groen",  "orange", "blaa", "gul") %>% factor(., levels = .) %>% sort(decreasing = T)
 
 
 format_chart <- function(x, titel, note = NULL) {
@@ -668,7 +750,8 @@ data_nysalg_2_stjerne <- data_nysalg_2 %>%
   mutate(AAR = ifelse(AAR == nyeste_aar, paste0(AAR, stjerne), AAR))
 
 data_nysalg_2_stjerne |> 
-  filter(as.numeric(str_sub(AAR, end = 4))>max(as.numeric(str_sub(AAR, end = 4)))-5) |> 
+  filter(as.numeric(str_sub(AAR, end = 4))>max(as.numeric(str_sub(AAR, end = 4)))-5,
+         DRIV != "Øvrige drivmidler") |> 
   hchart('column', hcaes(x = AAR, y =INDHOLD, group = DRIV ), borderColor = 0) |> 
   hc_plotOptions(column = list(stacking = "normal")) |> 
   hc_colors(c(trm_colors(farver))) |> 
@@ -697,7 +780,8 @@ data_nysalg_1_stjerne <- data_nysalg_1 %>%
   mutate(AAR = ifelse(AAR == nyeste_aar, paste0(AAR, stjerne), AAR))
 
 data_nysalg_1_stjerne |> 
-  filter(as.numeric(str_sub(AAR, end = 4))>max(as.numeric(str_sub(AAR, end = 4)))-5) |> 
+  filter(as.numeric(str_sub(AAR, end = 4))>max(as.numeric(str_sub(AAR, end = 4)))-5,
+         DRIV != "Øvrige drivmidler") |> 
   hchart('column', hcaes(x = AAR, y =A_INDHOLD, group = DRIV ), borderColor = 0) |> 
   hc_plotOptions(column = list(stacking = "normal")) |> 
   hc_colors(c(trm_colors(farver))) |> 
@@ -717,7 +801,7 @@ Den 1. januar 2020 var den samlede bestand `r pull(bestand_2020)` varebiler. Fra
 #Ny figur 3 opgørelse af årlig bestand
 
 ny_figur_3_1 |> 
-  filter(DRIV != "Drivmidler i alt" ) |>
+  filter(DRIV != "Drivmidler i alt", DRIV != "Øvrige drivmidler" ) |>
   filter(aar != 2018) |>
   hchart('column', hcaes(x = rigtigt_år, y = INDHOLD/1000, group = DRIV ), borderColor = 0) |> 
   hc_plotOptions(column = list(stacking = "normal")) |> 
@@ -879,6 +963,9 @@ eval(expr)
 
 ```
 
+Varebiler kan opdeles efter brug, afhængigt af om de bruges i husholdningen eller i erhvervet. Foreløbigt i `r as.character(nyeste_aar)` udgjorde nyregistreringer i husholdningen `r round(totalsalg_hus/totalsalg * 100,1)` pct. af alle nyregistreringer, mens erhvervet stod for `r round(totalsalg_erhverv/totalsalg * 100,1)` pct. af nyregistreringerne.
+
+Opdeles varebiler efter brug, fremgår det, at det primært er varebiler i erhvervet, der omstilles til eldrift. Foreløbigt i `r as.character(nyeste_aar)`  har el-varebiler udgjort `r round(eltotalsalg_hus/totalsalg_hus * 100, 1)` pct. af nyregistreringerne i husholdningen, jf. figur 7.1. I samme periode udgjorde el-varebiler i erhvervet `r round(eltotalsalg_erhverv/totalsalg_erhverv * 100, 1)` pct. af nyregistreringerne, jf. figur 7.2.
 
 ```{r}
 #Figur 7.1 Husholdningens andel af nyregistreringer for varebiler
@@ -892,7 +979,7 @@ figur7.1 <- data_nysalg_hus_1 |>
   hc_plotOptions(column = list(stacking = "normal"), style = list(
     fontFamily = "Georgia"
   )) |> 
-  hc_colors(as.character(trm_colors(farver[c(2, 3, 4, 5)]))) |>
+  hc_colors(as.character(trm_colors(farver[c(1, 2, 3, 4)]))) |>
   hc_yAxis(title = list(text = "Pct."), max = 100) |> 
   hc_xAxis(title = list(text = NULL), categories = fct_sort_hus,
            labels = list(rotation = -30)  # Tilt the labels by -45 degrees (you can adjust the angle)
@@ -921,7 +1008,7 @@ figur7.2 <- data_nysalg_erhverv_1 |>
   hc_plotOptions(column = list(stacking = "normal"), style = list(
     fontFamily = "Georgia"
   )) |> 
-  hc_colors(as.character(trm_colors(farver[c(2, 3, 4, 5)]))) |> 
+  hc_colors(as.character(trm_colors(farver[c(1, 2, 3, 4)]))) |> 
   hc_yAxis(title = list(text = "Pct."), max = 100) |> 
   hc_xAxis(title = list(text = NULL), categories = fct_sort_erhverv,
            labels = list(rotation = -30)  # Tilt the labels by -45 degrees (you can adjust the angle)
@@ -948,7 +1035,9 @@ html <- tagList(
 browsable(html)
 ```
 
+Bestanden af varebiler i husholdningen udgør `r round(totalbestand_hus/totalbestand * 100, 1)` pct. af den samlede bestand af varebiler, men bestanden af varebiler i erhvervet udgør `r round(totalbestand_erhverv/totalbestand * 100, 1)` pct.
 
+Bestanden af varebiler i husholdningerne er faldet med `r abs(round((totalbestand_hus - totalbestand_20_hus)/totalbestand_20_hus * 100, 1))` pct. siden 2020, jf. figur 8.1. Herudover ses det, at el-varebiler næsten ingen andel af bestanden af varebiler i husholdningen, mens bestanden af fossil-elvarebiler udgør `r round(fostotalbestand_hus/totalbestand_hus * 100, 1)` pct. Bestanden af varebiler i erhvervet er nogenlunde konstant siden 2020, jf. figur 8.2, hvor bestanden er vokset med `r totalbestand_erhverv - totalbestand_20_erhverv` varebiler. Endeligt ses der en vækst i andelen af el-varebiler i erhvervet. Foreløbigt i `r as.character(nyeste_aar)` udgør de `r round(eltotalbestand_erhverv/totalbestand_erhverv * 100, 1)`  pct. af den samlede bestand i erhvervet, mens fossil-varebiler udgør `r round(fostotalbestand_erhverv/totalbestand_erhverv * 100, 1)` pct.
 ```{r}
 #Figur 8.1. Udviklingen i den samlede bestand af varebiler i husholdningen
 
@@ -957,7 +1046,7 @@ categories_hus <- unique(data_bil_hus_1_ny$AAR)
 figur8.1 <- data_bil_hus_1_ny |> 
   hchart('column', hcaes(x = AAR, y = ANTAL, group = DRIV), borderColor = 0) |> 
   hc_plotOptions(column = list(stacking = "normal")) |> 
-  hc_colors(as.character(trm_colors(farver[c(2, 3, 4, 5)]))) |>
+  hc_colors(as.character(trm_colors(farver[c(1, 2, 3, 4)]))) |>
   hc_yAxis(
     title = list(text = "Antal"),
     labels = list(formatter = JS("function() {
@@ -967,7 +1056,7 @@ figur8.1 <- data_bil_hus_1_ny |>
                        crop = FALSE, overflow = 'none')
   ) |> 
   hc_xAxis(
-    categories_hus = categories_hus,
+    categories = categories_hus,
     title = list(text = NULL),
     labels = list(
       rotation = -30
@@ -1005,7 +1094,7 @@ categories_erhverv <- unique(data_bil_erhverv_1_ny$AAR)
 figur8.2 <- data_bil_erhverv_1_ny |> 
   hchart('column', hcaes(x = AAR, y = ANTAL, group = DRIV), borderColor = 0) |> 
   hc_plotOptions(column = list(stacking = "normal")) |> 
-  hc_colors(as.character(trm_colors(farver[c(2, 3, 4, 5)]))) |> 
+  hc_colors(as.character(trm_colors(farver[c(1, 2, 3, 4)]))) |> 
   hc_yAxis(
     title = list(text = "Antal"),
     labels = list(formatter = JS("function() {
@@ -1015,7 +1104,7 @@ figur8.2 <- data_bil_erhverv_1_ny |>
                        crop = FALSE, overflow = 'none')
   ) |> 
   hc_xAxis(
-    categories_erhverv = categories_erhverv,
+    categories = categories_erhverv,
     title = list(text = NULL),
     labels = list(
       rotation = -30
@@ -1049,7 +1138,9 @@ figur8.2 <- data_bil_erhverv_1_ny |>
 html2 <- tagList(
   div(style = "display: flex; justify-content: space-between;",
       div(style = "width: 48%;", figur8.1),
-      div(style = "width: 48%;", figur8.2)))
+      div(style = "width: 48%;", figur8.2)
+  )
+)
 
 # Render it in the browser
 browsable(html2)

@@ -844,7 +844,7 @@ bestand_data_1 |>
   hc_legend(reversed = TRUE)
 
 ```
-Omend bestanden af lette lastbiler blot udgør `r lette_andel_af_bestand` pct. af den samlede bestand af lastbiler, er det værd at bemærke, at bestanden af lette lastbiler er i vækst, og at det er særligt er lette ellastbiler, der kommer til. Ved udgangen af oktober udgjorde ellastbiler `r elbestand_seneste_lette/bestand_seneste_lette*100` pct. af den samlede bestand af lette lastbiler, jf. figur 3.1. I modsætning hertil udgjorde ellastbiler blot `r elbestand_seneste_tunge/bestand_seneste_tunge*100` pct. af den samlede bestand af tunge lastbiler, jf. figur 3.2. Lette elastbiler udgør således `r ellette_andel_af_elbestand` pct. af den samlede bestand af ellastbiler. 
+Omend bestanden af lette lastbiler blot udgør `r lette_andel_af_bestand` pct. af den samlede bestand af lastbiler, er det værd at bemærke, at bestanden af lette lastbiler er i vækst, og at det er særligt er lette ellastbiler, der kommer til. Ved udgangen af `r seneste_md` udgjorde ellastbiler `r elbestand_seneste_lette/bestand_seneste_lette*100` pct. af den samlede bestand af lette lastbiler, jf. figur 3.1. I modsætning hertil udgjorde ellastbiler blot `r elbestand_seneste_tunge/bestand_seneste_tunge*100` pct. af den samlede bestand af tunge lastbiler, jf. figur 3.2. Lette elastbiler udgør således `r ellette_andel_af_elbestand` pct. af den samlede bestand af ellastbiler. 
 
 ```{r}
 #Figur 3.1. Udviklingen i den samlede bestand af lette lastbiler
