@@ -544,8 +544,8 @@ KF_tal <- KF_bestand %>%
 
 #Data figur 5. udvikling i bestanden
 data_fig_4 <- data_bil_1 |> 
-  mutate(DRIV_1 = ifelse(DRIV %in% c("Benzin", "Diesel"), "Fossil biler", DRIV) |> 
-           factor(levels = c("El", "Plug-in-hybrid", "Fossil biler", "Drivmidler i alt")),
+  mutate(DRIV_1 = ifelse(DRIV %in% c("Benzin", "Diesel"), "Fossil varebiler", DRIV) |> 
+           factor(levels = c("El", "Plug-in-hybrid", "Fossil varebiler", "Drivmidler i alt")),
          AAR = year(DATE)) |> 
   summarise(INDHOLD = sum(INDHOLD),
             .by = c("DRIV_1", "AAR", "DATE") ) |> 
@@ -559,8 +559,8 @@ tal <- data_fig_4 |>
 
 tal_el_2019 <- tal |> filter(DRIV_1=="El", AAR=="2020") |> pull("UDV_ANTAL_BIL")
 tal_el_2023 <- tal |> filter(DRIV_1=="El", AAR==nyeste_aar) |> pull("UDV_ANTAL_BIL")
-tal_fos_2019 <- tal |> filter(DRIV_1=="Fossil biler", AAR=="2020") |> pull("UDV_ANTAL_BIL")
-tal_fos_2023 <- tal |> filter(DRIV_1=="Fossil biler", AAR==nyeste_aar) |> pull("UDV_ANTAL_BIL")
+tal_fos_2019 <- tal |> filter(DRIV_1=="Fossil varebiler", AAR=="2020") |> pull("UDV_ANTAL_BIL")
+tal_fos_2023 <- tal |> filter(DRIV_1=="Fossil varebiler", AAR==nyeste_aar) |> pull("UDV_ANTAL_BIL")
 
 #SKAL DETTE ÆNDRES TIL "VAREBILER"????
 
@@ -888,7 +888,7 @@ bind_rows(DST_tal, KF_tal) |>
 
 Alt imens bestanden af el-varebiler er under en positiv udvikling, er bestanden af fossil-varebiler forsat under en negativ udvikling. I de første `r month(max(dat_fig_3$DATE))` måneder af 2020 var der en nettoafgang på `r abs(tal_fos_2019)`, hvor der i de første `r month(max(dat_fig_3$DATE))` måneder af `r nyeste_aar` var en nettoafgang på `r abs(tal_fos_2023)` fossil-varebiler. Det skyldes særligt, at bestanden af diesel- og benzin-varebiler har været faldende siden august 2020.
 
-Af figuren fremgår det yderligere, at væksten i bestanden af plug-in-bybrid biler foreløbig er toppet i `r sprintf("%.0f", max_year_P_I_H)`.
+Af figuren fremgår det yderligere, at væksten i bestanden af plug-in-bybrid varebiler foreløbig er toppet i `r sprintf("%.0f", max_year_P_I_H)`.
 
 ```{r}
 # Figur 5. Udvikling i antallet af varebiler fra januar til nyeste måned
@@ -913,7 +913,7 @@ data_fig_4_stjerne |>
 
 Figur 6 viser udvikligen i bestanden over måneder. I `r md_d_afvikles_hurtigere` ud af årets første `r month(max(dat_fig_3$DATE))` måneder er  bestanden af diesel-varebiler blevet afviklet hurtigere, end det var tilfældet i `r as.character(næst_nyeste_aar)`. Bestanden af benzin-varebiler er afviklet hurtigere i `r md_b_afvikles_hurtigere`  ud af de første  `r month(max(dat_fig_3$DATE))` måneder af 2023. Hidtil er `r max_måned_afvikling_b` den måned, hvor bestanden af benzinbiler er faldet mest. Bastanden af el-varebiler har i `r md_e_udvikles_hurtigere` ud af årets første `r month(max(dat_fig_3$DATE))` måneder udviklet sig mere, end det var tilfældet i `r as.character(næst_nyeste_aar)`.
 
-**Figur 6. Udvikling pr måned i antallet af biler fordelt på drivmiddel**
+**Figur 6. Udvikling pr måned i antallet af varebiler fordelt på drivmiddel**
 ```{r}
 # Figur 6. Udvikling pr måned i antallet af varebiler fordelt på drivmiddel
 
