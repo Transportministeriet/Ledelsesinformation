@@ -694,7 +694,7 @@ figur_6 <- bind_rows(sidste_par_aar, dette_par_aar) |>
 
 ```
 
-Dette er Transportministeriets interne statusnotat for nyregistreringer og bestanden af varebiler. Det viser bl.a. udviklingen i antallet af varebiler fordelt på drivmiddeltyper. Notatet opdateres månedligt og er baseret på data fra Danmarks Statistik.  
+Dette er Transportministeriets interne statusnotat for nyregistreringer og bestanden af varebiler. Det viser bl.a. udviklingen i antallet af varebiler fordelt på drivmiddeltyper. Notatet opdateres månedligt.
 
 Data fra rapporten kan hentes her:
 ```{r}
@@ -712,7 +712,7 @@ list("Figur 1" = figur_1, "Figur 2" = figur_2, "Figur 3" = figur_3,
 
 
 ### Status på udviklingen af bestanden
-I perioden fra 2021 til 2023 faldt antallet af nyregistreringer, mens det er steget igen i 2024. I `r nyeste_aar` er der hidtil `r pull(totalsalg)` nyregistrerede varebiler, hvoraf `r pull(ebil_total_nysalget, nyeste_aar)` var elbiler. Til sammenligning  var der i `r as.character(max_aar-1)` registreret `r pull(ebil_total_nysalget, as.character(max_aar-1))` nye el-varebiler. 
+I perioden fra 2021 til 2023 faldt antallet af nyregistreringer, mens det er steget igen i 2024. I `r nyeste_aar` er der hidtil `r pull(totalsalg)` nyregistrerede varebiler, hvoraf `r pull(ebil_total_nysalget, nyeste_aar)` var elvarebiler. Til sammenligning  var der i `r as.character(max_aar-1)` registreret `r pull(ebil_total_nysalget, as.character(max_aar-1))` nye elvarebiler. 
 
 ```{r}
 #FIGUR 1. Udvikling i nyregistreringer af varebiler fordelt på drivmiddel
@@ -771,7 +771,7 @@ data_nysalg_2_stjerne |>
 
 ```
 
-El-varebilers andel af det samlede antal nyregistreringer har været stigende siden 2020. I 2020 udgjorde el-varebiler `r pull(ebil_andel_nysalget, "2020") ` pct. af de samlede nyregistreringer.  I `r nyeste_aar` har el-varebiler udgjort `r pull(ebil_andel_nysalget, nyeste_aar) ` pct. af de samlede nyregistreringer, jf. figur 2. I `r format(ISOdate(2000, Nummer_sidste_md, 1), "%B")` udgjorde el-varebiler `r ebil_andel_nysalget[length(ebil_andel_nysalget)] %>% as.numeric()` pct. af nyregistreringerne. Hidtil er den højeste andel nyregistrerede elbiler set i `r Måned_max_EL_andel`. 
+Elvarebilers andel af det samlede antal nyregistreringer har været stigende siden 2020. I 2020 udgjorde elvarebiler `r pull(ebil_andel_nysalget, "2020") ` pct. af de samlede nyregistreringer.  I `r nyeste_aar` har elvarebiler udgjort `r pull(ebil_andel_nysalget, nyeste_aar) ` pct. af de samlede nyregistreringer, jf. figur 2. I `r format(ISOdate(2000, Nummer_sidste_md, 1), "%B")` udgjorde elvarebiler `r ebil_andel_nysalget[length(ebil_andel_nysalget)] %>% as.numeric()` pct. af nyregistreringerne. Hidtil er den højeste andel nyregistrerede elvarebiler set i `r Måned_max_EL_andel`. 
 
 ```{r}
 # Figur 2. Drivmidlernes andel af nyregistreringer for varebiler
@@ -795,7 +795,7 @@ data_nysalg_1_stjerne |>
 
 ```
 
-Den 1. januar 2020 var den samlede bestand `r pull(bestand_2020)` varebiler. Fra januar 2020 til `r max_måned` `r nyeste_aar` er bestanden faldet med `r format(vækst_siden_2020, decimal.mark = ",")` pct., så den danske bestand af varebiler ultimo `r max_måned` var `r pull(bestand_2023_seneste)` varebiler. I `r max_måned` `r nyeste_aar` udgjorde el-varebiler `r round(DST_tal$INDHOLD[[2]]/bestand_2023_seneste*100,1)` pct. af den samlede bestand.
+Den 1. januar 2020 var den samlede bestand `r pull(bestand_2020)` varebiler. Fra januar 2020 til `r max_måned` `r nyeste_aar` er bestanden faldet med `r format(vækst_siden_2020, decimal.mark = ",")` pct., så den danske bestand af varebiler ultimo `r max_måned` var `r pull(bestand_2023_seneste)` varebiler. I `r max_måned` `r nyeste_aar` udgjorde elvarebiler `r round(DST_tal$INDHOLD[[2]]/bestand_2023_seneste*100,1)` pct. af den samlede bestand.
 
 ```{r}
 #Ny figur 3 opgørelse af årlig bestand
@@ -803,12 +803,16 @@ Den 1. januar 2020 var den samlede bestand `r pull(bestand_2020)` varebiler. Fra
 ny_figur_3_1 |> 
   filter(DRIV != "Drivmidler i alt", DRIV != "Øvrige drivmidler" ) |>
   filter(aar != 2018) |>
-  hchart('column', hcaes(x = rigtigt_år, y = INDHOLD/1000, group = DRIV ), borderColor = 0) |> 
+  hchart('column', hcaes(x = rigtigt_år, y = INDHOLD, group = DRIV ), borderColor = 0) |> 
   hc_plotOptions(column = list(stacking = "normal")) |> 
   hc_colors(c(trm_colors(farver))) |> 
   hc_yAxis(
     title = list(text = "Antal (tusind)"),
-    tickInterval = 100
+    labels = list(formatter = JS("function() {
+      return this.value >= 1000 ? (this.value / 1000).toFixed(0) : this.value;
+    }")),
+    stackLabels = list(enabled = TRUE, verticalAlign = 'top',
+                       crop = FALSE, overflow = 'none')
   ) |> 
   # hc_xAxis(title = list(text = NULL))|>
   #   hc_xAxis(title = list(text = NULL),
@@ -837,15 +841,8 @@ hc_xAxis(
     )
   )
 ) |> 
-  hc_tooltip(
-    formatter = JS("
-    function() {
-      var scaledValue = this.y * 1000; // Scale the value
-      return this.series.name + ': <b>' + Highcharts.numberFormat(scaledValue, 0, ',', '.') + '</b> varebiler<br>' +
-             '<b>' + Highcharts.numberFormat(this.percentage, 1, ',', '.') + '</b> pct. af den samlede bestand';
-    }
-  ")
-  )  %>% 
+  hc_tooltip(shared=TRUE,
+             pointFormat = "<b>{series.name}</b>: {point.percentage:.1f} pct. ({point.y:,.0f} varebiler) <br>")  %>% 
   hc_legend(reversed =TRUE) %>% 
   trm_hc_format("<b>Figur 3.</b> Bestand af varebiler",
                 note = "Kilde: Danmarks Statistik")
@@ -854,7 +851,7 @@ rest <- KF_tal$INDHOLD[[2]] - DST_tal$INDHOLD[[2]]
 
 ```
 
-Jævnfør Klimastatus og -fremskrivning 2024 vil der ved udgangen af 2025 være `r KF_tal$INDHOLD[[2]]` el-varebiler i Danmark. Bestanden pr. `r str_remove_all(DST_tal$x_axis[[2]], " observeret")` var `r DST_tal$INDHOLD[[2]]` el-varebiler, jf. figur 4. Differencen mellem det nuværende antal el-varebiler og det forventede antal el-varebiler ved udgangen af 2025 er således `r rest`.
+Jævnfør Klimastatus og -fremskrivning 2024 vil der ved udgangen af 2025 være `r KF_tal$INDHOLD[[2]]` elvarebiler i Danmark. Bestanden pr. `r str_remove_all(DST_tal$x_axis[[2]], " observeret")` var `r DST_tal$INDHOLD[[2]]` elvarebiler, jf. figur 4. Differencen mellem det nuværende antal elvarebiler og det forventede antal elvarebiler ved udgangen af 2025 er således `r rest`.
 
 ```{r}
 #Figur 4. Status for antallet af el-varebiler i nyeste aar
@@ -886,7 +883,7 @@ bind_rows(DST_tal, KF_tal) |>
 
 ```
 
-Alt imens bestanden af el-varebiler er under en positiv udvikling, er bestanden af fossil-varebiler forsat under en negativ udvikling. I de første `r month(max(dat_fig_3$DATE))` måneder af 2020 var der en nettoafgang på `r abs(tal_fos_2019)`, hvor der i de første `r month(max(dat_fig_3$DATE))` måneder af `r nyeste_aar` var en nettoafgang på `r abs(tal_fos_2023)` fossil-varebiler. Det skyldes særligt, at bestanden af diesel- og benzin-varebiler har været faldende siden august 2020.
+Alt imens bestanden af elvarebiler er under en positiv udvikling, er bestanden af fossilvarebiler forsat under en negativ udvikling. I de første `r month(max(dat_fig_3$DATE))` måneder af 2020 var der en nettoafgang på `r abs(tal_fos_2019)`, hvor der i de første `r month(max(dat_fig_3$DATE))` måneder af `r nyeste_aar` var en nettoafgang på `r abs(tal_fos_2023)` fossil-varebiler. Det skyldes særligt, at bestanden af dieselvarebiler har været faldende siden august 2020.
 
 Af figuren fremgår det yderligere, at væksten i bestanden af plug-in-bybrid varebiler foreløbig er toppet i `r sprintf("%.0f", max_year_P_I_H)`.
 
@@ -913,7 +910,7 @@ data_fig_4_stjerne |>
 
 Varebiler kan opdeles efter brug, afhængigt af om de bruges i husholdningen eller i erhvervet. Foreløbigt i `r as.character(nyeste_aar)` udgjorde nyregistreringer i husholdningen `r round(totalsalg_hus/totalsalg * 100,1)` pct. af alle nyregistreringer, mens erhvervet stod for `r round(totalsalg_erhverv/totalsalg * 100,1)` pct. af nyregistreringerne.
 
-Opdeles varebiler efter brug, fremgår det, at det primært er varebiler i erhvervet, der omstilles til eldrift. Foreløbigt i `r as.character(nyeste_aar)`  har el-varebiler udgjort `r round(eltotalsalg_hus/totalsalg_hus * 100, 1)` pct. af nyregistreringerne i husholdningen, jf. figur 7.1. I samme periode udgjorde el-varebiler i erhvervet `r round(eltotalsalg_erhverv/totalsalg_erhverv * 100, 1)` pct. af nyregistreringerne, jf. figur 7.2.
+Opdeles varebiler efter brug, fremgår det, at det primært er varebiler i erhvervet, der omstilles til eldrift. Foreløbigt i `r as.character(nyeste_aar)`  har elvarebiler udgjort `r round(eltotalsalg_hus/totalsalg_hus * 100, 1)` pct. af nyregistreringerne i husholdningen, jf. figur 7.1. I samme periode udgjorde elvarebiler i erhvervet `r round(eltotalsalg_erhverv/totalsalg_erhverv * 100, 1)` pct. af nyregistreringerne, jf. figur 7.2.
 
 ```{r}
 #Figur 6.1 Husholdningens andel af nyregistreringer for varebiler
@@ -939,7 +936,7 @@ figur6.1 <- data_nysalg_hus_1 |>
             itemStyle = list(fontSize = "11px"),
             itemDistance = 2 )%>% 
   hc_chart(marginBottom = 180)  %>%
-  hc_tooltip(shared = TRUE,             pointFormat = "<b>{series.name}</b>: {point.percentage:.1f} pct. (<b>{point.antal:,.0f}</b> lastbiler)<br>") %>%
+  hc_tooltip(shared = TRUE,             pointFormat = "<b>{series.name}</b>: {point.percentage:.1f} pct. (<b>{point.antal:,.0f}</b> varebiler)<br>") %>%
   trm_hc_format("<b>Figur 6.1</b> Husholdningens andel af nyregistreringer for varebiler",
                 note = str_glue("Kilde: Danmarks Statistik <br> {stjerne_tekst}"))
 
@@ -969,7 +966,7 @@ figur6.2 <- data_nysalg_erhverv_1 |>
             itemDistance = 2 )%>% 
   hc_chart(marginBottom = 180)  %>%
   hc_tooltip(shared = TRUE,
-             pointFormat = "<b>{series.name}</b>: {point.percentage:.1f} pct. (<b>{point.antal:,.0f}</b> lastbiler)<br>") %>%
+             pointFormat = "<b>{series.name}</b>: {point.percentage:.1f} pct. (<b>{point.antal:,.0f}</b> varebiler)<br>") %>%
   trm_hc_format("<b>Figur 6.2</b> Erhvervets andel af nyregistreringer for varebiler",
                 note = str_glue("Kilde: Danmarks Statistik <br> {stjerne_tekst}"))
 
@@ -985,7 +982,7 @@ browsable(html)
 
 Bestanden af varebiler i husholdningen udgør `r round(totalbestand_hus/totalbestand * 100, 1)` pct. af den samlede bestand af varebiler, men bestanden af varebiler i erhvervet udgør `r round(totalbestand_erhverv/totalbestand * 100, 1)` pct.
 
-Bestanden af varebiler i husholdningerne er faldet med `r abs(round((totalbestand_hus - totalbestand_20_hus)/totalbestand_20_hus * 100, 1))` pct. siden 2020, jf. figur 8.1. Herudover ses det, at el-varebiler næsten ingen andel af bestanden af varebiler i husholdningen, mens bestanden af fossil-elvarebiler udgør `r round(fostotalbestand_hus/totalbestand_hus * 100, 1)` pct. Bestanden af varebiler i erhvervet er nogenlunde konstant siden 2020, jf. figur 8.2, hvor bestanden er vokset med `r totalbestand_erhverv - totalbestand_20_erhverv` varebiler. Endeligt ses der en vækst i andelen af el-varebiler i erhvervet. Foreløbigt i `r as.character(nyeste_aar)` udgør de `r round(eltotalbestand_erhverv/totalbestand_erhverv * 100, 1)`  pct. af den samlede bestand i erhvervet, mens fossil-varebiler udgør `r round(fostotalbestand_erhverv/totalbestand_erhverv * 100, 1)` pct.
+Bestanden af varebiler i husholdningerne er faldet med `r abs(round((totalbestand_hus - totalbestand_20_hus)/totalbestand_20_hus * 100, 1))` pct. siden 2020, jf. figur 8.1. Herudover ses det, at el-varebiler næsten ingen andel af bestanden af varebiler i husholdningen, mens bestanden af fossilelvarebiler udgør `r round(fostotalbestand_hus/totalbestand_hus * 100, 1)` pct. Bestanden af varebiler i erhvervet er nogenlunde konstant siden 2020, jf. figur 8.2, hvor bestanden er vokset med `r totalbestand_erhverv - totalbestand_20_erhverv` varebiler. Endeligt ses der en vækst i andelen af elvarebiler i erhvervet. Foreløbigt i `r as.character(nyeste_aar)` udgør de `r round(eltotalbestand_erhverv/totalbestand_erhverv * 100, 1)`  pct. af den samlede bestand i erhvervet, mens fossilvarebiler udgør `r round(fostotalbestand_erhverv/totalbestand_erhverv * 100, 1)` pct.
 ```{r}
 #Figur 7.1. Udviklingen i den samlede bestand af varebiler i husholdningen
 
@@ -1024,7 +1021,7 @@ figur7.1 <- data_bil_hus_1_ny |>
     ) )|>
   hc_tooltip(shared=TRUE,
              pointFormat = "<b>{series.name}</b>: {point.percentage:.1f} pct. ({point.y:,.0f} varebiler) <br>") %>%
-  trm_hc_format("<b>Figur 6.1</b> Udviklingen i den samlede bestand af varebiler i husholdningen",
+  trm_hc_format("<b>Figur 7.1</b> Udviklingen i den samlede bestand af varebiler i husholdningen",
                 note = str_glue("Kilde: Danmarks Statistik"))%>% 
   hc_legend(reversed = TRUE, 
             layout = "horizontal", 
@@ -1072,7 +1069,7 @@ figur7.2 <- data_bil_erhverv_1_ny |>
     ) )|>
   hc_tooltip(shared=TRUE,
              pointFormat = "<b>{series.name}</b>: {point.percentage:.1f} pct. ({point.y:,.0f} varebiler) <br>") %>%
-  trm_hc_format("<b>Figur 6.2</b> Udviklingen i den samlede bestand af varebiler i erhvervet",
+  trm_hc_format("<b>Figur 7.2</b> Udviklingen i den samlede bestand af varebiler i erhvervet",
                 note = str_glue("Kilde: Danmarks Statistik"))%>% 
   hc_legend(reversed = TRUE, 
             layout = "horizontal", 
