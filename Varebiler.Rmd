@@ -911,67 +911,15 @@ data_fig_4_stjerne |>
 
 ```
 
-Figur 6 viser udvikligen i bestanden over måneder. I `r md_d_afvikles_hurtigere` ud af årets første `r month(max(dat_fig_3$DATE))` måneder er  bestanden af diesel-varebiler blevet afviklet hurtigere, end det var tilfældet i `r as.character(næst_nyeste_aar)`. Bestanden af benzin-varebiler er afviklet hurtigere i `r md_b_afvikles_hurtigere`  ud af de første  `r month(max(dat_fig_3$DATE))` måneder af 2023. Hidtil er `r max_måned_afvikling_b` den måned, hvor bestanden af benzinbiler er faldet mest. Bastanden af el-varebiler har i `r md_e_udvikles_hurtigere` ud af årets første `r month(max(dat_fig_3$DATE))` måneder udviklet sig mere, end det var tilfældet i `r as.character(næst_nyeste_aar)`.
-
-**Figur 6. Udvikling pr måned i antallet af varebiler fordelt på drivmiddel**
-```{r}
-# Figur 6. Udvikling pr måned i antallet af varebiler fordelt på drivmiddel
-
-marker_v <- " "
-
-if(Nummer_sidste_md!="1") marker_v <- ", marker = FALSE"
-
-# expr <- parse(text =str_c("map(sidste_par_aar$DRIV |> unique(),
-#     ~{hchart(sidste_par_aar |> filter(DRIV == .x), 'line', hcaes(x = month.abb[MD], y = UDV_BIL, group = TYPE ), marker = F) |>
-#         hc_colors(c(trm_colors(c('graa', 'orange')))) |>
-#         hc_add_series(filter(dette_par_aar, DRIV == .x), type = 'line'" , marker_v,", hcaes(x = month.abb[MD], y = UDV_BIL), color = trm_colors(c('blaa')), name =max_aar) |>
-#         hc_title(text = .x) |>
-#         hc_yAxis(title = list(text = 'Antal'),
-#                  labels = list(
-#       format = \"{value:,.0f}\"),
-#                    style = list(fontSize = '12px')
-#                  ) |>
-#         hc_xAxis(title = list(text = NULL)) %>%
-#     format_chart(str_glue('<b>{str_replace_all(.x, \"_\", \" \") %>%
-#                           str_to_sentence()}<b>'))
-#     }) |>
-#   hw_grid(rowheight = 400) %>% htmltools::browsable()"))
-
-expr <- parse(text = str_c(
-  "map(sidste_par_aar$DRIV |> unique(), 
-    ~{hchart(sidste_par_aar |> filter(DRIV == .x), 'line', hcaes(x = month.abb[MD], y = UDV_BIL, group = TYPE ), marker = FALSE) |> 
-        hc_colors(c(trm_colors(c('graa', 'orange')))) |> 
-        hc_add_series(filter(dette_par_aar, DRIV == .x), type = 'line', marker = FALSE, hcaes(x = month.abb[MD], y = UDV_BIL), color = trm_colors(c('blaa')), name = max_aar) |> 
-        hc_title(text = .x) |> 
-        hc_yAxis(title = list(text = 'Antal'),
-                 labels = list(
-      format = \"{value:,.0f}\"),
-                   style = list(fontSize = '12px')
-                 ) |> 
-       hc_xAxis(title = list(text = NULL)) |> 
-        trm_hc_format(
-      str_glue('<b>{.x}</b>'),
-      note = str_glue('Kilde: Danmarks Statistik')
-        )
-    }) |> 
-  hw_grid(rowheight = 400) %>% htmltools::browsable()"
-))
-
-eval(expr) 
-
-
-
-```
-
 Varebiler kan opdeles efter brug, afhængigt af om de bruges i husholdningen eller i erhvervet. Foreløbigt i `r as.character(nyeste_aar)` udgjorde nyregistreringer i husholdningen `r round(totalsalg_hus/totalsalg * 100,1)` pct. af alle nyregistreringer, mens erhvervet stod for `r round(totalsalg_erhverv/totalsalg * 100,1)` pct. af nyregistreringerne.
 
 Opdeles varebiler efter brug, fremgår det, at det primært er varebiler i erhvervet, der omstilles til eldrift. Foreløbigt i `r as.character(nyeste_aar)`  har el-varebiler udgjort `r round(eltotalsalg_hus/totalsalg_hus * 100, 1)` pct. af nyregistreringerne i husholdningen, jf. figur 7.1. I samme periode udgjorde el-varebiler i erhvervet `r round(eltotalsalg_erhverv/totalsalg_erhverv * 100, 1)` pct. af nyregistreringerne, jf. figur 7.2.
 
 ```{r}
-#Figur 7.1 Husholdningens andel af nyregistreringer for varebiler
+#Figur 6.1 Husholdningens andel af nyregistreringer for varebiler
 fct_sort_hus <- data_nysalg_hus_1$AAR %>% unique()
 
-figur7.1 <- data_nysalg_hus_1 |>
+figur6.1 <- data_nysalg_hus_1 |>
   filter(!AAR %in% c("2018", "2019"), DRIV != "Øvrige drivmidler") |># Exclude rows where AAR CONTATINS "9"
   mutate(AAR = factor(AAR, levels = fct_sort_hus),
          antal = INDHOLD) %>%  # Add ANTAL column for use in the tooltip
@@ -992,15 +940,15 @@ figur7.1 <- data_nysalg_hus_1 |>
             itemDistance = 2 )%>% 
   hc_chart(marginBottom = 180)  %>%
   hc_tooltip(shared = TRUE,             pointFormat = "<b>{series.name}</b>: {point.percentage:.1f} pct. (<b>{point.antal:,.0f}</b> lastbiler)<br>") %>%
-  trm_hc_format("<b>Figur 7.1</b> Husholdningens andel af nyregistreringer for varebiler",
+  trm_hc_format("<b>Figur 6.1</b> Husholdningens andel af nyregistreringer for varebiler",
                 note = str_glue("Kilde: Danmarks Statistik <br> {stjerne_tekst}"))
 
 
-#Figur 7.2 Erhvervets andel af nyregistreringer for varebiler
+#Figur 6.2 Erhvervets andel af nyregistreringer for varebiler
 
 fct_sort_erhverv <- data_nysalg_erhverv_1$AAR %>% unique()
 
-figur7.2 <- data_nysalg_erhverv_1 |>
+figur6.2 <- data_nysalg_erhverv_1 |>
   filter(!AAR %in% c("2018", "2019"), DRIV != "Øvrige drivmidler") |># Exclude rows where AAR CONTATINS "9"
   mutate(AAR = factor(AAR, levels = fct_sort_erhverv),
          antal = INDHOLD) %>%  # Add ANTAL column for use in the tooltip
@@ -1022,14 +970,14 @@ figur7.2 <- data_nysalg_erhverv_1 |>
   hc_chart(marginBottom = 180)  %>%
   hc_tooltip(shared = TRUE,
              pointFormat = "<b>{series.name}</b>: {point.percentage:.1f} pct. (<b>{point.antal:,.0f}</b> lastbiler)<br>") %>%
-  trm_hc_format("<b>Figur 7.2</b> Erhvervets andel af nyregistreringer for varebiler",
+  trm_hc_format("<b>Figur 6.2</b> Erhvervets andel af nyregistreringer for varebiler",
                 note = str_glue("Kilde: Danmarks Statistik <br> {stjerne_tekst}"))
 
 # Create a HTML structure with two columns
 html <- tagList(
   div(style = "display: flex; justify-content: space-between;",
-      div(style = "width: 48%;", figur7.1),
-      div(style = "width: 48%;", figur7.2)))
+      div(style = "width: 48%;", figur6.1),
+      div(style = "width: 48%;", figur6.2)))
 
 # Render it in the browser
 browsable(html)
@@ -1039,11 +987,11 @@ Bestanden af varebiler i husholdningen udgør `r round(totalbestand_hus/totalbes
 
 Bestanden af varebiler i husholdningerne er faldet med `r abs(round((totalbestand_hus - totalbestand_20_hus)/totalbestand_20_hus * 100, 1))` pct. siden 2020, jf. figur 8.1. Herudover ses det, at el-varebiler næsten ingen andel af bestanden af varebiler i husholdningen, mens bestanden af fossil-elvarebiler udgør `r round(fostotalbestand_hus/totalbestand_hus * 100, 1)` pct. Bestanden af varebiler i erhvervet er nogenlunde konstant siden 2020, jf. figur 8.2, hvor bestanden er vokset med `r totalbestand_erhverv - totalbestand_20_erhverv` varebiler. Endeligt ses der en vækst i andelen af el-varebiler i erhvervet. Foreløbigt i `r as.character(nyeste_aar)` udgør de `r round(eltotalbestand_erhverv/totalbestand_erhverv * 100, 1)`  pct. af den samlede bestand i erhvervet, mens fossil-varebiler udgør `r round(fostotalbestand_erhverv/totalbestand_erhverv * 100, 1)` pct.
 ```{r}
-#Figur 8.1. Udviklingen i den samlede bestand af varebiler i husholdningen
+#Figur 7.1. Udviklingen i den samlede bestand af varebiler i husholdningen
 
 categories_hus <- unique(data_bil_hus_1_ny$AAR)
 
-figur8.1 <- data_bil_hus_1_ny |> 
+figur7.1 <- data_bil_hus_1_ny |> 
   hchart('column', hcaes(x = AAR, y = ANTAL, group = DRIV), borderColor = 0) |> 
   hc_plotOptions(column = list(stacking = "normal")) |> 
   hc_colors(as.character(trm_colors(farver[c(1, 2, 3, 4)]))) |>
@@ -1076,7 +1024,7 @@ figur8.1 <- data_bil_hus_1_ny |>
     ) )|>
   hc_tooltip(shared=TRUE,
              pointFormat = "<b>{series.name}</b>: {point.percentage:.1f} pct. ({point.y:,.0f} varebiler) <br>") %>%
-  trm_hc_format("<b>Figur 8.1</b> Udviklingen i den samlede bestand af varebiler i husholdningen",
+  trm_hc_format("<b>Figur 6.1</b> Udviklingen i den samlede bestand af varebiler i husholdningen",
                 note = str_glue("Kilde: Danmarks Statistik"))%>% 
   hc_legend(reversed = TRUE, 
             layout = "horizontal", 
@@ -1087,11 +1035,11 @@ figur8.1 <- data_bil_hus_1_ny |>
   hc_chart(marginBottom = 180)# Reduce font size if necessary %>%  # Adding spacing between items
 
 
-#Figur 8.2. Udviklingen i den samlede bestand af varebiler i husholdningen
+#Figur 7.2. Udviklingen i den samlede bestand af varebiler i husholdningen
 
 categories_erhverv <- unique(data_bil_erhverv_1_ny$AAR)
 
-figur8.2 <- data_bil_erhverv_1_ny |> 
+figur7.2 <- data_bil_erhverv_1_ny |> 
   hchart('column', hcaes(x = AAR, y = ANTAL, group = DRIV), borderColor = 0) |> 
   hc_plotOptions(column = list(stacking = "normal")) |> 
   hc_colors(as.character(trm_colors(farver[c(1, 2, 3, 4)]))) |> 
@@ -1124,7 +1072,7 @@ figur8.2 <- data_bil_erhverv_1_ny |>
     ) )|>
   hc_tooltip(shared=TRUE,
              pointFormat = "<b>{series.name}</b>: {point.percentage:.1f} pct. ({point.y:,.0f} varebiler) <br>") %>%
-  trm_hc_format("<b>Figur 8.2</b> Udviklingen i den samlede bestand af varebiler i erhvervet",
+  trm_hc_format("<b>Figur 6.2</b> Udviklingen i den samlede bestand af varebiler i erhvervet",
                 note = str_glue("Kilde: Danmarks Statistik"))%>% 
   hc_legend(reversed = TRUE, 
             layout = "horizontal", 
@@ -1137,8 +1085,8 @@ figur8.2 <- data_bil_erhverv_1_ny |>
 # Create a HTML structure with two columns
 html2 <- tagList(
   div(style = "display: flex; justify-content: space-between;",
-      div(style = "width: 48%;", figur8.1),
-      div(style = "width: 48%;", figur8.2)
+      div(style = "width: 48%;", figur7.1),
+      div(style = "width: 48%;", figur7.2)
   )
 )
 
