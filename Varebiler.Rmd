@@ -468,9 +468,14 @@ ny_figur_3 <- data_bil %>%
       (maaned == 12) ~ "december"
     ),
     rigtigt_år = case_when(
-      (maaned == 12) ~ as.character(aar + 1),
-      T ~ paste(as.character(aar), dansk_måned)
-    ))
+      maaned == 12 ~ as.character(aar + 1),
+      TRUE ~ paste(as.character(aar), dansk_måned)
+    ),
+    ultimo = case_when(
+      maaned == 12 ~ paste("Ultimo", dansk_måned_uden, as.character(aar)), 
+      TRUE ~ paste("Ultimo", dansk_måned_uden, as.character(aar))
+    )
+  )
 
 
 ny_figur_3_1 <- ny_figur_3 %>%
@@ -515,8 +520,8 @@ DST_tal <- data_bil_1 |>
   filter(DRIV=="El", 
          DATE_1 %in% c(max(DATE_1), max(DATE_1-1) |> floor_date("years"))) |> 
   mutate(x_axis = ifelse(DATE_1 ==max(DATE_1),
-                         str_c(max_måned, " ", nyeste_aar),
-                         str_c("1. januar ", round(AAR,0))),
+                         str_c("Ultimo ", max_måned, " ", nyeste_aar),
+                         str_c("Ultimo ", round(AAR - 1,0))),
          oprindelse = "DST")
 
 KF_bestand <- read_excel(str_c(sti_kf, "/", "KF24_dataark_Transport.xlsx"),
@@ -533,7 +538,7 @@ KF_bestand <- read_excel(str_c(sti_kf, "/", "KF24_dataark_Transport.xlsx"),
 KF_tal <- KF_bestand %>% 
   filter(type=="Varebiler", drivmiddel =="BEV") %>% 
   mutate(aar = parse_number(aar),
-         x_axis = str_glue("1. januar {aar+1} forventet (KF24)"),
+         x_axis = str_glue("Forventet ultimo {aar} (KF24)"),
          oprindelse = "KF") %>% 
   filter(aar %in% c(as.numeric(nyeste_aar), as.numeric(nyeste_aar)+1)) %>% # TODO: Dette skal rettes når der kommer tal fra KF24
   select(INDHOLD=antal, x_axis, oprindelse)
@@ -803,7 +808,7 @@ Den 1. januar 2020 var den samlede bestand `r pull(bestand_2020)` varebiler. Fra
 ny_figur_3_1 |> 
   filter(DRIV != "Drivmidler i alt", DRIV != "Øvrige drivmidler" ) |>
   filter(aar != 2018) |>
-  hchart('column', hcaes(x = rigtigt_år, y = INDHOLD, group = DRIV ), borderColor = 0) |> 
+  hchart('column', hcaes(x = ultimo, y = INDHOLD, group = DRIV ), borderColor = 0) |> 
   hc_plotOptions(column = list(stacking = "normal")) |> 
   hc_colors(c(trm_colors(farver))) |> 
   hc_yAxis(
@@ -903,7 +908,7 @@ data_fig_4_stjerne |>
       return this.value ? (this.value / 1000).toFixed(0) : this.value;
     }"))) |> 
   hc_xAxis(title = list(text = NULL)) %>%
-  trm_hc_format(str_glue("<b>Figur 5.</b> Udvikling i antallet af varebiler fra januar til {format(ISOdate(2000, as.numeric(Nummer_sidste_md), 1), '%B')}" ),
+  trm_hc_format(str_glue("<b>Figur 5.</b> Udvikling i antallet af varebiler fra ultimo januar til ultimo {format(ISOdate(2000, as.numeric(Nummer_sidste_md), 1), '%B')}" ),
                 note = str_glue("Kilde: Danmarks Statistik<br>{stjerne_tekst}"))
 
 ```
