@@ -472,8 +472,8 @@ ny_figur_3 <- data_bil %>%
       TRUE ~ paste(as.character(aar), dansk_måned)
     ),
     ultimo = case_when(
-      maaned == 12 ~ paste("Ultimo", as.character(aar)),
-      TRUE ~ paste("Ultimo", dansk_måned_uden, as.character(aar))
+      maaned == 12 ~ paste(as.character(aar)),
+      TRUE ~ paste(dansk_måned_uden, as.character(aar))
     )
   )
 
@@ -838,7 +838,7 @@ ny_figur_3_1 |>
              pointFormat = "<b>{series.name}</b>: {point.percentage:.1f} pct. ({point.y:,.0f} varebiler) <br>")  %>% 
   hc_legend(reversed =TRUE) %>% 
   trm_hc_format("<b>Figur 3.</b> Bestand af varebiler",
-                note = "Kilde: Danmarks Statistik")
+                note = "Kilde: Danmarks Statistik <br> Note: Bestanden er opgjort ultimo året.")
 
 rest <- KF_tal$INDHOLD[[2]] - DST_tal$INDHOLD[[2]]
 
