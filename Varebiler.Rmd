@@ -883,10 +883,7 @@ Af figuren fremgår det yderligere, at væksten i bestanden af plug-in-bybrid va
 ```{r}
 # Figur 5. Udvikling i antallet af varebiler fra januar til nyeste måned
 
-data_fig_4_stjerne <- data_fig_4 %>%
-  mutate(AAR = ifelse(AAR == nyeste_aar, paste0(AAR, stjerne), AAR))
-
-data_fig_4_stjerne |> 
+data_fig_4 |> 
   filter(!is.na(DRIV_1), !is.na(UDV_ANTAL_BIL)) |> 
   hchart('column', hcaes(x = AAR, y = UDV_ANTAL_BIL, group = DRIV_1 ), borderColor = 0) |> 
   hc_colors(c(trm_colors(c("groen", "orange", "blaa" ,"lyseblaa")))) |> 
@@ -897,7 +894,7 @@ data_fig_4_stjerne |>
     }"))) |> 
   hc_xAxis(title = list(text = NULL)) %>%
   trm_hc_format(str_glue("<b>Figur 5.</b> Udvikling i antallet af varebiler fra ultimo januar til ultimo {format(ISOdate(2000, as.numeric(Nummer_sidste_md), 1), '%B')}" ),
-                note = str_glue("Kilde: Danmarks Statistik<br>{stjerne_tekst}"))
+                note = str_glue("Kilde: Danmarks Statistik"))
 
 ```
 
