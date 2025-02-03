@@ -876,7 +876,7 @@ bind_rows(DST_tal, KF_tal) |>
 
 ```
 
-Alt imens bestanden af elvarebiler er under en positiv udvikling, er bestanden af fossilvarebiler forsat under en negativ udvikling. I de første `r month(max(dat_fig_3$DATE))` måneder af 2020 var der en nettoafgang på `r abs(tal_fos_2019)`, hvor der i de første `r month(max(dat_fig_3$DATE))` måneder af `r nyeste_aar` var en nettoafgang på `r abs(tal_fos_2023)` fossil-varebiler. Det skyldes særligt, at bestanden af dieselvarebiler har været faldende siden august 2020.
+Alt imens bestanden af elvarebiler er under en positiv udvikling, er bestanden af fossilvarebiler forsat under en negativ udvikling. I de første `r month(max(dat_fig_3$DATE))` måneder af 2020 var der en nettoafgang på `r abs(tal_fos_2019)`, hvor der i de første `r month(max(dat_fig_3$DATE))` måneder af `r nyeste_aar` var en nettoafgang på `r abs(tal_fos_2023)` fossilvarebiler. Det skyldes særligt, at bestanden af dieselvarebiler har været faldende siden august 2020.
 
 Af figuren fremgår det yderligere, at væksten i bestanden af plug-in-bybrid varebiler foreløbig er toppet i `r sprintf("%.0f", max_year_P_I_H)`.
 
@@ -901,7 +901,7 @@ data_fig_4_stjerne |>
 
 ```
 
-Varebiler kan opdeles efter brug, afhængigt af om de bruges i husholdningen eller i erhvervet. Foreløbigt i `r as.character(nyeste_aar)` udgjorde nyregistreringer i husholdningen `r round(totalsalg_hus/totalsalg * 100,1)` pct. af alle nyregistreringer, mens erhvervet stod for `r round(totalsalg_erhverv/totalsalg * 100,1)` pct. af nyregistreringerne.
+Varebiler kan opdeles efter brug, afhængigt af om de bruges i husholdningen eller i erhvervet. Foreløbigt i `r as.character(nyeste_aar)` udgjorde nyregistreringer i husholdningen `r round(totalsalg_hus/totalsalg * 100,1)` pct. af alle nyregistreringer, svarende til `r totalsalg_hus` varebiler. Her imens stod erhvervet for `r round(totalsalg_erhverv/totalsalg * 100,1)` pct. af nyregistreringerne, svarende til `r format(as.numeric(totalsalg_erhverv), big.mark = ".", decimal.mark = ",", scientific = FALSE)` varebiler.
 
 Opdeles varebiler efter brug, fremgår det, at det primært er varebiler i erhvervet, der omstilles til eldrift. Foreløbigt i `r as.character(nyeste_aar)`  har elvarebiler udgjort `r round(eltotalsalg_hus/totalsalg_hus * 100, 1)` pct. af nyregistreringerne i husholdningen, jf. figur 7.1. I samme periode udgjorde elvarebiler i erhvervet `r round(eltotalsalg_erhverv/totalsalg_erhverv * 100, 1)` pct. af nyregistreringerne, jf. figur 7.2.
 
@@ -977,10 +977,7 @@ html <- tagList(
 # Render it in the browser
 browsable(html)
 ```
-
-Bestanden af varebiler i husholdningen udgør `r round(totalbestand_hus/totalbestand * 100, 1)` pct. af den samlede bestand af varebiler, men bestanden af varebiler i erhvervet udgør `r round(totalbestand_erhverv/totalbestand * 100, 1)` pct.
-
-Bestanden af varebiler i husholdningerne er faldet med `r abs(round((totalbestand_hus - totalbestand_20_hus)/totalbestand_20_hus * 100, 1))` pct. siden 2020, jf. figur 8.1. Herudover ses det, at el-varebiler næsten ingen andel af bestanden af varebiler i husholdningen, mens bestanden af fossilelvarebiler udgør `r round(fostotalbestand_hus/totalbestand_hus * 100, 1)` pct. Bestanden af varebiler i erhvervet er nogenlunde konstant siden 2020, jf. figur 8.2, hvor bestanden er vokset med `r totalbestand_erhverv - totalbestand_20_erhverv` varebiler. Endeligt ses der en vækst i andelen af elvarebiler i erhvervet. Foreløbigt i `r as.character(nyeste_aar)` udgør de `r round(eltotalbestand_erhverv/totalbestand_erhverv * 100, 1)`  pct. af den samlede bestand i erhvervet, mens fossilvarebiler udgør `r round(fostotalbestand_erhverv/totalbestand_erhverv * 100, 1)` pct.
+Bestanden af varebiler i husholdningen og erhvervet udgør henholdsvis `r round(totalbestand_hus/totalbestand * 100, 1)` pct. og `r round(totalbestand_erhverv/totalbestand * 100, 1)` pct. af den samlede bestand af varebiler. Bestanden af varebiler i husholdningerne er faldet med `r abs(round((totalbestand_hus - totalbestand_20_hus)/totalbestand_20_hus * 100, 1))` pct. siden 2020, jf. figur 8.1. Herudover ses det, at elvarebiler næsten ikke udgør en del af varebilbestanden i husholdningerne, hvor fossildrevne varebiler derimod udgør `r round(fostotalbestand_hus/totalbestand_hus * 100, 1)` pct. Bestanden af varebiler i erhvervet er nogenlunde konstant siden 2020, jf. figur 8.2, hvor bestanden er vokset med `r format(as.numeric(totalbestand_erhverv - totalbestand_20_erhverv), big.mark = ".", decimal.mark = ",", scientific = FALSE)` varebiler. Endeligt ses der en vækst i andelen af elvarebiler i erhvervet. Foreløbigt i `r as.character(nyeste_aar)` udgør de `r round(eltotalbestand_erhverv/totalbestand_erhverv * 100, 1)`  pct. af den samlede bestand i erhvervet, mens fossilvarebiler udgør `r round(fostotalbestand_erhverv/totalbestand_erhverv * 100, 1)` pct.
 ```{r}
 #Figur 7.1. Udviklingen i den samlede bestand af varebiler i husholdningen
 
