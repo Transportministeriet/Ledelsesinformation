@@ -172,9 +172,11 @@ tags$style("
 ```
 
 
-`r fa("temperature-arrow-up")` Udledninger 
+`r fa("temperature-arrow-down")` Udledninger 
 ===================================== 
 
+ <br />
+&nbsp;&nbsp; Ønskes et adgang til alle datasættene kan de tilgås her: <b> S:\\CKA\\Databank\\007 Klimafremskrivning\\KF24_dataark_Transport.xlsx </b>
 
 Row {data-height=auto}
 -------------------------------------
@@ -210,7 +212,7 @@ til_fig_udl_tot %>%
     ) %>% 
     hc_legend(reversed =TRUE) %>%
     hc_tooltip(shared = TRUE)  %>% 
-    trm_hc_format(titel ="<b>Samlede transportudledninger")
+    trm_hc_format(titel ="<b>Samlede udledninger fra transportsektoren")
 
 ```
 
@@ -290,7 +292,7 @@ best_fig_fkt("Motorcykler", "bestand")
 ```
    
     
-`r fa("plug-circle-bolt")` Salg
+`r fa("chart-line")` Salg
 ===================================== 
     
     
