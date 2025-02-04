@@ -56,6 +56,7 @@ if(month(Sys.Date())==1){
   stjerne_tekst <- "*År til dato"
 }
 
+
 sti_kf <- "S:/CKA/Databank/007 Klimafremskrivning"
 
 #Data til bestand
@@ -520,8 +521,8 @@ DST_tal <- data_bil_1 |>
   filter(DRIV=="El", 
          DATE_1 %in% c(max(DATE_1), max(DATE_1-1) |> floor_date("years"))) |> 
   mutate(x_axis = ifelse(DATE_1 ==max(DATE_1),
-                         str_c("Ultimo ", max_måned, " ", nyeste_aar),
-                         str_c("Ultimo ", round(AAR - 1,0))),
+                         str_c(max_måned, " ", nyeste_aar),
+                         str_c(round(AAR - 1,0))),
          oprindelse = "DST")
 
 KF_bestand <- read_excel(str_c(sti_kf, "/", "KF24_dataark_Transport.xlsx"),
@@ -538,7 +539,7 @@ KF_bestand <- read_excel(str_c(sti_kf, "/", "KF24_dataark_Transport.xlsx"),
 KF_tal <- KF_bestand %>% 
   filter(type=="Varebiler", drivmiddel =="BEV") %>% 
   mutate(aar = parse_number(aar),
-         x_axis = str_glue("Forventet ultimo {aar} (KF24)"),
+         x_axis = str_glue("Forventet {aar} (KF24)"),
          oprindelse = "KF") %>% 
   filter(aar %in% c(as.numeric(nyeste_aar), as.numeric(nyeste_aar)+1)) %>% # TODO: Dette skal rettes når der kommer tal fra KF24
   select(INDHOLD=antal, x_axis, oprindelse)
@@ -835,10 +836,10 @@ ny_figur_3_1 |>
     title = list(text = NULL)
   ) |> 
   hc_tooltip(shared=TRUE,
-             pointFormat = "<b>{series.name}</b>: {point.percentage:.1f} pct. ({point.y:,.0f} varebiler) <br>")  %>% 
+             pointFormat = "{series.name}: <b>{point.y:,.0f}</b> varebiler (<b>{point.percentage:.1f}</b> pct.) </b> <br>")  %>% 
   hc_legend(reversed =TRUE) %>% 
   trm_hc_format("<b>Figur 3.</b> Bestand af varebiler",
-                note = "Kilde: Danmarks Statistik <br> Note: Bestanden er opgjort ultimo året.")
+                note = "Kilde: Danmarks Statistik <br> Note: Bestanden er opgjort ultimo")
 
 rest <- KF_tal$INDHOLD[[2]] - DST_tal$INDHOLD[[2]]
 
@@ -872,7 +873,8 @@ bind_rows(DST_tal, KF_tal) |>
     pointPadding = 0.1    # Space between bars in the same group
   )) %>%
   trm_hc_format(str_glue("<b>Figur 4.</b> Status for antallet af el-varelbiler i {nyeste_aar}"),
-                note = "Kilde: Danmarks Statistik & Klimastatus for Fremskrivning 2024")
+                note = "Kilde: Danmarks Statistik & Klimastatus for Fremskrivning 2024
+                <br> Note: Bestanden er opgjort ultimo")
 
 ```
 
@@ -929,7 +931,7 @@ figur6.1 <- data_nysalg_hus_1_stjerne |>
             itemStyle = list(fontSize = "11px"),
             itemDistance = 2 )%>% 
   hc_chart(marginBottom = 180)  %>%
-  hc_tooltip(shared = TRUE,             pointFormat = "<b>{series.name}</b>: {point.percentage:.1f} pct. (<b>{point.antal:,.0f}</b> varebiler)<br>") %>%
+  hc_tooltip(shared = TRUE,             pointFormat = "{series.name}: <b>{point.percentage:.1f}</b> pct. (<b>{point.antal:,.1f}</b> varebiler)<br>") %>%
   trm_hc_format("<b>Figur 6.1</b> Husholdningens andel af nyregistreringer for varebiler",
                 note = str_glue("Kilde: Danmarks Statistik <br> {stjerne_tekst}"))
 
@@ -961,7 +963,7 @@ figur6.2 <- data_nysalg_erhverv_1_stjerne |>
             itemDistance = 2 )%>% 
   hc_chart(marginBottom = 180)  %>%
   hc_tooltip(shared = TRUE,
-             pointFormat = "<b>{series.name}</b>: {point.percentage:.1f} pct. (<b>{point.antal:,.0f}</b> varebiler)<br>") %>%
+             pointFormat = "{series.name}: <b>{point.percentage:.1f}</b> pct. (<b>{point.antal:,.0f}</b> varebiler)<br>") %>%
   trm_hc_format("<b>Figur 6.2</b> Erhvervets andel af nyregistreringer for varebiler",
                 note = str_glue("Kilde: Danmarks Statistik <br> {stjerne_tekst}"))
 
@@ -1012,9 +1014,9 @@ figur7.1 <- data_bil_hus_1_ny |>
       #      ")
     ) )|>
   hc_tooltip(shared=TRUE,
-             pointFormat = "<b>{series.name}</b>: {point.percentage:.1f} pct. ({point.y:,.0f} varebiler) <br>") %>%
+             pointFormat = "{series.name}: <b>{point.y:,.0f}</b> varebiler (<b>{point.percentage:.1f}</b> pct.) <br>") %>%
   trm_hc_format("<b>Figur 7.1</b> Udviklingen i den samlede bestand af varebiler i husholdningen",
-                note = str_glue("Kilde: Danmarks Statistik <br> Note: Bestanden er opgjort ultimo året."))%>% 
+                note = str_glue("Kilde: Danmarks Statistik <br> Note: Bestanden er opgjort ultimo"))%>% 
   hc_legend(reversed = TRUE, 
             layout = "horizontal", 
             align = "center", 
@@ -1060,9 +1062,9 @@ figur7.2 <- data_bil_erhverv_1_ny |>
       #      ")
     ) )|>
   hc_tooltip(shared=TRUE,
-             pointFormat = "<b>{series.name}</b>: {point.percentage:.1f} pct. ({point.y:,.0f} varebiler) <br>") %>%
+             pointFormat = "{series.name}: <b>{point.y:,.0f}</b> varebiler (<b>{point.percentage:.1f}</b> pct.) <br>") %>%
   trm_hc_format("<b>Figur 7.2</b> Udviklingen i den samlede bestand af varebiler i erhvervet",
-                note = str_glue("Kilde: Danmarks Statistik <br> Note: Bestanden er opgjort ultimo året."))%>% 
+                note = str_glue("Kilde: Danmarks Statistik <br> Note: Bestanden er opgjort ultimo"))%>% 
   hc_legend(reversed = TRUE, 
             layout = "horizontal", 
             align = "center", 
