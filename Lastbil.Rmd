@@ -58,8 +58,8 @@ knit_hooks$set(inline = function(x) {
 })
 
 
-sti_kf <- "S:/CKA/Databank/007 Klimafremskrivning"
-sti <- "S:/CKA/Databank/006 Bilstatistik/Lastbil"
+sti_kf <- "S:/TRM Databank/003 Klimafremskrivning"
+sti <- "S:/TRM Databank/004 Bilstatistik/Lastbil"
 
 
 # ---- BESTAND  ----
@@ -174,7 +174,10 @@ bestand_data_udv <- bestand_data_samlet_gammel_metode %>%
   filter(KASSORI == "TOTAL", month(DATE) == 12 | month(DATE) == nummer_sidste_md) %>% 
   mutate(AAR = year(DATE)) %>% 
   arrange(DRIV, DATE) %>% 
-  group_by (DRIV) 
+  mutate(UDV = ANTAL - lag(ANTAL),
+         .by = "DRIV") %>% 
+  filter(AAR > 2019, month(DATE)==nummer_sidste_md)
+  
 
 # %>%  # Group by AAR and DRIV
 #   mutate(lag_antal = lag(ANTAL)) %>%  # Calculate lag within each group
@@ -186,8 +189,6 @@ bestand_data_udv <- bestand_data_samlet_gammel_metode %>%
 #   select(-KASSORI) %>% 
 #   distinct(AAR, DRIV, .keep_all = TRUE) %>%  # Remove duplicate combinations of AAR and DRIV
 #   arrange(AAR)
-
-
 
 
 bestand_data_2 <- bestand_data %>% 
