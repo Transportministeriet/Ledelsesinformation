@@ -45,7 +45,7 @@ h1.title {
 /* Section headers */
 .section.level1 {
     color: #003847;  /* Darker than before */
-    font-size: 24px;
+    font-size: 20px;
     border-bottom: none;  /* Removed horizontal line */
     padding-bottom: 5px;
     margin-top: 20px;
