@@ -1,0 +1,372 @@
+---
+title: "Klimafremskrivning 24"
+output: 
+  flexdashboard::flex_dashboard:
+    css: "styles_KF.css"
+    orientation: rows
+    vertical_layout: fill
+---
+
+```{r include=FALSE}
+
+library(tidyverse)
+library(flexdashboard)
+library(data.table)
+library(highcharter)
+library(TRMvisual)
+library(fontawesome)
+
+lang <- getOption("highcharter.lang")
+lang$decimalPoint <- ","
+lang$thousandsSep <- "."
+lang$numericSymbols <- highcharter::JS("null") # optional: remove the SI prefixes
+options(highcharter.lang = lang)
+
+sti <- "S:/CKA/Databank/007 Klimafremskrivning/tidy_datasaet/"
+
+data <- dir(sti) %>% 
+  str_subset(".csv") |> 
+  (\(y) map(y, ~fread(str_c(sti,.x)) %>% 
+              mutate(drivmiddel =case_when(drivmiddel =="BEV"~"El",
+                                           drivmiddel =="PHEV"~"Plug-in-hybrid",
+                                           drivmiddel =="Total"~"Drivmidler i alt",
+                                           drivmiddel =="Øvrige"~"Oevrige",
+                                           T ~drivmiddel) |>
+                       str_squish() %>% 
+           factor(levels = rev(c("El", "Plug-in-hybrid","Brint",
+                             "Benzin", "Diesel", "Gas", "Oevrige",
+                             "Drivmidler i alt")))
+           )) %>% 
+     set_names(str_remove_all(y, "_kf24.csv")))()
+
+farver <- c(trm_colors(c("groen",  "orange", "blaa", "gul", "graa")), "#d49e02", "#0087b3") 
+names(farver) <- c("El", "Plug-in-hybrid","Benzin", "Diesel", "Oevrige", "Brint", "Gas")
+
+
+
+til_fig_udl <- data[["udledninger"]] %>% 
+  filter(type!="Total", str_detect(type, "definieret", negate = T)) %>% 
+  mutate(type = factor(type, levels = rev(c( "Grænsehandel","Personbiler", "Varebiler",
+                                             "Lastbiler","Busser","Motorcykler",
+                             "Banetransport",
+                             "Indenrigs søfart",
+                             "Lufttransport, indenrigs",  "Grønland & Færøerne",
+                             "Øvrige Transport"))))
+
+farver_udl <- c( "#0087b3",trm_colors(c( "blaa", "orange", "groen", "gul", "lyseblaa")),
+                trm_colors("blaa"),
+                trm_colors("blaa"),
+                trm_colors(c("blaa", "orange")),
+                trm_colors(c("blaa", "graa")))
+                
+names(farver_udl) <- c( "Grænsehandel","Personbiler", "Varebiler", "Lastbiler","Busser","Motorcykler",
+                             "Banetransport",
+                             "Indenrigs søfart",
+                             "Lufttransport, indenrigs",  "Grønland & Færøerne",
+                             "Øvrige Transport",  "Ikke defineret")
+
+
+til_fig_udl_tot <- data[["udledninger"]] %>% 
+  filter(type=="Total") %>% 
+  mutate(sektor = factor(sektor, levels = rev(c( "Vejtransport", "Banetransport", "Luftfart", "Søfart", "Øvrige transport" )))) %>% 
+  arrange(sektor, aar)
+
+farver_udl_tot <- trm_colors(c("groen", "gul","graa", "orange", "blaa"))
+  
+
+til_fig <- map_dfr(c("bestand", "salg"), ~data[[.x]] %>% 
+                      mutate(type_KF = .x)) %>% 
+  # add_column(summarise(.,n_driv = n_distinct(drivmiddel),
+  #                      .by = "type")) %>% 
+  filter(!(underkat=="Total" & drivmiddel=="Drivmidler i alt")) %>% 
+  summarise(vaerdi = sum(vaerdi),
+            .by = c("type_KF", "type", "drivmiddel", "aar"))
+
+
+best_fig_fkt <- function(input, input_type){
+  
+  input1 <- til_fig %>% 
+    filter(type==input, type_KF==input_type ) %>% 
+    arrange(drivmiddel, aar)
+  
+  farver_end <- input1 %>% inner_join(enframe(farver, name = "drivmiddel", value = "farve")) %>% distinct(drivmiddel, farve) %>% deframe() %>% unname() %>% as.character()
+
+  tal <- input1$vaerdi %>% max() %>% as.character() %>%  str_length()
+
+  tal_end <- 10^((tal-1)%/%3*3)
+
+  tal_tekst <- case_when(tal_end==1000~ "tus.",
+                         tal_end==1000000 ~"mio.")
+  
+  input1 %>% 
+    mutate(tal_end = tal_end) %>% 
+    hchart('area', hcaes(x = aar, y =vaerdi, group = drivmiddel  ), borderColor = 0, 
+           marker = FALSE,style = list(useHTML = TRUE, font = "Georgia")) %>%
+    hc_plotOptions(series = list(stacking = "normal", lineWidth = 0)) %>% 
+   
+    hc_colors(farver_end) |>
+    hc_yAxis(title = list(text = str_c("Antal i ", tal_tekst)),
+                 labels = list(formatter = JS("function() {
+        if (this.value >= 1000000) {
+            return (this.value / 1000000).toFixed(0) ;
+        } else if (this.value >= 1000) {
+            return (this.value / 1000).toFixed(0) ;
+        } else {
+            return this.value.toLocaleString();
+        }
+    }"))
+    ) %>% 
+    hc_xAxis(title = list(text = "")) %>% 
+    hc_tooltip(shared = TRUE,
+               pointFormat = str_glue(" <b>{{series.name}}</b>: {{point.y:,.0f}} {str_to_lower(input)} ({{point.percentage:.1f}} pct.) <br>") ) %>% 
+    hc_legend(reversed =TRUE) %>%
+    hc_tooltip(shared = TRUE)  %>% 
+    trm_hc_format(titel =str_glue("<b>{input}" ))
+}
+
+
+
+udl_fig_fkt <- function(input){
+  
+  input1 <- til_fig_udl %>% 
+    filter(sektor==input) %>% 
+    arrange(type, aar)
+  
+  farver_end <- input1 %>% inner_join(enframe(farver_udl, name = "type", value = "farve")) %>% distinct(type, farve) %>% deframe() %>% unname() %>% as.character()
+
+  y_max <- ifelse(input=="Vejtransport", (sum(input1 %>% filter(aar==min(aar)) %>% pull(vaerdi))%/%1000000)+1, 0.5)
+  
+  input1 %>% 
+    hchart('area', hcaes(x = aar, y =vaerdi/1000000, group = type  ), borderColor = 0, 
+           marker = FALSE,style = list(useHTML = TRUE, font = "Georgia")) %>%
+    hc_plotOptions(series = list(stacking = "normal", lineWidth = 0)) %>% 
+ 
+    hc_colors(farver_end) |>
+    hc_yAxis(title = list(text = "Mio. ton CO2"),
+             max = y_max
+             ) %>% 
+    hc_xAxis(title = list(text = "")) %>% 
+    hc_tooltip(shared = TRUE) %>% 
+    hc_legend(reversed =TRUE
+              # layout = "horizontal",     # Ensures a horizontal layout
+              # align = "center",          # Center-aligns the legend
+              # verticalAlign = "bottom",  # Places the legend at the bottom
+              ) %>%
+              hc_tooltip(shared = TRUE,
+                         pointFormat = " <b>{series.name} </b>: {point.y:,.1f} mio. t ({point.percentage:.1f} pct.) <br>")  %>% 
+                trm_hc_format(titel =str_glue("<b>{input}" ))
+}
+
+
+
+```
+
+```{r}
+tags$style("
+  .chart-container {
+    width: 100% !important;
+  }
+")
+```
+
+
+`r fa("file-lines")` Beskrivelse 
+===================================== 
+
+Klimastatus og -fremskrivning (KF) er Klima-, Energi- og Forsyningsministeriets årlige rapport, der overvåger Danmarks fremskridt mod klimalovens mål om at reducere drivhusgasudledningerne. Ifølge klimaloven skal Danmarks udledninger i 2030 være reduceret med 70% i forhold til 1990-niveauet, med en målsætning om klimaneutralitet senest i 2050. Regeringen har yderligere fremrykket målet om klimaneutralitet til 2045 og fastsat et nyt mål om 110% reduktion i 2050.
+
+KF-rapporten indeholder en årlig opdatering af Danmarks drivhusgasudledninger og vurderer, om de nuværende klimaindsatser er tilstrækkelige til at nå disse mål. Den fungerer som et centralt redskab for beslutningstagere, virksomheder og borgere til at forstå og følge landets fremskridt i den grønne omstilling.
+
+Indeværende dashboard viser udelukkende udledningen fra transportsektoren.
+
+Den næste udgave, Klimastatus og -fremskrivning 2025 (KF25), forventes offentliggjort i april 2025, med den endelige version planlagt til sommeren 2025.
+
+[Link til KF24](https://www.kefm.dk/klima/klimastatus-og-fremskrivning/klimastatus-og-fremskrivning-2024) 
+
+Ønskes et adgang til alle datasættene kan de tilgås her: <b> S:\\TRM Databank\\003 Klimafremskrivning\\KF24_dataark_Transport.xlsx </b>
+
+
+`r fa("temperature-arrow-down")` Udledninger 
+===================================== 
+
+**Indledning**
+<br>
+Transportsektoren udgør 25 pct. af Danmarks CO₂-udledninger i 2023 og forventes at stå for 33 % af de samlede udledninger i 2030. Vejtransport er den største kilde, men reduktioner vil ske gennem elektrificering, øget energieffektivitet og brug af vedvarende brændstoffer. Selvom transportaktiviteterne stiger, bidrager den teknologiske udvikling til at begrænse udledningerne. Luft- og søfart følger samme tendens med en gradvis omstilling til mere bæredygtige brændstoffer.
+
+Tallene kan genfindes i Klimastatus og -fremskrivning 2024 kapitel 21 om Transport, [Link](https://www.kefm.dk/Media/638557749235686945/KF24%20Kapitel%2021%20Transport.pdf) 
+ 
+
+Row {data-height=auto}
+-------------------------------------
+
+```{r}
+
+til_fig_udl_tot %>% 
+  mutate(vaerdi = vaerdi/1000000) %>% 
+    hchart('area', hcaes(x = aar, y =vaerdi, group = sektor  ), borderColor = 0, 
+           marker = FALSE,style = list(useHTML = TRUE, font = "Georgia")) %>%
+    hc_plotOptions(series = list(stacking = "normal", lineWidth = 0)) %>% 
+    # },
+    # select: {
+    #   enabled: false
+    # }
+    hc_colors(farver_udl_tot) |> 
+  hc_chart(
+    width = NULL  # Forces responsive width
+  ) %>% 
+    # hc_colors(c(trm_colors(farver))) |>
+    # hc_yAxis(title = list(text = "Antal (Mio.)"),
+    #          labels = list(formatter = JS("function() {
+    #   return this.value.toLocaleString();
+    # }"))) |> 
+    hc_yAxis(title = list(text = "Mio. ton CO2")) %>% 
+    hc_xAxis(title = list(text = "")) %>% 
+  
+    hc_tooltip(shared = TRUE, 
+               pointFormat = paste(" <b>{series.name} </b>: {point.y:,.1f} mio. t. CO2 ({point.percentage:.1f} pct.) <br>")
+    ) %>% 
+    hc_legend(reversed =TRUE) %>%
+    hc_tooltip(shared = TRUE)  %>% 
+    trm_hc_format(titel ="<b>Samlede udledninger fra transportsektoren")
+
+```
+
+
+
+Row
+-------------------------------------
+
+```{r}
+udl_fig_fkt("Vejtransport")
+```
+    
+        
+```{r}
+udl_fig_fkt("Banetransport")
+```
+
+Row {data-height=350}
+-------------------------------------
+
+```{r}
+udl_fig_fkt("Søfart")
+```
+    
+        
+```{r}
+udl_fig_fkt("Luftfart")
+```
+
+Row 
+-------------------------------------
+
+```{r}
+udl_fig_fkt("Øvrige transport")
+```
+    
+        
+
+Bestand {data-icon="fa-solid fa-car-side"}
+===================================== 
+
+**Indledning**
+<br>
+Bestanden af køretøjer i Danmark har udviklet sig markant i de seneste år, især med en stigende elektrificering. I 2023 var der knap 2,7 millioner personbiler, hvoraf antallet af elbiler steg fra cirka 113.000 i 2022 til 200.000 i 2023. Varebiler udgjorde omkring 364.000 enheder, mens der var cirka 43.000 lastbiler og 9.500 busser. Diesel forbliver det dominerende drivmiddel for varebiler, lastbiler og busser, men elektrificeringen vinder gradvist indpasd. Denne udvikling afspejler en generel omstilling mod mere bæredygtige transportløsninger, drevet af teknologiske fremskridt og politiske målsætninger om CO₂-reduktion.
+
+Fremskrivninger frem mod 2035 peger på en fortsat omstilling mod bæredygtig transport, hvor elbiler vil spille en større rolle og reducere CO₂-udledningerne markant. Samlet bestand vil dog være domineret af diesel i de tunge transportsegmenter, men en gradvis overgang til el forventes.
+
+Tallene kan genfindes i Klimastatus og -fremskrivning 2024 kapitel 21 om Transport, [Link](https://www.kefm.dk/Media/638557749235686945/KF24%20Kapitel%2021%20Transport.pdf) 
+
+Row
+-------------------------------------
+
+```{r}
+best_fig_fkt("Personbiler", "bestand")
+```
+    
+        
+```{r}
+best_fig_fkt("Varebiler", "bestand")
+```
+
+Row
+-------------------------------------
+
+```{r}
+
+best_fig_fkt("Lastbiler", "bestand")
+
+```
+    
+```{r}
+
+best_fig_fkt("Busser", "bestand")
+
+```
+    
+Row
+-------------------------------------
+
+```{r}
+
+best_fig_fkt("Motorcykler", "bestand")
+
+```
+   
+    
+`r fa("chart-line")` Salg
+===================================== 
+
+**Indledning**
+<br>
+I indeværende fane indgår **kun** nyregistreringer. Brugtbilsimport og -salg indgår således **ikke** i tallene.
+
+Salget af nye køretøjer i Danmark har ændret sig markant, især med en kraftig vækst i elbiler. På trods af et fald i det samlede bilsalg fra 2019 steg elbilernes andel til over 40 % i 2023 – mere end 30.000 flere end forventet. Dieselbiler er i tilbagegang, mens plug-in hybrider, der toppede med 12 % af salget i 2021, ventes at falde til 4 % i 2030. Brint- og gasbiler forbliver marginale.
+
+For varebiler er elektrificeringen langsommere, men voksende. I 2023 udgjorde elvarebiler 14 % af salget, og andelen forventes at stige med bedre teknologi og infrastruktur.
+
+Lastbiler halter bagefter med kun 6 % elbiler i 2023, men salget ventes at stige frem mod 2035 drevet af skærpede EU-krav, teknologi udvikling og vejafgift på lastbiler. Busser omstilles hurtigere, og i 2023 var over halvdelen af de nye bybusser eldrevne – en udvikling, der forventes at accelerere.
+    
+Tallene kan genfindes i Klimastatus og -fremskrivning 2024 kapitel 21 om Transport, [Link](https://www.kefm.dk/Media/638557749235686945/KF24%20Kapitel%2021%20Transport.pdf) 
+
+Row
+-------------------------------------
+
+```{r}
+
+# map( unique(til_fig_best %>% pull(type)),
+#      ~best_fig_fkt(.x))
+
+best_fig_fkt("Personbiler", "salg")
+
+```
+    
+        
+```{r}
+best_fig_fkt("Varebiler", "salg")
+```
+
+Row 
+-------------------------------------
+
+```{r}
+
+best_fig_fkt("Lastbiler", "salg")
+
+```
+    
+```{r}
+
+best_fig_fkt("Busser", "salg")
+
+```
+    
+Row 
+-------------------------------------
+
+```{r}
+
+best_fig_fkt("Motorcykler", "salg")
+
+```
+   
