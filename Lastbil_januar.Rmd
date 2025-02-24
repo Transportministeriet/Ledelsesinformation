@@ -419,17 +419,16 @@ nyreg_data_underkat <- nyreg_data_uden_vægt %>%
   arrange(AAR)
 
 bestand_data_underkat <- bestand_data %>% 
-  filter(DRIV !="Total", KASSORI %in% udvalgte_kat, month(DATE)==12 | DATE==max(DATE)) %>% 
-  summarise(ANTAL = sum(ANTAL), 
-                                        .by = c("DATE","KASSORI", "DRIV")) %>% 
-  mutate(AAR = ifelse(month(max(DATE))!=12, 
+  filter(DRIV != "Total", KASSORI %in% udvalgte_kat, month(DATE) == 12 | DATE == max(DATE)) %>% 
+  summarise(ANTAL = sum(ANTAL), .by = c("DATE", "KASSORI", "DRIV")) %>% 
+  mutate(AAR = ifelse(month(max(DATE)) != 12, 
                       str_c(year(DATE), " (", format(DATE, "%B"), ")"), 
-                      as.character(year(DATE)+1)), 
-         A_BESTAND = ANTAL/sum(ANTAL)*100,
-         .by = c("DATE","KASSORI")) %>% 
-  select(AAR,KASSORI, DRIV, ANTAL, A_BESTAND) %>% 
+                      as.character(year(DATE) + 1)), 
+         .by = c("DATE", "KASSORI")) %>% 
+  select(AAR, KASSORI, DRIV, ANTAL) %>%
+  mutate(A_BESTAND = round(ANTAL / sum(ANTAL) * 100, 1), 
+         .by = c("AAR", "KASSORI")) %>%  
   arrange(AAR)
-
 
 totalsalg_seneste <- nyreg_data_1 %>% filter(AAR==nyeste_aar) %>% pull(ANTAL) %>% sum()
 elsalg_seneste <- nyreg_data_1 %>% filter(AAR==nyeste_aar, DRIV=="El") %>% pull(ANTAL) %>% sum()
@@ -644,9 +643,11 @@ I løbet af `r as.character(nyeste_aar)` er der nyregistreret `r totalsalg_senes
 
 farver <- c("graa",  "blaa", "orange","groen") %>% factor(., levels = .)
 
-nyreg_data_1 |> 
+nyreg_data_1_stjerne <- nyreg_data_1 %>%
+  mutate(AAR = ifelse(AAR == nyeste_aar, paste0(AAR, stjerne), AAR))
+
+nyreg_data_1_stjerne |> 
   filter(!str_detect(AAR, "\\(|9")) |># Exclude rows where AAR contains "(" or "9"
-  mutate(AAR = as.numeric(AAR)) %>% 
   hchart('column', hcaes(x = AAR, y =ANTAL, group = DRIV ), borderColor = 0,
          style = list(useHTML = TRUE, font = "Georgia")) %>%
   
@@ -682,10 +683,12 @@ Ellastbilers andel af det samlede antal nyregistreringer har været svagt stigen
 
 ```{r}
 #Figur 2. Drivmidlernes andel af nyregistreringer
+nyreg_data_1_stjerne <- nyreg_data_1 %>%
+  mutate(AAR = ifelse(AAR == nyeste_aar, paste0(AAR, stjerne), AAR))
 
-fct_sort_stjerne <- nyreg_data_1$AAR %>% unique()
+fct_sort_stjerne <- nyreg_data_1_stjerne$AAR %>% unique()
 
-nyreg_data_1 |> 
+nyreg_data_1_stjerne |> 
   filter(!str_detect(AAR, "9")) |># Exclude rows where AAR CONTATINS "9"
   mutate(AAR = factor(AAR, levels = fct_sort_stjerne),
          antal = ANTAL) %>%  # Add ANTAL column for use in the tooltip
@@ -737,10 +740,12 @@ Opdeles lastibler efter vægt, fremgår det, at det primært er de lette lastbil
 
 ```{r}
 #Figur 2.1 Drivmidlernes andel af nyregistreringer for lette lastbiler
+nyreg_data_1_lette_stjerne <- nyreg_data_1_lette %>%
+  mutate(AAR = ifelse(AAR == nyeste_aar, paste0(AAR, stjerne), AAR))
 
-fct_sort <- nyreg_data_1_lette$AAR %>% unique()
+fct_sort <- nyreg_data_1_lette_stjerne$AAR %>% unique()
 
-figur2_lette <- nyreg_data_1_lette |>
+figur2_lette <- nyreg_data_1_lette_stjerne |>
   filter(!str_detect(AAR, "9")) |># Exclude rows where AAR CONTATINS "9"
   mutate(AAR = factor(AAR, levels = fct_sort),
          antal = ANTAL) %>%  # Add ANTAL column for use in the tooltip
@@ -768,8 +773,10 @@ figur2_lette <- nyreg_data_1_lette |>
 
 
 #Figur 2.2 Drivmidlernes andel af nyregistreringer for tunge lastbiler
+nyreg_data_1_tunge_stjerne <- nyreg_data_1_tunge %>%
+  mutate(AAR = ifelse(AAR == nyeste_aar, paste0(AAR, stjerne), AAR))
 
-figur2_tunge <- nyreg_data_1_tunge |>
+figur2_tunge <- nyreg_data_1_tunge_stjerne |>
   filter(!str_detect(AAR, "9")) |># Exclude rows where AAR CONTATINS "9"
   mutate(AAR = factor(AAR, levels = fct_sort),
          antal = ANTAL) %>%  # Add ANTAL column for use in the tooltip
@@ -814,7 +821,7 @@ elandel_seneste <- elbestand_seneste/bestand_seneste*100
 
 ```
 
-Diesel er stadig det dominernde drivmiddel i bestanden af lastbiler. Bestanden af lastbiler har generelt været svagt stigende siden 1. januar 2021, hvor den samlede bestand var `r bestand_2021`, mens  bestanden primo januar 2025 var `r bestand_seneste` lastbiler. 
+Diesel er stadig det dominernde drivmiddel i bestanden af lastbiler. Bestanden af lastbiler har generelt været svagt stigende siden 1. januar 2021, hvor den samlede bestand var `r bestand_2021`, mens  bestanden ultimo januar 2025 var `r bestand_seneste` lastbiler. 
 
 I `r format(ISOdate(2000, nummer_sidste_md, 1), "%B")` måned voksede bestanden af ellastbiler med `r udv_elbestand_seneste_måned` lastbiler således, at der primo januar 2025 var `r elbestand_seneste` ellastbiler i Danmark svarende til `r elandel_seneste` pct. af den samlede bestand jf. figur 3.
 
@@ -1059,11 +1066,13 @@ cat("**Figur 6. Andel af nyregistreringer fordelt supplerende karosseri og drivm
 nyreg_data_underkat <- nyreg_data_underkat %>% 
   filter(!str_detect(AAR, "2019"))  # Exclude rows where AAR contains "2019"
 
+nyreg_data_underkat_stjerne <- nyreg_data_underkat %>%
+  mutate(AAR = ifelse(AAR == nyeste_aar, paste0(AAR, stjerne), AAR))
 
-fct_sort_underkat <- nyreg_data_underkat$AAR %>% unique()
+fct_sort_underkat <- nyreg_data_underkat_stjerne$AAR %>% unique()
 
 
-map(udvalgte_kat, ~{nyreg_data_underkat |>
+map(udvalgte_kat, ~{nyreg_data_underkat_stjerne |>
     filter(KASSORI==.x) %>% 
     mutate(AAR = factor(AAR, levels = fct_sort_underkat)) %>% 
     hchart('column', hcaes(x = AAR, y =ANTAL, group = DRIV ), borderColor = 0) |> 
@@ -1108,44 +1117,40 @@ Da en lastbil kan have mange forskellige supplerende karosserier, kan en lastbil
 
 **Figur 7. Bestanden fordelt supplerende karosseri og drivmiddel**
 ```{r}
+bestand_data_underkat <- bestand_data_underkat %>%
+  arrange(AAR, DRIV, KASSORI)
 
+fct_sort_underkat <- bestand_data_underkat$AAR %>% unique()
 
-fct_sort_underkat <-bestand_data_underkat$AAR %>% unique()
-
-
-
-map(udvalgte_kat, ~{bestand_data_underkat |> 
-    filter(KASSORI==.x) %>% 
-    
-    hchart('column', hcaes(x = AAR, y = ANTAL, group = DRIV ), borderColor = 0) |> 
+map(udvalgte_kat, ~{
+  bestand_data_underkat |> 
+    filter(KASSORI == .x) |>
+    mutate(AAR = factor(AAR, levels = fct_sort_underkat)) %>% 
+    hchart('column', hcaes(x = AAR, y = ANTAL, group = DRIV), borderColor = 0) |> 
     hc_plotOptions(column = list(stacking = "NULL")) |> 
     hc_colors(c(trm_colors(farver))) |> 
     hc_yAxis(
       title = list(text = "Antal"),
-      labels = list(
-        format = "{value:,.0f}")
+      labels = list(format = "{value:,.0f}")
     ) |> 
-    hc_xAxis(categories = fct_sort_underkat, title = list(text = NULL),
-             labels = list(
-               rotation = -45))      %>%
-    hc_tooltip(shared = TRUE,
-               pointFormat = "<b>{series.name}</b>: {point.y:,.0f} lastbiler ({point.percentage:.1f} pct.) <br>"
-    )  %>% 
+    hc_xAxis(categories = fct_sort_underkat,  # Ensure all years are included
+             title = list(text = NULL),
+             labels = list(rotation = -60)) |> 
     hc_legend(
-      layout = "horizontal",         # Arrange legends horizontally
-      align = "center",              # Align the legend in the center
-      verticalAlign = "bottom",      # Place the legend at the bottom
-      itemDistance = 1,             # Adjust space between items
-      itemWidth = 80,               # Set the width for each legend item
-      itemStyle = list(
-        fontSize = "12",
-        width = 60              # Set an appropriate font size
-      )              # Set the legend width to fit 2 items per row)# Reduce space between legend items# Place legends at the bottom
-    )%>% 
+      layout = "horizontal",
+      align = "center",
+      verticalAlign = "bottom",
+      itemDistance = 1,
+      itemWidth = 80,
+      itemStyle = list(fontSize = "12", width = 60)
+    ) |> 
+    hc_tooltip(shared = TRUE,
+               pointFormat = "<b>{series.name}</b>: {point.y:,.0f} lastbiler ({point.percentage:.1f} pct.) <br>") |>
     trm_hc_format(
-      str_glue(str_glue("<b>{str_replace_all(.x, c('_'=' ', 'OE'='Ø', 'AA'='Å', 'AE'='Æ')) %>% str_to_sentence()}<b>")),
-      note="Kilde: Bilstatisitk")
-  }) |> 
+      str_glue("<b>{str_replace_all(.x, c('_'=' ', 'OE'='Ø', 'AA'='Å', 'AE'='Æ')) %>% str_to_sentence()}</b>"),
+      note = "Kilde: Bilstatistik"
+    )
+}) |> 
   hw_grid(rowheight = 400) %>% htmltools::browsable()
 
 
