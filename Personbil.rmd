@@ -308,8 +308,8 @@ DST_tal <- data_bil_1 |>
   filter(DRIV=="El", 
          DATE_1 %in% c(max(DATE_1), max(DATE_1-1) |> floor_date("years"))) |> 
   mutate(x_axis = ifelse(DATE_1 ==max(DATE_1),
-                         str_c(max_måned, " ", nyeste_aar),
-                         str_c("1. januar ", round(AAR,0))),
+                         str_c("Ultimo ", max_måned, " ", nyeste_aar),
+                         str_c("Ultimo ", round(AAR - 1,0))),
          oprindelse = "DST")
          
 KF_bestand <- read_excel(str_c(sti_kf, "/", "KF24_dataark_Transport.xlsx"),
@@ -326,7 +326,7 @@ KF_bestand <- read_excel(str_c(sti_kf, "/", "KF24_dataark_Transport.xlsx"),
 KF_tal <- KF_bestand %>% 
   filter(type=="Personbiler", drivmiddel =="BEV") %>% 
   mutate(aar = parse_number(aar),
-         x_axis = str_glue("1. januar {aar+1} forventet (KF24)"),
+         x_axis = str_glue("Forventet ultimo {aar} (KF24)"),
          oprindelse = "KF") %>% 
   filter(aar %in% c(as.numeric(nyeste_aar), as.numeric(nyeste_aar)+1)) %>% # TODO: Dette skal rettes når der kommer tal fra KF24
   select(INDHOLD=antal, x_axis, oprindelse)
@@ -683,7 +683,7 @@ data_fig_4_stjerne |>
       return this.value ? (this.value / 1000).toFixed(0) : this.value;
     }"))) |> 
   hc_xAxis(title = list(text = NULL)) %>%
-  trm_hc_format(str_glue("<b>Figur 5.</b> Udvikling i antallet af biler fra januar til {format(ISOdate(2000, as.numeric(Nummer_sidste_md), 1), '%B')}" ),
+  trm_hc_format(str_glue("<b>Figur 5.</b> Udvikling i antallet af biler fra ultimo januar til ultimo {format(ISOdate(2000, as.numeric(Nummer_sidste_md), 1), '%B')}" ),
                note = str_glue("Kilde: Danmarks Statistik<br>{stjerne_tekst}"))
 
 ```
