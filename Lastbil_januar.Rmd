@@ -387,7 +387,7 @@ KF_bestand <- read_excel(str_c(sti_kf, "/", "KF24_dataark_Transport.xlsx"),
 KF_tal <- KF_bestand %>% 
   filter(type=="Lastbiler", drivmiddel =="BEV") %>% 
   mutate(aar = parse_number(aar),
-         x_axis = str_glue("1. januar {aar+1} forventet (KF24)"),
+         x_axis = str_glue("Forventet ultimo {aar} (KF24)"),
          oprindelse = "KF") %>% 
   filter(aar %in% c(nyeste_aar, nyeste_aar+1)) %>% # TODO: Når KF24 kommer skal denne rettes til
   select(ANTAL=antal, x_axis, oprindelse)
@@ -560,16 +560,20 @@ figur_3_tunge <- bestand_data_1_tunge |>
   ) 
 
 
+
 figur_4 <- bestand_data_1 %>% 
-  filter(AAR %in% c(nyeste_aar-1,nyeste_aar), DRIV =="El") %>% 
-  mutate(x_axis = str_c("1. januar", AAR),
-         oprindelse = "Bilstatistik",
-         ANTAL,
-         .keep = "none") %>%
+  filter(AAR %in% c(nyeste_aar - 1, nyeste_aar), DRIV == "El") %>% 
+  mutate(
+    x_axis = ifelse(
+      AAR == nyeste_aar - 1, 
+      str_c("Ultimo ", nyeste_aar - 1),
+      str_c("Ultimo ", seneste_md, " ", nyeste_aar) # Ensure ISO_data$month exists
+    ),
+    oprindelse = "Bilstatistik",
+    .keep = "unused"
+  ) %>%
   bind_rows(KF_tal) %>% 
-  select(kilde = oprindelse,
-         dato=x_axis, 
-         antal =ANTAL)
+  select(kilde = oprindelse, dato = x_axis, antal = ANTAL)
 
 
  
@@ -971,12 +975,15 @@ KF_tal <- KF_tal %>%
 
 bestand_data_1 %>% 
   filter(AAR == "2024" | AAR == "2025", DRIV == "El") %>% 
-  mutate(x_axis = ifelse(str_detect(AAR, "\\("),
-                         str_c("Ultimo ", seneste_md, " ", nyeste_aar),
-                         str_c("1. januar ", AAR)),
-         oprindelse = "Bilstatistik",
-         ANTAL,
-         .keep = "none") %>%
+  mutate(x_axis = case_when(
+    AAR == "2025" ~ str_c("Ultimo ", seneste_md, " ", nyeste_aar),  # Replace Ultimo 2025 with Ultimo seneste_md nyeste_aar
+    AAR == "2024" ~ str_c("Ultimo ", AAR),  # Keep Ultimo 2024
+    str_detect(AAR, "\\(") ~ str_c("Ultimo ", seneste_md, " ", nyeste_aar),  # Ensure other cases follow the same format
+    TRUE ~ str_c("Ultimo ", AAR)
+  ),
+  oprindelse = "Bilstatistik",
+  ANTAL,
+  .keep = "none") %>%
   bind_rows(KF_tal) |> 
   hchart('column', hcaes(x = x_axis, y = ANTAL, group = oprindelse), 
          color = trm_colors(c("blaa", "orange")), borderColor = 0) |>
@@ -985,21 +992,19 @@ bestand_data_1 %>%
     title = list(text = NULL),
     
     labels = list(
-      align = "center",    # Align labels to center under the bars
-      rotation = 0         # Keep labels horizontal (adjust if needed)
+      align = "center",    
+      rotation = 0         
     ),
-    tickmarkPlacement = "on"  # Ensures bars are centered on ticks
+    tickmarkPlacement = "on"
   ) |>
   
   hc_plotOptions(column = list(
-    pointWidth = 100,       # Bar width
-    groupPadding = 0.52,    # Space between groups of bars
-    pointPadding = 0.1    # Space between bars in the same group
+    pointWidth = 100,       
+    groupPadding = 0.52,    
+    pointPadding = 0.1    
   )) %>%
   trm_hc_format("<b>Figur 4.</b> Status for antallet af ellastbiler i 2025 - oberserveret versus forventet",
                 note = str_glue("Kilde: Bilstatistik"))
-
-
 
 nyreg_data_underkat_txt_el <- nyreg_data_underkat %>% filter(AAR == nyeste_aar-1, DRIV == "El") %>% select(KASSORI, ANTAL) %>% deframe() %>% as.list()
 
