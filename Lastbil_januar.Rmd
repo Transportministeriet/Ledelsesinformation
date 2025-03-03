@@ -63,8 +63,8 @@ if(month(Sys.Date())==1){
     stjerne_tekst <- "*År til dato"
   }
 
-sti_kf <- "S:/CKA/Databank/007 Klimafremskrivning"
-sti <- "S:/CKA/Databank/006 Bilstatistik/Lastbil"
+sti_kf <- "S:/TRM Databank/003 Klimafremskrivning"
+sti <- "S:/TRM Databank/004 Bilstatistik/Lastbil"
 
 
 # ---- BESTAND  ----

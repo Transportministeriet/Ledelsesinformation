@@ -57,7 +57,7 @@ if(month(Sys.Date())==1){
 }
 
 
-sti_kf <- "S:/CKA/Databank/007 Klimafremskrivning"
+sti_kf <- "S:/TRM Databank/003 Klimafremskrivning"
 
 #Data til bestand
 data_bil <- tbl_dst("BIL54", "da") |> 

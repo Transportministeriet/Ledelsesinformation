@@ -59,7 +59,8 @@ if(month(Sys.Date())==1){
     stjerne_tekst <- "*År til dato"
   }
 
-sti_kf <- "S:/CKA/Databank/007 Klimafremskrivning"
+sti_kf <- "S:/TRM Databank/003 Klimafremskrivning"
+
 data_bil <- tbl_dst("BIL54", "da") |> 
   filter(BILTYPE %in% c("4000101002"), OMRÅDE == "000", 
          BRUG %in% c("1000")) |> 
