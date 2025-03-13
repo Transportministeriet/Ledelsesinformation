@@ -718,7 +718,7 @@ if(Nummer_sidste_md!="1") marker_v <- ", marker = FALSE"
 expr <- parse(text = str_c(
   "map(sidste_par_aar$DRIV |> unique(), 
     ~{hchart(sidste_par_aar |> filter(DRIV == .x), 'line', hcaes(x = month.abb[MD], y = UDV_BIL, group = TYPE ), marker = FALSE) |> 
-        hc_colors(c(trm_colors(c('graa', 'orange')))) |> 
+        hc_colors(c(trm_colors(c('graa', 'orange', 'blaa')))) |> 
         hc_add_series(filter(dette_par_aar, DRIV == .x), type = 'line', marker = FALSE, hcaes(x = month.abb[MD], y = UDV_BIL), color = trm_colors(c('blaa')), name = max_aar) |> 
         hc_title(text = .x) |> 
         hc_yAxis(title = list(text = 'Antal'),

@@ -644,7 +644,10 @@ I løbet af `r as.character(nyeste_aar)` er der nyregistreret `r totalsalg_senes
 
 farver <- c("graa",  "blaa", "orange","groen") %>% factor(., levels = .)
 
-nyreg_data_1 |> 
+nyreg_data_1_stjerne <- nyreg_data_1 %>%
+  mutate(AAR = ifelse(AAR == nyeste_aar, paste0(AAR, stjerne), AAR))
+
+nyreg_data_1_stjerne |> 
   filter(!str_detect(AAR, "\\(|9")) |># Exclude rows where AAR contains "(" or "9"
   mutate(AAR = as.numeric(AAR)) %>% 
   hchart('column', hcaes(x = AAR, y =ANTAL, group = DRIV ), borderColor = 0,
