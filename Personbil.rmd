@@ -71,7 +71,7 @@ if(month(Sys.Date())==1){
   }
 
 sti_kf <- "S:/TRM Databank/003 Klimafremskrivning"
-sti <- "S:/CKA/Databank/006 Bilstatistik/Personbil"
+sti <- "S:/TRM Databank/004 Bilstatistik/Personbil"
 
 brugtvognsimport_data <- dir(sti) %>% 
   map_dfr(function(y) 
