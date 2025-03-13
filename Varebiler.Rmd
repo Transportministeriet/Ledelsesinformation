@@ -57,7 +57,8 @@ if(month(Sys.Date())==1){
 }
 
 
-sti_kf <- "S:/CKA/Databank/007 Klimafremskrivning"
+sti_kf <- "S:/TRM Databank/003 Klimafremskrivning"
+
 
 #Data til bestand
 data_bil <- tbl_dst("BIL54", "da") |> 
@@ -930,8 +931,9 @@ figur6.1 <- data_nysalg_hus_1_stjerne |>
             verticalAlign = "bottom",
             itemStyle = list(fontSize = "11px"),
             itemDistance = 2 )%>% 
-  hc_chart(marginBottom = 180)  %>%
-  hc_tooltip(shared = TRUE,             pointFormat = "{series.name}: <b>{point.percentage:.1f}</b> pct. (<b>{point.antal:,.1f}</b> varebiler)<br>") %>%
+  hc_chart(marginTop = 90, marginBottom = 180)  %>%
+  hc_tooltip(shared = TRUE,             pointFormat = "<b>{series.name}</b>: {point.percentage:.1f} pct. (<b>{point.antal:,.0f}</b> varebiler)<br>") %>%
+
   trm_hc_format("<b>Figur 6.1</b> Husholdningens andel af nyregistreringer for varebiler",
                 note = str_glue("Kilde: Danmarks Statistik <br> {stjerne_tekst}"))
 
@@ -961,7 +963,7 @@ figur6.2 <- data_nysalg_erhverv_1_stjerne |>
             verticalAlign = "bottom",
             itemStyle = list(fontSize = "11px"),
             itemDistance = 2 )%>% 
-  hc_chart(marginBottom = 180)  %>%
+  hc_chart(marginTop = 90, marginBottom = 180)  %>%
   hc_tooltip(shared = TRUE,
              pointFormat = "{series.name}: <b>{point.percentage:.1f}</b> pct. (<b>{point.antal:,.0f}</b> varebiler)<br>") %>%
   trm_hc_format("<b>Figur 6.2</b> Erhvervets andel af nyregistreringer for varebiler",
