@@ -1,0 +1,143 @@
+/* General body styling */
+body {
+    font-family: 'Lato', sans-serif;
+    background-color: #f4f4f4;
+    color: #222;  /* Darker text */
+    margin: 0;
+}
+
+/* Flexdashboard main container */
+.main-container {
+    background-color: #ffffff;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.15);
+}
+
+/* Ensuring text remains in one column */
+.text-container {
+    display: block;  /* Prevents flex or grid issues */
+    width: 100%;
+}
+
+/* Fix for possible flex/grid misalignment */
+.flex-container {
+    display: flex;
+    flex-direction: column;  /* Ensures all content is stacked in one column */
+    align-items: flex-start; /* Aligns text properly */
+}
+
+/* Fix floating issues */
+p, span, div {
+    float: none;
+    clear: both;
+}
+
+/* Header styles */
+h1.title {
+    color: #003847;  /* Darker shade of blue */
+    font-size: 28px;
+    text-align: center;
+    border-bottom: none;  /* Removed the horizontal line */
+    padding-bottom: 10px;
+}
+
+/* Section headers */
+.section.level1 {
+    color: #003847;  /* Darker than before */
+    font-size: 20px;
+    border-bottom: none;  /* Removed horizontal line */
+    padding-bottom: 5px;
+    margin-top: 20px;
+}
+
+/* Chart Titles */
+.chart-title {
+    color: #222;  /* Darker text */
+    font-size: 18px;
+    font-weight: bold;
+}
+
+/* Paragraph styling */
+p {
+    color: #222;  /* Darker text */
+    line-height: 1.7;
+    width: 100%;  /* Ensures full width */
+    max-width: none;  /* Prevents unnecessary breaks */
+}
+
+/* Fix for inline elements (like spans) breaking into different lines */
+span {
+    display: inline;
+}
+
+/* Styling links */
+a {
+    color: #003847;  /* Darker blue */
+    font-weight: bold;
+    text-decoration: none;
+    border-bottom: 2px solid #008080;
+    transition: all 0.3s ease;
+}
+
+a:hover {
+    color: #005f73;
+    border-bottom: 2px solid #005f73;
+}
+
+/* List styles */
+ul, ol {
+    padding-left: 20px;
+}
+
+li {
+    color: #222;  /* Darker text */
+    margin-bottom: 5px;
+}
+
+/* Code block styling */
+pre, code {
+    background-color: #e6e6e6;
+    color: #222;  /* Darker text */
+    padding: 5px;
+    border-radius: 5px;
+    font-family: 'Courier New', monospace;
+}
+
+/* Table styles */
+table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 15px;
+}
+
+th, td {
+    padding: 10px;
+    border: 1px solid #bbb;  /* Slightly darker borders */
+    text-align: left;
+    color: #222;  /* Darker text */
+}
+
+th {
+    background-color: #003847;
+    color: white;
+}
+
+tr:nth-child(even) {
+    background-color: #f0f0f0;
+}
+
+/* Button styles */
+button {
+    background-color: #005f73;
+    color: white;
+    padding: 10px 15px;
+    border: none;
+    border-radius: 5px;
+    font-size: 16px;
+    cursor: pointer;
+}
+
+button:hover {
+    background-color: #003847;
+}
