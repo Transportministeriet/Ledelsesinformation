@@ -62,7 +62,15 @@ knit_hooks$set(inline = function(x) {
   }
 })
 
-sti_kf <- "S:/CKA/Databank/007 Klimafremskrivning"
+if(month(Sys.Date())==1){
+  stjerne <- ""
+  stjerne_tekst <- ""
+} else{
+    stjerne <- "*"
+    stjerne_tekst <- "*År til dato"
+  }
+
+sti_kf <- "S:/TRM Databank/003 Klimafremskrivning"
 sti <- "S:/CKA/Databank/006 Bilstatistik/Personbil"
 
 brugtvognsimport_data <- dir(sti) %>% 
@@ -131,8 +139,6 @@ process_nyreg_data <- function(data, date_column) {
 
 
 brugt_1 <-process_nyreg_data(brugtvognsimport_data, date_column = "DATE_ST")
-
-
 
 data_bil <- tbl_dst("BIL54", "da") |> 
   filter(BILTYPE %in% c("4000101002"), OMRÅDE == "000", 
@@ -385,11 +391,12 @@ vækst_siden_2020 <- round((bestand_2023_seneste-bestand_2020)/bestand_2020*100,
 
 
 DST_tal <- data_bil_1 |>
-  filter(DRIV == "El", 
-         DATE_1 %in% c(max(DATE_1), floor_date(max(DATE_1) - years(1), "year"))) |> 
-  mutate(x_axis = ifelse(DATE_1 == max(DATE_1),
-                         str_c("1. ", max_måned, " ", nyeste_aar, "<br> observeret (DST)"),  # Line break added
-                         str_c("1. januar ", year(DATE_1), "<br> observeret (DST)")),        # Line break added
+  filter(DRIV=="El", 
+         DATE_1 %in% c(max(DATE_1), max(DATE_1-1) |> floor_date("years"))) |> 
+  mutate(x_axis = ifelse(DATE_1 ==max(DATE_1),
+                         str_c("Ultimo ", max_måned, " ", nyeste_aar),
+                         str_c("Ultimo ", round(AAR - 1,0))),
+
          oprindelse = "DST")
 
 
@@ -407,7 +414,7 @@ KF_bestand <- read_excel(str_c(sti_kf, "/", "KF24_dataark_Transport.xlsx"),
 KF_tal <- KF_bestand %>% 
   filter(type == "Personbiler", drivmiddel == "BEV") %>% 
   mutate(aar = parse_number(aar),
-         x_axis = str_glue("1. januar {aar+1} <br> forventet (KF24)"),  # Added <br> for line break
+         x_axis = str_glue("Forventet ultimo {aar} (KF24)"),
          oprindelse = "KF") %>% 
   filter(aar %in% c(as.numeric(nyeste_aar), as.numeric(nyeste_aar) + 1)) %>%  # TODO: Adjust when KF25 data is available
   select(INDHOLD = antal, x_axis, oprindelse)
@@ -867,8 +874,8 @@ data_fig_4 |>
       return this.value ? (this.value / 1000).toFixed(0) : this.value;
     }"))) |> 
   hc_xAxis(title = list(text = NULL)) %>%
-  format_chart(titel =str_glue("<b>Figur 5.</b> Udvikling i antallet af biler fra januar til {format(ISOdate(2000, as.numeric(Nummer_sidste_md), 1), '%B')}" ),
-               note = "Kilde: Danmarks Statistik")
+  trm_hc_format(str_glue("<b>Figur 5.</b> Udvikling i antallet af biler fra primo januar til ultimo {format(ISOdate(2000, as.numeric(Nummer_sidste_md), 1), '%B')}" ),
+               note = str_glue("Kilde: Danmarks Statistik<br>{stjerne_tekst}"))
 
 ```
 
