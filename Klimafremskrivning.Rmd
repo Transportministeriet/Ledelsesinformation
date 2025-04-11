@@ -191,7 +191,7 @@ Den næste udgave, Klimastatus og -fremskrivning 2025 (KF25), forventes offentli
 
 **Indledning**
 <br>
-Transportsektoren udgør 25 pct. af Danmarks CO₂-udledninger i 2023 og forventes at stå for 33 % af de samlede udledninger i 2030. Vejtransport er den største kilde, men reduktioner vil ske gennem elektrificering, øget energieffektivitet og brug af bæredygtige brændstoffer. Selvom transportaktiviteterne stiger, bidrager den teknologiske udvikling til at begrænse udledningerne. Luft- og søfart følger samme tendens med en gradvis omstilling til mere bæredygtige brændstoffer.
+Transportsektoren udgør 25 pct. af Danmarks CO₂-udledninger i 2023 og forventes at stå for 33 % af de samlede udledninger i 2030. Vejtransport er den største kilde, men reduktioner vil ske gennem elektrificering, øget energieffektivitet og brug af bæredygtige drivmidler. Selvom transportaktiviteterne stiger, bidrager den teknologiske udvikling til at begrænse udledningerne. Luft- og søfart følger samme tendens med en gradvis omstilling til mere bæredygtige drivmidler.
 
 Tallene kan genfindes i Klimastatus og -fremskrivning 2024 kapitel 21 om transport, [Link](https://www.kefm.dk/Media/638557749235686945/KF24%20Kapitel%2021%20Transport.pdf) 
  
@@ -247,9 +247,9 @@ Bestand {data-icon="fa-solid fa-car-side"}
 
 **Indledning**
 <br>
-Bestanden af køretøjer i Danmark har udviklet sig markant i de seneste år samtidig med en stigende elektrificering. Ultimo 2023 var der knap 2,7 millioner personbiler, hvoraf antallet af elbiler var 200.000. Varebiler udgjorde omkring 364.000 køretæjer ultimo 2023, mens der var cirka 43.000 lastbiler og 9.500 busser. Diesel er det klart dominerende drivmiddel for varebiler, lastbiler og busser, men elektrificeringen vinder gradvist indpas for alle køretøjer. Denne udvikling afspejler en generel omstilling mod mere bæredygtige transportløsninger drevet af teknologiske fremskridt og politiske målsætninger om CO₂-reduktion.
+Bestanden af køretøjer i Danmark har udviklet sig markant i de seneste år samtidig med en stigende elektrificering. Ultimo 2023 var der knap 2,7 millioner personbiler, hvoraf antallet af elbiler var 200.000. Varebiler udgjorde omkring 364.000 køretøjer ultimo 2023, mens der var cirka 43.000 lastbiler og 9.500 busser. Diesel er det klart dominerende drivmiddel for varebiler, lastbiler og busser, men elektrificeringen vinder gradvist indpas for alle køretøjer. Denne udvikling afspejler en generel omstilling mod mere bæredygtige drivmidler drevet af teknologiske fremskridt og politiske målsætninger om CO₂-reduktion.
 
-Fremskrivningerne frem mod 2035 peger på en fortsat omstilling mod bæredygtig transport, hvor elbiler vil spille en større rolle og reducere transportsektorens CO₂-udledningerne markant. 
+Fremskrivningerne frem mod 2035 peger på en fortsat omstilling mod bæredygtige drivmidler, hvor elbiler vil spille en større rolle og reducere transportsektorens CO₂-udledningerne markant. 
 
 Tallene kan genfindes i Klimastatus og -fremskrivning 2024 kapitel 21 om transport, [Link](https://www.kefm.dk/Media/638557749235686945/KF24%20Kapitel%2021%20Transport.pdf) 
 
@@ -288,9 +288,9 @@ best_fig_fkt("Busser", "bestand")
 <br>
 Nyregistreringer dækker i denne sammenhæng over et registreringspligtigt køretøjs første registrering i motorregisteret. Importerede brugte køretøjer tæller ikke med i nyregistreringerne, men opgøres som genregistreringer.
 
-Sammensætningen af drivmidler for nye køretøjer i Danmark har ændret sig markant de seneste år, hvor der især ses en kraftig vækst i elbiler. I 2023 steg elbilernes andel til over 40 % af nyregistreringerne svarende til 30.000 flere biler end forventet. Dieselbiler er i tilbagegang, mens salget af plug-in hybridbiler, der toppede med 12 pct. i 2021, ventes at falde til 4 pct. i 2030. Brint- og gasbiler forventes fortsat at udgøre en minimal del af nyregistriringerne.
+Sammensætningen af drivmidler for nye køretøjer i Danmark har ændret sig markant de seneste år, hvor der især ses en kraftig vækst i elbiler. I 2023 steg elbilernes andel til over 40 % af nyregistreringerne svarende til 30.000 flere biler end forventet i KF24. Dieselbiler er i tilbagegang, mens salget af plug-in hybridbiler, der toppede med 12 pct. i 2021, ventes at falde til 4 pct. i 2030. Brint- og gasbiler forventes fortsat at udgøre en minimal del af nyregistriringerne.
 
-For varebiler sker elektrificeringen langsommere end personbiler I 2023 udgjorde elvarebiler 14 % af salget, og andelen forventes at stige med bedre teknologi og ladeinfrastruktur.
+For varebiler sker elektrificeringen langsommere end personbiler. I 2023 udgjorde elvarebiler 14 % af salget, og andelen forventes at stige med bedre teknologi og ladeinfrastruktur.
 
 For lastbiler udgør el endnu kun 6 pct. af tilgangen i 2023, men salget ventes at stige frem mod 2035 drevet af skærpede EU-krav, teknologiudvikling og kilometerbaseret vejafgift på lastbiler. Den hurtigste omstilling ses for busser, hvor over halvdelen af de nye bybusser var eldrevne i 2023.
     

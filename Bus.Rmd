@@ -59,10 +59,10 @@ if(month(Sys.Date())==1){
   stjerne_tekst <- "*År til dato"
 }
 
-sti <- "S:/CKA/Databank/006 Bilstatistik/Bus"
+sti <- "S:/TRM Databank/004 Bilstatistik/Bus"
 
 
-til_indlaes <- bilstat_peri <- dir(str_c("S:/CKA/Databank/006 Bilstatistik/Bus")) %>% 
+til_indlaes <- bilstat_peri <- dir(str_c("S:/TRM Databank/004 Bilstatistik/Bus")) %>% 
   enframe() %>% 
   mutate(dato = coalesce(parse_date_time2(value, orders = "dmY") %>% as.Date(),
                          map_chr(value, ~strsplit(.x, ', ', fixed = TRUE)[[1]][2]) %>% 
