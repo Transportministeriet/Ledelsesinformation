@@ -503,15 +503,19 @@ cat("**Figur 4. Andel af nyregistreringer fordelt på anvendelse og drivmiddel**
 
 fct_sort <- nyreg_data_underkat$AAR %>% unique()
 
+
 map(udvalgte_kat, ~{
   nyreg_data_underkat |>
     filter(ANVENDELSE == .x) %>% 
     mutate(AAR = factor(AAR, levels = fct_sort)) %>% 
-    hchart('column', hcaes(x = AAR, y = ANTAL, group = DRIV), borderColor = 0) |> 
+    hchart('column', hcaes(x = AAR, y = ANTAL, group = DRIV), borderColor = 0) %>% 
+    hc_chart(marginTop = 90) %>% 
     hc_plotOptions(column = list(stacking = "percent")) |> 
     hc_colors(c(trm_colors(farver))) |> 
     hc_yAxis(title = list(text = "Pct."), max = 100) |> 
-    hc_xAxis(categories = fct_sort, title = list(text = NULL)) |> 
+    hc_xAxis(categories = fct_sort, 
+             title = list(text = NULL),
+             labels = list(rotation = -60)) |> 
     hc_legend(reversed = TRUE) |> 
     hc_tooltip(shared = TRUE,
                pointFormat = "<b>{series.name}</b>: {point.percentage:.1f} pct. ({point.y:,.0f} busser) <br>") %>% 
@@ -542,7 +546,8 @@ fct_sor_2 <- bestand_data_underkat$AAR %>% unique()
 
 map(udvalgte_kat, ~{bestand_data_underkat |> 
     filter(ANVENDELSE==.x) %>% 
-    hchart('column', hcaes(x = AAR, y = BESTAND, group = DRIV ), borderColor = 0) |> 
+    hchart('column', hcaes(x = AAR, y = BESTAND, group = DRIV ), borderColor = 0) |>
+    hc_chart(marginTop = 90) %>% 
     hc_plotOptions(column = list(stacking = "normal")) |> 
     hc_colors(c(trm_colors(farver))) |> 
     hc_yAxis(
@@ -550,7 +555,9 @@ map(udvalgte_kat, ~{bestand_data_underkat |>
       labels = list(
         format = "{value:,.0f}")
     ) |> 
-    hc_xAxis(categories = fct_sor_2, title = list(text = NULL)) |> 
+    hc_xAxis(categories = fct_sor_2, 
+             title = list(text = NULL),
+             labels = list(rotation = -60)) |> 
     hc_tooltip(
       shared = TRUE,
       pointFormat = "<b>{series.name}</b>: {point.y:,.0f} busser ({point.percentage:.1f} pct.) <br>"
