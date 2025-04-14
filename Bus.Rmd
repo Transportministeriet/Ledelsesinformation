@@ -124,18 +124,19 @@ bestand_data_x <- bestand_seneste_data %>%
   select(AAR, DRIV, ANTAL, A_BESTAND)
 
 
-bestand_data_1 <- bestand_data %>% 
-  filter(ANVENDELSE !="Særlig anvendelse") %>% 
+bestand_data_1 <- bestand_data %>%
+  filter(ANVENDELSE !="Særlig anvendelse") %>%
   summarise(ANTAL = sum(BESTAND),
-            .by = c("DATE", "DRIV")) %>% 
-  mutate(AAR = ifelse(month(max(DATE))!=12, 
-                      str_c(year(DATE), " (", format(DATE, "%B"), ")"), 
-                      as.character(year(DATE)+1)), 
+            .by = c("DATE", "DRIV")) %>%
+  mutate(AAR = ifelse(month(max(DATE))!=12,
+                      str_c(format(DATE, "%B"), " ", year(DATE)),
+                      as.character(year(DATE)+1)),
          A_BESTAND = ANTAL/sum(ANTAL)*100,
-         .by = "DATE") %>% 
-  filter(!str_detect(AAR, "\\(") | str_detect(AAR, "\\(") & DATE==max(DATE) ) %>% 
-  arrange(AAR) %>% 
+         .by = "DATE") %>%
+  filter(!str_detect(AAR, "\\(") | str_detect(AAR, "\\(") & DATE==max(DATE) ) %>%
+  arrange(AAR) %>%
   select(AAR, DRIV, ANTAL, A_BESTAND)
+
 
 nyreg_data <- til_indlaes %>% 
   filter(str_detect(value, "Nyregistreringer")) %>% 
@@ -222,7 +223,7 @@ bestand_data_underkat <-  bestand_data_underkat %>%
   summarise(BESTAND = sum(BESTAND), 
             .by = c("DATE","ANVENDELSE", "DRIV")) %>% 
   mutate(AAR = ifelse(month(max(DATE))!=12, 
-                      str_c(year(DATE), " (", format(DATE, "%B"), ")"), 
+                      str_c(format(DATE, "%B"), " ", year(DATE)), 
                       as.character(year(DATE)+1)), 
          A_BESTAND = BESTAND/sum(BESTAND)*100,
          .by = c("DATE","ANVENDELSE")) %>% 
@@ -254,13 +255,13 @@ result_max_month <- nyreg_data_3 %>%
   group_by(AAR, MONTH, ANVENDELSE, DRIV) %>%    
   summarize(
     ANTAL = sum(ANTAL),                  
-    DATE = max(DATE),                    # Keep the maximum DATE for each group
+    DATE = max(DATE),
     .groups = 'drop'
   ) %>% 
   group_by(AAR, MONTH, ANVENDELSE) %>%            
   mutate(
-    A_NYREG = ANTAL / sum(ANTAL) * 100,  
-    AAR = str_c(year(DATE), " (", lubridate::quarter(DATE), ". Kvt)")  # Use DATE to create AAR with year and quarter
+    A_NYREG = ANTAL / sum(ANTAL) * 100,
+    AAR = str_c(lubridate::quarter(DATE), ". kvt ", year(DATE))
   ) %>%  
   ungroup()
 
@@ -395,23 +396,39 @@ format_chart <- function(x, titel) {
     )
 }
 
+nyreg_data_2_stjerne <- nyreg_data_2 %>%
+  mutate(
+    AAR = ifelse(AAR == nyeste_aar, paste0(AAR, "*"), AAR),
+    year = suppressWarnings(as.numeric(str_sub(AAR, end = 4)))  
+  )
 
-nyreg_data_2 |> 
-  filter(as.numeric(str_sub(AAR, end = 4))>max(as.numeric(str_sub(AAR, end = 4)))-5) |> 
-  hchart('column', hcaes(x = AAR, y =ANTAL, group = DRIV ), borderColor = 0) |> 
+
+bind_rows(
+  nyreg_data_2_stjerne,
+  nyreg_data_1 |> 
+    filter(DATE == max(DATE)) |> 
+    mutate(AAR = str_c(lubridate::quarter(DATE), ". kvt ", year(DATE)))
+) |> 
+  filter(year > max(year, na.rm = TRUE) - 5 | is.na(year)) |> 
+  hchart('column', hcaes(x = AAR, y = ANTAL, group = DRIV), borderColor = 0) |> 
   hc_plotOptions(column = list(stacking = "normal")) |> 
   hc_colors(c(trm_colors(farver))) |> 
-  hc_yAxis(title = list(text = "Antal"),
-           labels = list(formatter = JS("function() {
+  hc_yAxis(
+    title = list(text = "Antal"),
+    labels = list(formatter = JS("function() {
       return this.value >= 1000 ? (this.value / 1000).toFixed(0) : this.value;
     }")),
     stackLabels = list(enabled = TRUE, verticalAlign = 'top',
-                       crop = FALSE, overflow = 'none')) |> 
+                       crop = FALSE, overflow = 'none')
+  ) |> 
   hc_xAxis(title = list(text = NULL)) %>% 
-  hc_legend(reversed =TRUE) %>% 
+  hc_legend(reversed = TRUE) %>% 
   hc_tooltip(shared = TRUE) %>% 
-  trm_hc_format("<b>Figur 1.</b> Udvikling i nyregistreringer af busser fordelt på drivmiddel",
-                note = str_glue("Kilde: Bilstatistik<br>{stjerne_tekst}"))
+  trm_hc_format(
+    "<b>Figur 1.</b> Udvikling i nyregistreringer af busser fordelt på drivmiddel",
+    note = str_glue("Kilde: Bilstatistik<br>{stjerne_tekst}")
+  )
+
 
 
 ```
@@ -425,10 +442,11 @@ Elbussers andel af det samlede antal nyregistreringer varierer meget fra år til
 
 # TODO: forstår ikke helt Camillas kommentarer til tekst
 
-bind_rows(nyreg_data_2, 
+bind_rows(nyreg_data_2_stjerne, 
           nyreg_data_1 |> 
             filter(DATE==max(DATE)) %>% 
-            mutate(AAR = str_c(year(DATE), " (",  lubridate::quarter(DATE), ". Kvt)" ))) %>%
+            mutate(AAR = str_c(lubridate::quarter(DATE), ". kvt ", year(DATE)))
+          ) %>%
   hchart('column', hcaes(x = AAR, y =A_NYREG , group = DRIV ), borderColor = 0) |> 
   hc_plotOptions(column = list(stacking = "normal")) |> 
   hc_colors(c(trm_colors(farver))) |> 
@@ -501,11 +519,16 @@ Opdeles busserne efter anvendelse ses tydeligt, at der primært nyregistreres el
 
 cat("**Figur 4. Andel af nyregistreringer fordelt på anvendelse og drivmiddel**")
 
-fct_sort <- nyreg_data_underkat$AAR %>% unique()
+nyreg_data_underkat_stjerne <- nyreg_data_underkat %>%
+  mutate(
+    AAR = ifelse(AAR == nyeste_aar, paste0(AAR, "*"), AAR),
+    year = suppressWarnings(as.numeric(str_sub(AAR, end = 4)))  
+  )
 
+fct_sort <- nyreg_data_underkat_stjerne$AAR %>% unique()
 
 map(udvalgte_kat, ~{
-  nyreg_data_underkat |>
+  nyreg_data_underkat_stjerne |>
     filter(ANVENDELSE == .x) %>% 
     mutate(AAR = factor(AAR, levels = fct_sort)) %>% 
     hchart('column', hcaes(x = AAR, y = ANTAL, group = DRIV), borderColor = 0) %>% 
@@ -527,7 +550,6 @@ map(udvalgte_kat, ~{
 
 
 nyeste_aar_C <- as.character(nyeste_aar)
-
 
 ```
 
