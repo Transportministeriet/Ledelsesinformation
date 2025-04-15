@@ -455,51 +455,70 @@ elsalg_naestseneste <- nyreg_data_1 %>%  filter(AAR==nyeste_aar-1, DRIV=="El") %
 
 
 seneste_md <- format(ISOdate(2000, nummer_sidste_md, 1), "%B") 
-seneste_md_tal <- nyreg_data_1 %>% 
-  filter(str_detect(AAR, "\\("), DRIV=="El") %>% 
+
+seneste_md_tal <- nyreg_data_1 %>%
+  filter(AAR == max(AAR), DRIV == "El") %>%
   pull("A_NYREG")
 
-
 bestand_2021 <- bestand_data_1 %>% filter(AAR=="2021") %>% pull("ANTAL") %>% sum()
+
 bestand_seneste <- bestand_data_1 %>%
-  filter(if (any(str_detect(AAR, "\\("))) {
-    str_detect(AAR, "\\(")
+  filter(if (any(!str_detect(AAR, "^\\d{4}$"))) {
+    !str_detect(AAR, "^\\d{4}$")
   } else {
     AAR == "2025"
   }) %>%
   pull("ANTAL") %>%
   sum()
-bestand_seneste_lette <- bestand_data_1_lette %>% filter(if (any(str_detect(AAR, "\\("))) {
-    str_detect(AAR, "\\(")
+
+bestand_seneste_lette <- bestand_data_1_lette %>%
+  filter(if (any(!str_detect(AAR, "^\\d{4}$"))) {
+    !str_detect(AAR, "^\\d{4}$")
   } else {
     AAR == "2025"
-  }) %>% pull("ANTAL") %>% sum()
-bestand_seneste_tunge <- bestand_data_1_tunge %>% filter(if (any(str_detect(AAR, "\\("))) {
-    str_detect(AAR, "\\(")
+  }) %>%
+  pull("ANTAL") %>%
+  sum()
+
+bestand_seneste_tunge <- bestand_data_1_tunge %>%
+  filter(if (any(!str_detect(AAR, "^\\d{4}$"))) {
+    !str_detect(AAR, "^\\d{4}$")
   } else {
     AAR == "2025"
-  }) %>% pull("ANTAL") %>% sum()
+  }) %>%
+  pull("ANTAL") %>%
+  sum()
 
 elbestand_seneste <- bestand_data_1 %>%
-  filter(if (any(str_detect(AAR, "\\("))) {
-    str_detect(AAR, "\\(")
+  filter(if (any(!str_detect(AAR, "^\\d{4}$"))) {
+    !str_detect(AAR, "^\\d{4}$")
   } else {
     AAR == "2025"
-  }, DRIV=="El") %>% pull("ANTAL")
+  }, DRIV == "El") %>%
+  pull("ANTAL")
 
+elbestand_seneste_lette <- bestand_data_1_lette %>%
+  filter(if (any(!str_detect(AAR, "^\\d{4}$"))) {
+    !str_detect(AAR, "^\\d{4}$")
+  } else {
+    AAR == "2025"
+  }, DRIV == "El") %>%
+  pull("ANTAL")
 
-elbestand_seneste_lette <- bestand_data_1_lette %>% filter(if (any(str_detect(AAR, "\\("))) {
-    str_detect(AAR, "\\(")
+elbestand_seneste_tunge <- bestand_data_1_tunge %>%
+  filter(if (any(!str_detect(AAR, "^\\d{4}$"))) {
+    !str_detect(AAR, "^\\d{4}$")
   } else {
     AAR == "2025"
-  }, DRIV=="El") %>% pull("ANTAL")
-elbestand_seneste_tunge <- bestand_data_1_tunge %>% filter (if (any(str_detect(AAR, "\\("))) {
-    str_detect(AAR, "\\(")
-  } else {
-    AAR == "2025"
-  }, DRIV=="El") %>% pull("ANTAL")
-elbestand_næst_seneste <- bestand_data_2 %>% filter(str_detect(AAR, "\\("), DRIV=="El") %>% pull("ANTAL")
+  }, DRIV == "El") %>%
+  pull("ANTAL")
+
+elbestand_næst_seneste <- bestand_data_2 %>%
+  filter(!str_detect(AAR, "^\\d{4}$"), DRIV == "El") %>%
+  pull("ANTAL")
+
 udv_elbestand_seneste_måned <- elbestand_seneste - elbestand_næst_seneste
+
 
 # 
 # Alt imens bestanden af elbiler er under udvikling, er bestanden af fossilbiler gået fra en nettotilgang på  `r tal_fos_2019` biler i de første `r month(max(dat_fig_3$DATE))` måneder af 2020 til en nettoafgang på `r tal_fos_2023` biler i de første `r month(max(dat_fig_3$DATE))` måneder af 2023. Det skyldes særligt, at bestanden af dieselbiler har været faldende siden august 2020, mens bestanden af benzinbiler har været faldende siden august 2021.
@@ -820,9 +839,9 @@ elandel_seneste <- elbestand_seneste/bestand_seneste*100
 
 ```
 
-Diesel er stadig det dominernde drivmiddel i bestanden af lastbiler. Bestanden af lastbiler har generelt været svagt stigende siden 1. januar 2021, hvor den samlede bestand var `r bestand_2021`, mens  bestanden ultimo januar 2025 var `r bestand_seneste` lastbiler. 
+Diesel er stadig det dominernde drivmiddel i bestanden af lastbiler. Bestanden af lastbiler har generelt været svagt stigende siden 1. januar 2021, hvor den samlede bestand var `r bestand_2021`, mens  bestanden ultimo `r str_c(seneste_md)` 2025 var `r bestand_seneste` lastbiler. 
 
-I `r format(ISOdate(2000, nummer_sidste_md, 1), "%B")` måned voksede bestanden af ellastbiler med `r udv_elbestand_seneste_måned` lastbiler således, at der primo januar 2025 var `r elbestand_seneste` ellastbiler i Danmark svarende til `r elandel_seneste` pct. af den samlede bestand jf. figur 3.
+I `r format(ISOdate(2000, nummer_sidste_md, 1), "%B")` måned udviklede bestanden af ellastbiler sig med `r udv_elbestand_seneste_måned` lastbiler således, at der ultimo `r str_c(seneste_md)` 2025 var `r elbestand_seneste` ellastbiler i Danmark svarende til `r elandel_seneste` pct. af den samlede bestand jf. figur 3.
 
 
 ```{r}
@@ -960,8 +979,7 @@ rest <- abs(KF_tal$ANTAL[[2]] - elbestand_seneste)
 ```
 
 
-Ifølge Klimastatus og -fremskrvining 2024 forventes der at være cirka `r KF_tal$ANTAL[[2]]` elektriske lastbiler i Danmark ved udgangen af 2025. Differencen mellem det nuværende antal  og det forventede antal elektriske lastbiler ved udgangen af 2025 er således `r rest` lastbiler, jævnfør figur 4.
-
+Ifølge Klimastatus og -fremskrvining 2024 forventes der at være cirka `r KF_tal$ANTAL[[2]]` elektriske lastbiler i Danmark ved udgangen af 2025. Differencen mellem det nuværende antal, jævnfør figur 3, og det forventede antal elektriske lastbiler ved udgangen af 2025, jævnfør figur 4, er således `r rest` lastbiler.
 
 
 ```{r}
