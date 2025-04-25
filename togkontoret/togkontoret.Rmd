@@ -1,0 +1,108 @@
+---
+title: "togkontoret"
+output: html_document
+date: "2025-04-23"
+---
+```{css, echo=FALSE}
+
+.main-container {
+  max-width: 700px !important;
+  margin: auto;
+  font-family: Georgia;
+}
+body{
+  font-family: Georgia;
+  font-size: 12pt;
+}
+.highcharts-background {
+  fill: #EDF1F4;}
+```
+
+```{r setup, include=FALSE}
+
+
+source("S:/CKA/Git/Ledelsesinformation/standard_indstillinger.R")
+library(data.table)
+
+
+data_til_fig <- fread("S:/TRM Databank/012 Togkontoret/Kundepunktlighed.csv")
+
+md_aar <- data_til_fig %>%
+  filter(maaned!="aar_til_dato" & tog_type=="fjern_og_regionaltog" & type=="Kundepunktlighed" ) %>%
+  arrange(aar, maaned) %>% 
+  distinct(aar, maaned) %>%
+  mutate(aar_md = str_c(maaned, " ", aar)) %>%
+  pull(aar_md)
+
+lvls <- md_aar %>% 
+  tail(12)
+
+fig_kunde <- data_til_fig %>%
+  mutate(aar_md = str_c(maaned, " ", aar)) %>% 
+  filter(maaned!="aar_til_dato", str_detect(tog_type,"fjern_og_regionaltog"),
+         aar_md %in% lvls)
+
+gnst_tal <- fig_kunde %>% summarise(gnst = mean(pct),
+                        .by = "type") %>% deframe()
+
+md_under <- fig_kunde %>% pivot_wider(names_from = "type", values_from = "pct") %>% 
+  mutate(tjek = Kundepunktlighed <Kontraktkrav) %>% 
+  pull(tjek) %>% sum()
+
+fig_kunde <- data_til_fig %>%
+  mutate(aar_md = str_c(maaned, " ", aar)) %>% 
+  filter(maaned!="aar_til_dato", str_detect(tog_type,"fjern_og_regionaltog"),
+         aar_md %in% lvls)
+
+gnst_tal <- fig_kunde %>% summarise(gnst = mean(pct),
+                        .by = "type") %>% deframe()
+
+md_under <- fig_kunde %>% pivot_wider(names_from = "type", values_from = "pct") %>% 
+  mutate(tjek = Kundepunktlighed <Kontraktkrav) %>% 
+  pull(tjek) %>% sum()
+
+fig_kunde_1 <- data_til_fig %>%
+  mutate(aar_md = str_c(maaned, " ", aar)) %>% 
+  filter(maaned!="aar_til_dato", str_detect(tog_type,"fjern_og_regionaltog"),
+         aar_md %in% tail(md_aar, 24)[1:12])
+
+md_under_1 <- fig_kunde_1 %>% pivot_wider(names_from = "type", values_from = "pct") %>% 
+  mutate(tjek = Kundepunktlighed <Kontraktkrav) %>% 
+  pull(tjek) %>% sum()
+
+```
+
+Dette er Transportministeriets interne statusnotat med månedstal fra DSB månedstal. Det viser bl.a. udviklingen i kundepunktligheden.......... Notatet opdateres månedsvis og er baseret på data fra DSB  
+
+Data fra rapporten kan hentes her:
+```{r}
+list("Figur 1" = fig_kunde) %>%
+  download_this(
+    output_name = "Tal fra rapport om togdata",
+    output_extension = ".xlsx",
+    button_label = "Download datasæt",
+    button_type = "info",
+    has_icon = TRUE,
+    icon = "fa fa-save"
+  )
+
+```
+
+### Kundepuktlighed
+
+De seneste 12 måneder har kundepunkligheden ligget på `r gnst_tal["Kundepunktlighed"]` og med `r md_under` måneder under kontraktkravet. I samme periode sidste år var `r md_under_1` under kontraktkravet.
+
+```{r cars}
+highchart() %>% 
+  hc_add_series(fig_kunde %>% filter(type=="Kundepunktlighed"), 'line', 
+                hcaes(x = aar_md, y =pct), marker = FALSE, color = trm_colors("blaa"), 
+                name = "Kundepunktlighed") %>% 
+  hc_add_series(fig_kunde %>% filter(type=="Kontraktkrav"), 'line', 
+                hcaes(x = aar_md, y =pct), marker = FALSE, color = "black", dashStyle = "Dash",
+                name = "Kontraktkrav") %>% 
+  hc_xAxis(categories = lvls,
+           title = list(text = NULL)) %>% 
+  hc_yAxis(title = list(text = "Andel (pct.)")) %>% 
+  trm_hc_format("<b>Figur 1</b> Seneste tolv måneders kundepunktlighed",
+                note = str_glue("Kilde: DSB"))
+```
