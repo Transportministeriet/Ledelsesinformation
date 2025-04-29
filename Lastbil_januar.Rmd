@@ -37,18 +37,20 @@ library(zoo)
 library(htmltools)
 
 
-  
+
 lang <- getOption("highcharter.lang")
 lang$decimalPoint <- ","
 lang$thousandsSep <- "."
 lang$numericSymbols <- highcharter::JS("null") # optional: remove the SI prefixes
 options(highcharter.lang = lang)
 
-options(scipen = 1000, digits = 2, decimal.mark = ",", OutDec = ",")
+
+options(scipen = 100, digits = 2, OutDec = ",")
 Sys.setenv(Lang = "da")
+Sys.setlocale("LC_TIME", "da_DK.UTF-8")
 
 knit_hooks$set(inline = function(x) {
-  if(is.numeric(x)){
+  if(is.numeric(x) | is.data.frame(x)){
     return(prettyNum(x, big.mark=".", digits = 2))
   } else{
     return(x)
@@ -59,9 +61,9 @@ if(month(Sys.Date())==1){
   stjerne <- ""
   stjerne_tekst <- ""
 } else{
-    stjerne <- "*"
-    stjerne_tekst <- "*År til dato"
-  }
+  stjerne <- "*"
+  stjerne_tekst <- "*År til dato"
+}
 
 sti_kf <- "S:/TRM Databank/003 Klimafremskrivning"
 sti <- "S:/TRM Databank/004 Bilstatistik/Lastbil"
@@ -663,21 +665,18 @@ I løbet af `r as.character(nyeste_aar)` er der nyregistreret `r totalsalg_senes
 
 farver <- c("graa",  "blaa", "orange","groen") %>% factor(., levels = .)
 
-nyreg_data_1_stjerne <- nyreg_data_1 %>%
-  mutate(AAR = ifelse(AAR == nyeste_aar, paste0(AAR, stjerne), AAR))
-
-nyreg_data_1_stjerne |> 
-  filter(!str_detect(AAR, "\\(|9")) |># Exclude rows where AAR contains "(" or "9"
-  hchart('column', hcaes(x = AAR, y =ANTAL, group = DRIV ), borderColor = 0,
-         style = list(useHTML = TRUE, font = "Georgia")) %>%
-  
+nyreg_data_1 %>%
+  filter(AAR >= (nyeste_aar-5)) %>% 
+  mutate(AAR = ifelse(AAR == nyeste_aar, paste0(AAR, stjerne), AAR)) %>%
+  hchart('column', hcaes(x = AAR, y =ANTAL, group = DRIV ), borderColor = 0) %>%
   hc_plotOptions(column = list(stacking = "normal")) |> 
   hc_colors(c(trm_colors(farver))) |> 
   hc_yAxis(title = list(text = "Antal"),
            labels = list(format = "{value:,.0f}"),
            stackLabels = list(enabled = TRUE, verticalAlign = 'top',
                               crop = FALSE, overflow = 'none')) |> 
-  hc_xAxis(title = list(text = NULL)
+  hc_xAxis(title = list(text = NULL),
+           categories = c("2019","2020","2021","2022","2023","2024",paste0(nyeste_aar, stjerne),paste0(seneste_md, " ", nyeste_aar))
            # labels = list(
            #   formatter = JS("
            #     function() {
