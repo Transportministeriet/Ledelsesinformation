@@ -1,5 +1,5 @@
 ---
-title: "Klimafremskrivning 24"
+title: "Klimastatus og -fremskrivning 25"
 output: 
   flexdashboard::flex_dashboard:
     css: "styles_KF.css"
@@ -22,30 +22,28 @@ lang$thousandsSep <- "."
 lang$numericSymbols <- highcharter::JS("null") # optional: remove the SI prefixes
 options(highcharter.lang = lang)
 
-sti <- "S:/CKA/Databank/007 Klimafremskrivning/tidy_datasaet/"
+sti <- "S:/TRM Databank/003 Klimafremskrivning/tidy_datasaet/"
 
 data <- dir(sti) %>% 
-  str_subset(".csv") |> 
+  str_subset("kf25.csv") |> 
   (\(y) map(y, ~fread(str_c(sti,.x)) %>% 
-              mutate(drivmiddel =case_when(drivmiddel =="BEV"~"El",
-                                           drivmiddel =="PHEV"~"Plug-in-hybrid",
-                                           drivmiddel =="Total"~"Drivmidler i alt",
+              mutate(drivmiddel =case_when(drivmiddel =="Total"~"Drivmidler i alt",
                                            drivmiddel =="Øvrige"~"Oevrige",
                                            T ~drivmiddel) |>
                        str_squish() %>% 
-           factor(levels = rev(c("El", "Plug-in-hybrid","Brint",
+           factor(levels = rev(c("El", "Plug-in Hybrid","Brint",
                              "Benzin", "Diesel", "Gas", "Oevrige",
                              "Drivmidler i alt")))
            )) %>% 
-     set_names(str_remove_all(y, "_kf24.csv")))()
+     set_names(str_remove_all(y, "_kf25.csv")))()
 
 farver <- c(trm_colors(c("groen",  "orange", "blaa", "gul", "graa")), "#d49e02", "#0087b3") 
-names(farver) <- c("El", "Plug-in-hybrid","Benzin", "Diesel", "Oevrige", "Brint", "Gas")
+names(farver) <- c("El", "Plug-in Hybrid","Benzin", "Diesel", "Oevrige", "Brint", "Gas")
 
 
 
-til_fig_udl <- data[["udledninger"]] %>% 
-  filter(type!="Total", str_detect(type, "definieret|defineret", negate = T)) %>% 
+til_fig_udl <- data[["udledninger"]] %>%
+  filter(type!="Total", str_detect(type, "definieret|defineret", negate = T)) %>%
   mutate(type = factor(type, levels = rev(c( "Grænsehandel","Personbiler", "Varebiler",
                                              "Lastbiler","Busser","Motorcykler",
                              "Banetransport",
@@ -66,9 +64,9 @@ names(farver_udl) <- c( "Grænsehandel","Personbiler", "Varebiler", "Lastbiler",
                              "Øvrige Transport",  "Ikke defineret")
 
 
-til_fig_udl_tot <- data[["udledninger"]] %>% 
-  filter(type=="Total") %>% 
-  mutate(sektor = factor(sektor, levels = rev(c( "Vejtransport", "Banetransport", "Luftfart", "Søfart", "Øvrige transport" )))) %>% 
+til_fig_udl_tot <- data[["udledninger"]] %>%
+  filter(type=="Total") %>%
+  mutate(sektor = factor(sektor, levels = rev(c( "Vejtransport", "Banetransport", "Luftfart", "Søfart", "Øvrige transport" )))) %>%
   arrange(sektor, aar)
 
 farver_udl_tot <- trm_colors(c("groen", "gul","graa", "orange", "blaa"))
@@ -179,54 +177,54 @@ KF-rapporten indeholder en årlig opdatering af Danmarks drivhusgasudledninger o
 
 Indeværende oversigt viser udelukkende udledningen fra transportsektoren. På de forskellige ark er det muligt at finde detaljerede tal for den forventede årlige udledning for alle transportformer.
 
-Den næste udgave, Klimastatus og -fremskrivning 2025 (KF25), forventes offentliggjort ultimo april 2025 med den endelige version før sommeren 2025.
+Den næste udgave, Klimastatus og -fremskrivning 2026 (KF26), forventes offentliggjort ultimo april 2026 med den endelige version før sommeren 2026.
 
-[Link til KF24](https://www.kefm.dk/klima/klimastatus-og-fremskrivning/klimastatus-og-fremskrivning-2024) 
+[Link til KF25](https://www.kefm.dk/klima/klimastatus-og-fremskrivning/klimastatus-og-fremskrivning-2025) 
 
-Ønskes adgang til alle datasættene kan de tilgås her: <b> S:\\TRM Databank\\003 Klimafremskrivning\\KF24_dataark_Transport.xlsx </b>
+Ønskes adgang til alle datasættene kan de tilgås her: <b> S:\\TRM Databank\\003 Klimafremskrivning\\KF25 Transport - dataark.xlsx </b>
 
 
-`r fa("temperature-arrow-down")` Udledninger 
-===================================== 
+`r fa("temperature-arrow-down")` Udledninger
+=====================================
 
 **Indledning**
 <br>
-Transportsektoren udgør 25 pct. af Danmarks CO₂-udledninger i 2023 og forventes at stå for 33 % af de samlede udledninger i 2030. Vejtransport er den største kilde, men reduktioner vil ske gennem elektrificering, øget energieffektivitet og brug af bæredygtige drivmidler. Selvom transportaktiviteterne stiger, bidrager den teknologiske udvikling til at begrænse udledningerne. Luft- og søfart følger samme tendens med en gradvis omstilling til mere bæredygtige drivmidler.
+Transportsektoren udgør 32 pct. af Danmarks CO₂-udledninger i 2023 og forventes at stå for 30 pct. af de samlede udledninger i 2030. Der fremskrives reduktioner i udledningen for transportsektoren på 47 pct. fra 2023 til 2030. Vejtransport er den største kilde, men reduktioner vil ske gennem elektrificering, øget energieffektivitet og brug af bæredygtige drivmidler. Selvom transportaktiviteterne stiger, bidrager den teknologiske udvikling til at begrænse udledningerne. Luft- og søfart følger samme tendens med en gradvis omstilling til mere bæredygtige drivmidler.
 
-Tallene kan genfindes i Klimastatus og -fremskrivning 2024 kapitel 21 om transport, [Link](https://www.kefm.dk/Media/638557749235686945/KF24%20Kapitel%2021%20Transport.pdf) 
- 
+Tallene kan genfindes i Klimastatus og -fremskrivning 2025 kapitel 22 om transport, [Link](https://www.kefm.dk/Media/638815947445107820/Kapitel%2022%20Transport.pdf)
+
 
 Row {data-height=auto}
 -------------------------------------
 
 ```{r}
 
-til_fig_udl_tot %>% 
-  mutate(vaerdi = vaerdi/1000000) %>% 
-    hchart('area', hcaes(x = aar, y =vaerdi, group = sektor  ), borderColor = 0, 
+til_fig_udl_tot %>%
+  mutate(vaerdi = vaerdi/1000000) %>%
+    hchart('area', hcaes(x = aar, y =vaerdi, group = sektor  ), borderColor = 0,
            marker = FALSE,style = list(useHTML = TRUE, font = "Georgia")) %>%
-    hc_plotOptions(series = list(stacking = "normal", lineWidth = 0)) %>% 
+    hc_plotOptions(series = list(stacking = "normal", lineWidth = 0)) %>%
     # },
     # select: {
     #   enabled: false
     # }
-    hc_colors(farver_udl_tot) |> 
+    hc_colors(farver_udl_tot) |>
   hc_chart(
     width = NULL  # Forces responsive width
-  ) %>% 
+  ) %>%
     # hc_colors(c(trm_colors(farver))) |>
     # hc_yAxis(title = list(text = "Antal (Mio.)"),
     #          labels = list(formatter = JS("function() {
     #   return this.value.toLocaleString();
-    # }"))) |> 
-    hc_yAxis(title = list(text = "Mio. ton CO2")) %>% 
-    hc_xAxis(title = list(text = "")) %>% 
-  
-    hc_tooltip(shared = TRUE, 
+    # }"))) |>
+    hc_yAxis(title = list(text = "Mio. ton CO2")) %>%
+    hc_xAxis(title = list(text = "")) %>%
+
+    hc_tooltip(shared = TRUE,
                pointFormat = paste(" <b>{series.name} </b>: {point.y:,.1f} mio. t. CO2 ({point.percentage:.1f} pct.) <br>")
-    ) %>% 
+    ) %>%
     hc_legend(reversed =TRUE) %>%
-    hc_tooltip(shared = TRUE)  %>% 
+    hc_tooltip(shared = TRUE)  %>%
     trm_hc_format(titel ="<b>Samlede udledninger fra transportsektoren")
 
 ```
@@ -239,7 +237,7 @@ Row
 ```{r}
 udl_fig_fkt("Vejtransport")
 ```
-    
+
 
 
 Bestand {data-icon="fa-solid fa-car-side"}
@@ -247,11 +245,11 @@ Bestand {data-icon="fa-solid fa-car-side"}
 
 **Indledning**
 <br>
-Bestanden af køretøjer i Danmark har udviklet sig markant i de seneste år samtidig med en stigende elektrificering. Ultimo 2023 var der knap 2,7 millioner personbiler, hvoraf antallet af elbiler var 200.000. Varebiler udgjorde omkring 364.000 køretøjer ultimo 2023, mens der var cirka 43.000 lastbiler og 9.500 busser. Diesel er det klart dominerende drivmiddel for varebiler, lastbiler og busser, men elektrificeringen vinder gradvist indpas for alle køretøjer. Denne udvikling afspejler en generel omstilling mod mere bæredygtige drivmidler drevet af teknologiske fremskridt og politiske målsætninger om CO₂-reduktion.
+Bestanden af køretøjer i Danmark har udviklet sig markant i de seneste år samtidig med en stigende elektrificering. Ultimo 2024 var der godt 2,7 millioner personbiler, hvoraf antallet af elbiler var 340.000. Varebiler udgjorde omkring 362.000 køretøjer ultimo 2024, mens der var knap 43.000 lastbiler og 10.000 busser. Diesel er det klart dominerende drivmiddel for varebiler, lastbiler og busser, men elektrificeringen vinder gradvist indpas for alle køretøjer. Denne udvikling afspejler en generel omstilling mod mere bæredygtige drivmidler drevet af teknologiske fremskridt og politiske målsætninger om CO₂-reduktion.
 
-Fremskrivningerne frem mod 2035 peger på en fortsat omstilling mod bæredygtige drivmidler, hvor elbiler vil spille en større rolle og reducere transportsektorens CO₂-udledningerne markant. 
+Fremskrivningerne frem mod 2050 peger på en fortsat omstilling mod bæredygtige drivmidler, hvor elbiler vil spille en større rolle og reducere transportsektorens CO₂-udledningerne markant. 
 
-Tallene kan genfindes i Klimastatus og -fremskrivning 2024 kapitel 21 om transport, [Link](https://www.kefm.dk/Media/638557749235686945/KF24%20Kapitel%2021%20Transport.pdf) 
+Tallene kan genfindes i Klimastatus og -fremskrivning 2025 kapitel 22 om transport, [Link](https://www.kefm.dk/Media/638815947445107820/Kapitel%2022%20Transport.pdf) 
 
 Row
 -------------------------------------
@@ -281,20 +279,20 @@ best_fig_fkt("Busser", "bestand")
 ```
     
     
-`r fa("chart-line")` Nyregistreringer
+`r fa("chart-line")` Salg
 ===================================== 
 
 **Indledning**
 <br>
-Nyregistreringer dækker i denne sammenhæng over et registreringspligtigt køretøjs første registrering i motorregisteret. Importerede brugte køretøjer tæller ikke med i nyregistreringerne, men opgøres som genregistreringer.
+Salg dækker over alle nyregistreringer - registreringpligtsigt køretøjs første registrering i motorregisteret - og brugtimporterede biler
 
-Sammensætningen af drivmidler for nye køretøjer i Danmark har ændret sig markant de seneste år, hvor der især ses en kraftig vækst i elbiler. I 2023 steg elbilernes andel til over 40 % af nyregistreringerne svarende til 30.000 flere biler end forventet i KF24. Dieselbiler er i tilbagegang, mens salget af plug-in hybridbiler, der toppede med 12 pct. i 2021, ventes at falde til 4 pct. i 2030. Brint- og gasbiler forventes fortsat at udgøre en minimal del af nyregistriringerne.
+Sammensætningen af drivmidler for salget af køretøjer i Danmark har ændret sig markant de seneste år, hvor der især ses en kraftig vækst i elbiler. I 2024 steg elbilernes andel til godt 70 pct. for salget af nyregistreringer og brugtimport. Dieselbiler er i tilbagegang, mens salget af plug-in hybridbiler, der toppede med 24 pct. i 2021, ventes at falde til 1 pct. i 2030. 
 
-For varebiler sker elektrificeringen langsommere end personbiler. I 2023 udgjorde elvarebiler 14 % af salget, og andelen forventes at stige med bedre teknologi og ladeinfrastruktur.
+For varebiler sker elektrificeringen langsommere end personbiler. I 2023 udgjorde elvarebiler 11,5 pct. af salget, og andelen forventes at stige med bedre teknologi og ladeinfrastruktur.
 
-For lastbiler udgør el endnu kun 6 pct. af tilgangen i 2023, men salget ventes at stige frem mod 2035 drevet af skærpede EU-krav, teknologiudvikling og kilometerbaseret vejafgift på lastbiler. Den hurtigste omstilling ses for busser, hvor over halvdelen af de nye bybusser var eldrevne i 2023.
+For lastbiler udgør el endnu kun 9 pct. af tilgangen i 2023, men salget ventes at stige frem mod 2030 drevet af skærpede EU-krav, teknologiudvikling og kilometerbaseret vejafgift på lastbiler. Den hurtigste omstilling ses for busser, hvor over halvdelen af salget af busser var eldrevne i 2024.
     
-Tallene kan genfindes i Klimastatus og -fremskrivning 2024 kapitel 21 om transport, [Link](https://www.kefm.dk/Media/638557749235686945/KF24%20Kapitel%2021%20Transport.pdf) 
+Tallene kan genfindes i Klimastatus og -fremskrivning 2025 kapitel 22 om transport, [Link](https://www.kefm.dk/Media/638815947445107820/Kapitel%2022%20Transport.pdf) 
 
 Row
 -------------------------------------
