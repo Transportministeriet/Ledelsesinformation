@@ -38,7 +38,7 @@ data <- dir(sti) %>%
      set_names(str_remove_all(y, "_kf25.csv")))()
 
 farver <- c(trm_colors(c("groen",  "orange", "blaa", "gul", "graa")), "#d49e02", "#0087b3") 
-names(farver) <- c("El", "Plug-in Hybrid","Benzin", "Diesel", "Oevrige", "Brint", "Gas")
+names(farver) <- c("El", "Plug-in Hybrid", "Diesel","Benzin", "Oevrige", "Brint", "Gas")
 
 
 
@@ -177,6 +177,8 @@ KF-rapporten indeholder en årlig opdatering af Danmarks drivhusgasudledninger o
 
 Indeværende oversigt viser udelukkende udledningen fra transportsektoren. På de forskellige ark er det muligt at finde detaljerede tal for den forventede årlige udledning for alle transportformer.
 
+Fremskrivningen baserer sig på middelrette skøn og er behæftet med generel usikkerhed. Med en fremskrivningsperiode til 2050, tilskrives fremskrivningen yderligere usikkerhed. Usikkerheden knytter sig især til antagelser og skøn over udefrakommende variable, som er følsomme overfor uforudsete udviklinger i priser, adfærd og teknologi samt udsving i vejret mv. 
+
 Den næste udgave, Klimastatus og -fremskrivning 2026 (KF26), forventes offentliggjort ultimo april 2026 med den endelige version før sommeren 2026.
 
 [Link til KF25](https://www.kefm.dk/klima/klimastatus-og-fremskrivning/klimastatus-og-fremskrivning-2025) 
@@ -284,7 +286,7 @@ best_fig_fkt("Busser", "bestand")
 
 **Indledning**
 <br>
-Salg dækker over alle nyregistreringer - registreringpligtsigt køretøjs første registrering i motorregisteret - og brugtimporterede biler
+Salg dækker over alle nyregistreringer - registreringspligtig køretøjs første registrering i motorregisteret - og brugtimporterede biler
 
 Sammensætningen af drivmidler for salget af køretøjer i Danmark har ændret sig markant de seneste år, hvor der især ses en kraftig vækst i elbiler. I 2024 steg elbilernes andel til godt 70 pct. for salget af nyregistreringer og brugtimport. Dieselbiler er i tilbagegang, mens salget af plug-in hybridbiler, der toppede med 24 pct. i 2021, ventes at falde til 1 pct. i 2030. 
 

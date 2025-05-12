@@ -29,24 +29,9 @@ library(plotly)
 library(scales)
 library(downloadthis)
 library(htmltools)
+library(data.table)
 
-
-lang <- getOption("highcharter.lang")
-lang$decimalPoint <- ","
-lang$thousandsSep <- "."
-lang$numericSymbols <- highcharter::JS("null") # optional: remove the SI prefixes
-options(highcharter.lang = lang)
-
-options(scipen = 100, digits = 2, OutDec = ",")
-Sys.setenv(Lang = "da")
-
-knit_hooks$set(inline = function(x) {
-  if(is.numeric(x)){
-    return(prettyNum(x, big.mark=".", digits = 2))
-  } else{
-    return(x)
-  }
-})
+source("hc_set_up_og_tekst.R")
 
 if(month(Sys.Date())==1){
   stjerne <- ""
@@ -403,7 +388,7 @@ pct_el_biler_ialt <- (antal_el_biler_ialt/antal_el_biler_KF_est-1)*100
 #     aar = as.numeric(substr(TID, start = 1, stop = nchar(TID) - 3)),
 #     maaned = as.numeric(substr(TID, start = nchar(TID) - 1, stop = nchar(TID))),
 #     dansk_måned = str_c("(", format(ISOdate(2000, 1:12, 1), "%B")[maaned], ")"),
-#       dansk_måned_uden = case_when(
+#       dansk_maaned_uden = case_when(
 #       (maaned == 1) ~ "januar",
 #       (maaned == 2) ~ "februar",
 #       (maaned == 3) ~ "marts",
@@ -417,48 +402,35 @@ pct_el_biler_ialt <- (antal_el_biler_ialt/antal_el_biler_KF_est-1)*100
 #       (maaned == 11) ~ "november",
 #       (maaned == 12) ~ "december"
 #     ),
-#     rigtigt_år = case_when(
+#     rigtigt_aar = case_when(
 #       (maaned == 12) ~ as.character(aar + 1),
 #       T ~ paste(as.character(aar), dansk_måned)
 #     ))
 
 ny_figur_3 <- data_bil %>%
   mutate(
-    aar = as.numeric(substr(TID, start = 1, stop = nchar(TID) - 3)),
-    maaned = as.numeric(substr(TID, start = nchar(TID) - 1, stop = nchar(TID))),
+    aar = as.numeric(str_sub(TID, end = 4)),
+    maaned = as.numeric(str_sub(TID, start = -2)),
     
-    dansk_måned_uden = case_when(
-      maaned == 1  ~ "januar",
-      maaned == 2  ~ "februar",
-      maaned == 3  ~ "marts",
-      maaned == 4  ~ "april",
-      maaned == 5  ~ "maj",
-      maaned == 6  ~ "juni",
-      maaned == 7  ~ "juli",
-      maaned == 8  ~ "august",
-      maaned == 9  ~ "september",
-      maaned == 10 ~ "oktober",
-      maaned == 11 ~ "november",
-      maaned == 12 ~ "december"
-    ),
+  dansk_maaned_uden = format(ISOdate(aar, maaned, 1), "%B"),
     
-    rigtigt_år = case_when(
-      maaned == 12 ~ paste(aar + 1),   # Treat December as Jan next year
-      TRUE ~ paste(dansk_måned_uden, aar)
+    rigtigt_aar = case_when(
+      maaned == 12 ~ paste(aar),  
+      TRUE ~ paste(dansk_maaned_uden, aar)
     )
   )
 
 
 ny_figur_3_1 <- ny_figur_3 %>%
-  filter(maaned == max(maaned),
+  filter(., maaned == max(maaned),
          .by = "aar") %>%
-  filter(DRIV !="Drivmidler i alt") %>%
-  mutate(DRIV = factor(DRIV, levels = legend_sort))
+  filter(., DRIV !="Drivmidler i alt") %>%
+  mutate(.,DRIV = factor(DRIV, levels = legend_sort))
 
 
 max_måned <- ny_figur_3 |> 
   slice_tail(n=1) |> 
-  pull(dansk_måned_uden)
+  pull(dansk_maaned_uden)
 
 max_aar <- ny_figur_3 |> 
   slice_tail(n=1) |> 
@@ -474,12 +446,12 @@ bestand_2020 <- ny_figur_3_1 %>%
 
 bestand_2023_seneste <- ny_figur_3_1 %>%
   filter(DRIV != "Drivmidler i alt", aar == max_aar,
-         dansk_måned_uden == max_måned) %>%
+         dansk_maaned_uden == max_måned) %>%
   summarise(sum_indhold = sum(INDHOLD))
 
 andel_elbiler <- ny_figur_3_1 %>%
   filter(DRIV != "Drivmidler i alt", aar == max_aar,
-         dansk_måned_uden == max_måned) %>%
+         dansk_maaned_uden == max_måned) %>%
   summarise(sum_indhold = sum(INDHOLD))
 
 vækst_siden_2020 <- round((bestand_2023_seneste-bestand_2020)/bestand_2020*100,2)
@@ -498,24 +470,13 @@ DST_tal <- data_bil_1 |>
          oprindelse = "DST")
 
 
-KF_bestand <- read_excel(str_c(sti_kf, "/", "KF24_dataark_Transport.xlsx"),
-                         sheet = "Bestand", skip =4) %>% 
-  rename("type"=1, drivmiddel = 2) %>% 
-  filter(!if_all(.fns =~is.na(.x))) %>% 
-  mutate(drivmiddel =coalesce(drivmiddel, "Total")) %>% 
-  fill(type) %>% 
-  summarise(across(where(is.double), sum),
-            .by = c("type","drivmiddel")) %>% 
-  pivot_longer(cols = matches("\\d+"), names_to = "aar", values_to = "antal") %>% 
-  mutate(antal = round(antal, 0))
-
-KF_tal <- KF_bestand %>% 
-  filter(type == "Personbiler", drivmiddel == "BEV") %>% 
-  mutate(aar = parse_number(aar),
-         x_axis = str_glue("Forventet {aar} (KF24)"),
+KF_tal <- fread(str_c(sti_kf, "/tidy_datasaet/", "bestand_kf25.csv")) %>% 
+  filter(type == "Personbiler", drivmiddel == "El") %>% 
+  mutate(aar = as.numeric(aar),
+         x_axis = str_glue("Forventet {aar} (KF25)"),
          oprindelse = "KF") %>% 
   filter(aar %in% c(as.numeric(nyeste_aar), as.numeric(nyeste_aar) + 1)) %>%  # TODO: Adjust when KF25 data is available
-  select(INDHOLD = antal, x_axis, oprindelse)
+  select(INDHOLD = vaerdi, x_axis, oprindelse)
 
 ```
 
@@ -664,7 +625,7 @@ figur_2.2 <- brugt_1_stjerne %>%
 figur_3 <- ny_figur_3_1 |> 
   filter(DRIV != "Drivmidler i alt" ) |>
   filter(aar != 2018) %>% 
-  select(år = rigtigt_år, 
+  select(år = rigtigt_aar, 
          drivmiddel=DRIV,
          antal =INDHOLD
   ) %>% 
@@ -723,34 +684,6 @@ Fra 2023 til 2024 steg brugtvognsimporten med `r (brugt_import_2024-brugt_import
 
 farver <- c("groen",  "orange", "blaa", "gul", "graa") %>% factor(., levels = .) %>% sort(decreasing = T)
 
-
-format_chart <- function(x, titel, note = NULL) {
-  library(stringr)
-  library(highcharter)
-  
-  x %>%
-    hc_chart(spacingTop = 40,
-             style = list(fontFamily = 'Georgia')) %>%
-    hc_title(text = titel,
-             margin = 10,   # Reduce margin to avoid pushing chart down
-             align = "left",
-             x = 25,
-             y = -10,  
-             style = list(useHTML = TRUE, fontSize = "16px")) |>
-    hc_exporting(
-      enabled = TRUE, # always enabled
-      filename = paste0("Personbil_", str_extract(titel, "Figur \\d+"))
-    ) %>%
-    hc_subtitle(point = list(x = 0.5, y = 0.0, xAxis = 0, yAxis = 0), # Position relative to chart
-                text = note,
-                align = "bottom",
-                verticalAlign = "bottom",  # Place at the bottom
-                y = 5,  # Adjust position
-                style = list(fontSize = "12px", fontStyle = "italic")
-    )
-}
-
-
 data_nysalg_2_stjerne <- data_nysalg_2 %>%
   mutate(AAR = ifelse(AAR == nyeste_aar, paste0(AAR, "*"), AAR)) %>% 
   mutate(REG_TYPE = "NY")
@@ -765,6 +698,8 @@ y_maks <- data_nysalg_2_stjerne |>
 tickInterval <- 50000 # Set a fixed interval (e.g., 50 thousand units)
 
 #Figur 1 nyregistreringerne
+
+tekst_note_nyreg <- str_glue("Kilde: Danmarks Statistik<br>*År til dato (til og med {max_måned})")
 
 figur_1.1 <- data_nysalg_2_stjerne |> 
   filter(year > max(year, na.rm = TRUE) - 5 | is.na(year)) |> 
@@ -788,8 +723,8 @@ figur_1.1 <- data_nysalg_2_stjerne |>
             itemStyle = list(fontSize = "11px"),
             itemDistance = 2) %>% 
   hc_tooltip(shared = TRUE) %>% 
-  format_chart("<b>Figur 1.1.</b> Udvikling i nyregistreringer af personbiler fordelt på drivmiddel",
-               "Kilde: Danmarks Statistik<br>*År til dato")
+  trm_hc_format("<b>Figur 1.1.</b> Udvikling i nyregistreringer af personbiler fordelt på drivmiddel",
+               note = tekst_note_nyreg)
 
 #Overvej at gå tilbage
 figur_1.2 <- brugt_1_stjerne |> 
@@ -816,8 +751,8 @@ figur_1.2 <- brugt_1_stjerne |>
     itemDistance = 2
   ) %>%
   hc_tooltip(shared = TRUE) |> 
-  format_chart("<b>Figur 1.2.</b> Udvikling i brugtvognsimport af personbiler fordelt på drivmiddel",
-               "Kilde: Bilstatistik <br>*År til dato")
+  trm_hc_format("<b>Figur 1.2.</b> Udvikling i brugtvognsimport af personbiler fordelt på drivmiddel",
+               note = tekst_note_nyreg)
 
 
 # Create a HTML structure with two columns
@@ -859,10 +794,9 @@ figur_2.1 <- data_nysalg_1_stjerne |>
             itemStyle = list(fontSize = "11px"),
             itemDistance = 2) %>%
   hc_tooltip(shared = TRUE) %>% 
-  format_chart(
-    titel = str_glue("<b>Figur 2.1.</b> Drivmidlernes andel af nyregistreringer for personbiler"),
-    "Kilde: Danmarks Statistik<br>*År til dato"
-  )
+  trm_hc_format(
+    titel = "<b>Figur 2.1.</b> Drivmidlernes andel af nyregistreringer for personbiler",
+    note = tekst_note_nyreg)
 
 
 figur_2.2 <- brugt_1_stjerne |> 
@@ -879,10 +813,9 @@ figur_2.2 <- brugt_1_stjerne |>
             itemStyle = list(fontSize = "11px"),
             itemDistance = 2) %>%
   hc_tooltip(shared = TRUE) %>% 
-  format_chart(
-    titel = str_glue("<b>Figur 2.2.</b> Drivmidlernes andel af brugtimport for personbiler"),
-    "Kilde: Bilstatistik <br>*År til dato"
-  )
+  trm_hc_format(
+    titel = "<b>Figur 2.2.</b> Drivmidlernes andel af brugtimport for personbiler",
+    note = tekst_note_nyreg)
 
 
 # Create a HTML structure with two columns
@@ -900,30 +833,33 @@ Den 1. januar 2020 var den samlede bestand `r format(bestand_2020/1000000, nsmal
 nsmall = 1, decimal.mark = ",")` pct. af den samlede bestand.
 
 ```{r}
-#Ny figur 3 opgørelse af årlig bestand
-ny_figur_3_1_stjerne <- ny_figur_3_1 %>%
-  mutate(rigtigt_år = ifelse(rigtigt_år == nyeste_aar, paste0(rigtigt_år, "*"), rigtigt_år))
 
-ny_figur_3_1_stjerne |> 
-  filter(DRIV != "Drivmidler i alt" ) |>
+tekst_note_bestand <- "Kilde: Danmarks Statistik<br>Note: Bestanden er opgjort ultimo"
+#Ny figur 3 opgørelse af årlig bestand
+
+ny_figur_3_1 |> 
   filter(aar != 2018) |>
-  hchart('column', hcaes(x = rigtigt_år, y = INDHOLD/1000000, group = DRIV ), borderColor = 0) |> 
+  hchart('column', hcaes(x = rigtigt_aar, y = INDHOLD/1000000, group = DRIV ), borderColor = 0) |> 
   hc_plotOptions(column = list(stacking = "normal")) |> 
   hc_colors(c(trm_colors(farver))) |> 
   hc_yAxis(
     title = list(text = "Antal (millioner)"),
     tickInterval = 0.2,  # Keeps tick marks at 0.2 intervals
-    labels = list(formatter = JS("function() {
-    return this.value.toFixed(1).replace('.', ','); // Replace . with ,
-  }"))
+    stackLabels = list(enabled = TRUE, verticalAlign = 'top',
+                       crop = FALSE, overflow = 'none',
+                             formatter = JS("function() {
+        return this.total.toFixed(2).replace('.', ','); // Round and use comma
+      }"))
+  #   labels = list(formatter = JS("function() {
+  #   return this.value.toFixed(1).replace('.', ','); // Replace . with ,
+  # }"))
   )   |>
   hc_xAxis(title = list(text = NULL))|>
-  hc_tooltip(
-    pointFormat = "{series.name}: <b>{point.y:.2f}<b> millioner biler <br>
-    <b>{point.percentage:.1f}<b> pct. af den samlede bestand"
-  )  %>% 
+  hc_tooltip(shared=TRUE,
+             pointFormat = "{series.name}: <b>{point.y:,.2f}</b> mio. biler (<b>{point.percentage:.1f}</b> pct.) </b> <br>")  %>% 
   hc_legend(reversed =TRUE) %>% 
-  format_chart(titel =str_glue("<b>Figur 3.</b> Bestand af personbiler" ), "Kilde: Danmarks Statistik<br>*År til dato")
+  trm_hc_format(titel =str_glue("<b>Figur 3.</b> Bestand af personbiler" ), 
+                note = tekst_note_bestand)
 
 rest <- KF_tal$INDHOLD[[2]] - DST_tal$INDHOLD[[1]]
 
@@ -956,8 +892,8 @@ bind_rows(DST_tal, KF_tal) |>
     groupPadding = 0.52,    # Space between groups of bars
     pointPadding = 0.1    # Space between bars in the same group
   )) %>%
-  format_chart(str_glue("<b>Figur 4.</b> Status for antallet af elbiler i {nyeste_aar}"),
-               note = "Kilde: Danmarks Statistik & Klimastatus og Fremskrivning 2024")
+  trm_hc_format(str_glue("<b>Figur 4.</b> Status for antallet af elbiler i {nyeste_aar}"),
+               note = "Kilde: Danmarks Statistik & Klimastatus og Fremskrivning 2024<br>Note: Bestanden er opgjort ultimo")
 
 
 ```
@@ -981,7 +917,7 @@ data_fig_4 |>
       return this.value ? (this.value / 1000).toFixed(0) : this.value;
     }"))) |> 
   hc_xAxis(title = list(text = NULL)) %>%
-  trm_hc_format(str_glue("<b>Figur 5.</b> Udvikling i antallet af biler fra primo januar til ultimo {format(ISOdate(2000, as.numeric(Nummer_sidste_md), 1), '%B')}" ),
+  trm_hc_format(str_glue("<b>Figur 5.</b> Udvikling i antallet af personbiler til og med {format(ISOdate(2000, as.numeric(Nummer_sidste_md), 1), '%B')} måned i de respektive år" ),
                 note = str_glue("Kilde: Danmarks Statistik"))
 
 ```
@@ -1007,8 +943,9 @@ expr <- parse(text =str_c("map(sidste_par_aar$DRIV |> unique(),
                    style = list(fontSize = '12px')
                  ) |> 
         hc_xAxis(title = list(text = NULL)) %>%   
-    format_chart(str_glue('<b>{str_replace_all(.x, \"_\", \" \") %>% 
-                          str_to_sentence()}<b>'))
+    trm_hc_format(str_glue('<b>{str_replace_all(.x, \"_\", \" \") %>% 
+                          str_to_sentence()}<b>'),
+                  note = 'Kilde: Danmarks Statistik')
     }) |> 
   hw_grid(rowheight = 400) %>% htmltools::browsable()"))
 
