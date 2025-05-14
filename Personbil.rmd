@@ -33,14 +33,6 @@ library(data.table)
 
 source("hc_set_up_og_tekst.R")
 
-if(month(Sys.Date())==1){
-  stjerne <- ""
-  stjerne_tekst <- ""
-} else{
-  stjerne <- "*"
-  stjerne_tekst <- "*År til dato"
-}
-
 sti_kf <- "S:/TRM Databank/003 Klimafremskrivning"
 sti <- "S:/TRM Databank/004 Bilstatistik/Personbil"
 
@@ -383,30 +375,6 @@ pct_el_biler_ialt <- (antal_el_biler_ialt/antal_el_biler_KF_est-1)*100
 ```{r}
 #Data til Figur ny figur 3 opgørelse af årlig bestand.
 
-# ny_figur_3 <- data_bil %>%
-#   mutate(
-#     aar = as.numeric(substr(TID, start = 1, stop = nchar(TID) - 3)),
-#     maaned = as.numeric(substr(TID, start = nchar(TID) - 1, stop = nchar(TID))),
-#     dansk_måned = str_c("(", format(ISOdate(2000, 1:12, 1), "%B")[maaned], ")"),
-#       dansk_maaned_uden = case_when(
-#       (maaned == 1) ~ "januar",
-#       (maaned == 2) ~ "februar",
-#       (maaned == 3) ~ "marts",
-#       (maaned == 4) ~ "april",
-#       (maaned == 5) ~ "maj",
-#       (maaned == 6) ~ "juni",
-#       (maaned == 7) ~ "juli",
-#       (maaned == 8) ~ "august",
-#       (maaned == 9) ~ "september",
-#       (maaned == 10) ~ "oktober",
-#       (maaned == 11) ~ "november",
-#       (maaned == 12) ~ "december"
-#     ),
-#     rigtigt_aar = case_when(
-#       (maaned == 12) ~ as.character(aar + 1),
-#       T ~ paste(as.character(aar), dansk_måned)
-#     ))
-
 ny_figur_3 <- data_bil %>%
   mutate(
     aar = as.numeric(str_sub(TID, end = 4)),
@@ -431,6 +399,14 @@ ny_figur_3_1 <- ny_figur_3 %>%
 max_måned <- ny_figur_3 |> 
   slice_tail(n=1) |> 
   pull(dansk_maaned_uden)
+
+if(month(Sys.Date())==1){
+  stjerne <- ""
+  stjerne_tekst <- ""
+} else{
+  stjerne <- "*"
+  stjerne_tekst <- str_glue("*År til dato (til og med {max_måned})")
+}
 
 max_aar <- ny_figur_3 |> 
   slice_tail(n=1) |> 
@@ -670,12 +646,7 @@ list("Figur 1.1" = figur_1.1, "Figur 1.2" = figur_1.2, "Figur 2.1" = figur_2.1, 
 ```
 
 ### Status på udviklingen af bestanden
-I perioden fra 2019 til 2022 faldt antallet af nyregistreringer, mens det er steget siden 2022. I `r nyeste_aar` er der hidtil nyregistreret `r pull(totalsalg)`  personbiler, hvoraf `r pull(ebil_total_nysalget, nyeste_aar)` var elbiler. Til sammenligning  var der i hele `r as.character(max_aar-1)` `r pull(ebil_total_nysalget, as.character(max_aar-1))` nyregistrerede elbiler. Nyregistreringer dækker i denne sammenhæng over et registreringspligtigt køretøjs første registrering i 
-motorregisteret. Importerede brugte køretøjer tæller ikke med i nyregistreringerne, men opgøres som genregistreringer.
-
-
-
-
+I perioden fra 2019 til 2022 faldt antallet af nyregistreringer, mens det er steget siden 2022. I `r nyeste_aar` er der hidtil nyregistreret `r pull(totalsalg)`  personbiler, hvoraf `r pull(ebil_total_nysalget, nyeste_aar)` var elbiler. Til sammenligning  var der i hele `r as.character(max_aar-1)` `r pull(ebil_total_nysalget, as.character(max_aar-1))` nyregistrerede elbiler. Nyregistreringer dækker i denne sammenhæng over et registreringspligtigt køretøjs første registrering i motorregisteret. Importerede brugte køretøjer tæller ikke med i nyregistreringerne, men opgøres som genregistreringer.
 
 
 Fra 2023 til 2024 steg brugtvognsimporten med `r (brugt_import_2024-brugt_import_2023)/brugt_import_2023*100` pct. særligt drevet af en øget brugtimport af elbiler. Der blev således importeret `r brugt_import_2024_EL` brugte elbiler i 2024. I 2025 er der foreløbigt importeret `r brugt_import_2025` biler heraf `r brugt_import_2025_EL` elbiler, jf. figur 1.2.
@@ -699,7 +670,7 @@ tickInterval <- 50000 # Set a fixed interval (e.g., 50 thousand units)
 
 #Figur 1 nyregistreringerne
 
-tekst_note_nyreg <- str_glue("Kilde: Danmarks Statistik<br>*År til dato (til og med {max_måned})")
+tekst_note_nyreg <- str_glue("Kilde: Danmarks Statistik<br>{stjerne_tekst}")
 
 figur_1.1 <- data_nysalg_2_stjerne |> 
   filter(year > max(year, na.rm = TRUE) - 5 | is.na(year)) |> 
@@ -834,9 +805,7 @@ nsmall = 1, decimal.mark = ",")` pct. af den samlede bestand.
 
 ```{r}
 
-tekst_note_bestand <- "Kilde: Danmarks Statistik<br>Note: Bestanden er opgjort ultimo"
 #Ny figur 3 opgørelse af årlig bestand
-
 ny_figur_3_1 |> 
   filter(aar != 2018) |>
   hchart('column', hcaes(x = rigtigt_aar, y = INDHOLD/1000000, group = DRIV ), borderColor = 0) |> 

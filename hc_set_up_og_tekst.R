@@ -18,3 +18,6 @@ knit_hooks$set(inline = function(x) {
     return(x)
   }
 })
+
+tekst_note_bestand <- "Kilde: Danmarks Statistik<br>Note: Bestanden er opgjort ultimo"
+tekst_note_bestand_bilstat <- "Kilde: Danmarks Statistik<br>Note: Bestanden er opgjort ultimo"
