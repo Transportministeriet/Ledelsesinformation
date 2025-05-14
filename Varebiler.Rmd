@@ -29,33 +29,8 @@ library(scales)
 library(downloadthis)
 library(htmltools)
 
+source("hc_set_up_og_tekst.R")
 
-lang <- getOption("highcharter.lang")
-lang$decimalPoint <- ","
-lang$thousandsSep <- "."
-lang$numericSymbols <- highcharter::JS("null") # optional: remove the SI prefixes
-options(highcharter.lang = lang)
-
-
-options(scipen = 100, digits = 2, OutDec = ",")
-Sys.setenv(Lang = "da")
-Sys.setlocale("LC_TIME", "da_DK.UTF-8")
-
-knit_hooks$set(inline = function(x) {
-  if(is.numeric(x) | is.data.frame(x)){
-    return(prettyNum(x, big.mark=".", digits = 2))
-  } else{
-    return(x)
-  }
-})
-
-if(month(Sys.Date())==1){
-  stjerne <- ""
-  stjerne_tekst <- ""
-} else{
-  stjerne <- "*"
-  stjerne_tekst <- "*År til dato"
-}
 
 sti_kf <- "S:/TRM Databank/003 Klimafremskrivning"
 
@@ -122,6 +97,15 @@ n_sidste_md <- data_nysalg |>
   (\(y) ifelse(str_sub(y, start = -2, end = -2) == "0", str_sub(y, start = -1), str_sub(y, start = -2)))()
 
 t_sidste_md <- format(as.Date(str_glue("2020-{str_pad(n_sidste_md,2, side = 'left', '0')}-01")), "%B")
+
+
+if(month(Sys.Date())==1){
+  stjerne <- ""
+  stjerne_tekst <- ""
+} else{
+  stjerne <- "*"
+  stjerne_tekst <- str_glue("*År til dato (til og med {t_sidste_md})")
+}
 
 nyeste_aar <- data_nysalg |> 
   slice_tail(n=1) |> 
@@ -544,7 +528,7 @@ data_nysalg_1 %>%
 # pull skal bruges naar man henter et tibble ind saa 
 ```
 
-Den 1. januar 2020 var den samlede bestand `r totalbestand["I alt 2019"]` varebiler. Fra januar 2020 til `r t_sidste_md` `r nyeste_aar` er bestanden faldet med `r abs(totalbestand[str_glue("I alt {senest_md_tekst}")]/totalbestand["I alt 2019"]-1)*100` pct., så den danske bestand af varebiler ultimo `r t_sidste_md` var `r totalbestand[str_glue("I alt {senest_md_tekst}")]` varebiler. I `r t_sidste_md` `r nyeste_aar` udgjorde elvarebiler `r round((elbestand[str_glue("I alt {senest_md_tekst}")]/totalbestand[str_glue("I alt {senest_md_tekst}")])*100,1)` pct. af den samlede bestand.
+Den ultimo 2019 var den samlede bestand `r totalbestand["I alt 2019"]` varebiler. Fra ultimo 2019 til `r t_sidste_md` `r nyeste_aar` er bestanden faldet med `r abs(totalbestand[str_glue("I alt {senest_md_tekst}")]/totalbestand["I alt 2019"]-1)*100` pct., så den danske bestand af varebiler ultimo `r t_sidste_md` var `r totalbestand[str_glue("I alt {senest_md_tekst}")]` varebiler. Ultimo `r t_sidste_md` `r nyeste_aar` udgjorde elvarebiler `r round((elbestand[str_glue("I alt {senest_md_tekst}")]/totalbestand[str_glue("I alt {senest_md_tekst}")])*100,1)` pct. af den samlede bestand.
 
 ```{r}
 
@@ -583,7 +567,7 @@ ny_figur_3_1 |>
              pointFormat = "{series.name}: <b>{point.y:,.0f}</b> varebiler (<b>{point.percentage:.1f}</b> pct.) </b> <br>")  %>% 
   hc_legend(reversed =TRUE) %>% 
   trm_hc_format("<b>Figur 3.</b> Bestand af varebiler",
-                note = "Kilde: Danmarks Statistik <br> Note: Bestanden er opgjort ultimo")
+                note = tekst_note_bestand)
 
 rest <- KF_tal$INDHOLD[[2]] - DST_tal$INDHOLD[[2]]
 
@@ -764,7 +748,7 @@ figur7_1 <- data_hush_erhv_1_ny |>
   hc_tooltip(shared=TRUE,
              pointFormat = "{series.name}: <b>{point.y:,.0f}</b> varebiler (<b>{point.percentage:.1f}</b> pct.) <br>") %>%
   trm_hc_format("<b>Figur 7.1</b> Udviklingen i den samlede bestand af varebiler i husholdningen",
-                note = str_glue("Kilde: Danmarks Statistik <br> Note: Bestanden er opgjort ultimo"))%>% 
+                note = tekst_note_bestand)%>% 
   hc_legend(reversed = TRUE, 
             layout = "horizontal", 
             align = "center", 
@@ -811,7 +795,7 @@ figur7_2 <- data_hush_erhv_1_ny |>
   hc_tooltip(shared=TRUE,
              pointFormat = "{series.name}: <b>{point.y:,.0f}</b> varebiler (<b>{point.percentage:.1f}</b> pct.) <br>") %>%
   trm_hc_format("<b>Figur 7.2</b> Udviklingen i den samlede bestand af varebiler i erhvervet",
-                note = str_glue("Kilde: Danmarks Statistik <br> Note: Bestanden er opgjort ultimo"))%>% 
+                note = tekst_note_bestand)%>% 
   hc_legend(reversed = TRUE, 
             layout = "horizontal", 
             align = "center", 
