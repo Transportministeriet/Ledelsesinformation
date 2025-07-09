@@ -20,7 +20,6 @@ body{
 
 ```{r setup, include=FALSE}
 
-
 source("S:/CKA/Git/Ledelsesinformation/standard_indstillinger.R")
 library(data.table)
 library(base64enc)
@@ -74,6 +73,16 @@ fig_2 <- data_til_fig %>%
   mutate(maaned_num = month(dmy(paste0("01-", maaned, "-2024"), locale = "da_DK"))) %>% 
   arrange(aar, maaned_num)
 
+
+# figur 3
+fig_3 <- data_til_fig %>%
+   mutate(aar_md = str_c(maaned, " ", aar)) %>% 
+  filter(maaned=="apr", str_detect(tog_type,"fjern_og_regionaltog"),
+         type=="Kundepunktlighed",aar %in% c((indev_aar-10):indev_aar)) %>% 
+    mutate(maaned_num = month(dmy(paste0("01-", maaned, "-2024"), locale = "da_DK"))) %>% 
+  arrange(aar, maaned_num)
+
+#### GÅR KUN TILBAGE TIL 2017, SPØRG JOEN ##########
 
 ```
 
@@ -150,3 +159,6 @@ highchart() %>%
                 note = str_glue("Kilde: DSB"))
 
 ```
+
+```{r}
+# FIGUR 3 #####
