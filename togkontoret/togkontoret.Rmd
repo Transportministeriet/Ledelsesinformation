@@ -23,13 +23,15 @@ body{
 
 source("S:/CKA/Git/Ledelsesinformation/standard_indstillinger.R")
 library(data.table)
+library(base64enc)
 
-
+Sys.setlocale("LC_TIME", "da_DK.UTF-8")
 data_til_fig <- fread("S:/TRM Databank/012 Togkontoret/Kundepunktlighed.csv")
 
 md_aar <- data_til_fig %>%
-  filter(maaned!="aar_til_dato" & tog_type=="fjern_og_regionaltog" & type=="Kundepunktlighed" ) %>%
-  arrange(aar, maaned) %>% 
+  filter(maaned!="aar_til_dato" & tog_type=="fjern_og_regionaltog" & type=="Kundepunktlighed" ) %>%  
+    mutate(maaned_num = month(dmy(paste0("01-", maaned, "-2024"), locale = "da_DK"))) %>% 
+  arrange(aar, maaned_num) %>% 
   distinct(aar, maaned) %>%
   mutate(aar_md = str_c(maaned, " ", aar)) %>%
   pull(aar_md)
@@ -37,18 +39,10 @@ md_aar <- data_til_fig %>%
 lvls <- md_aar %>% 
   tail(12)
 
-fig_kunde <- data_til_fig %>%
-  mutate(aar_md = str_c(maaned, " ", aar)) %>% 
-  filter(maaned!="aar_til_dato", str_detect(tog_type,"fjern_og_regionaltog"),
-         aar_md %in% lvls)
-
-gnst_tal <- fig_kunde %>% summarise(gnst = mean(pct),
-                        .by = "type") %>% deframe()
-
-md_under <- fig_kunde %>% pivot_wider(names_from = "type", values_from = "pct") %>% 
-  mutate(tjek = Kundepunktlighed <Kontraktkrav) %>% 
-  pull(tjek) %>% sum()
-
+indev_aar <- md_aar %>% str_extract_all("\\d{4}$", simplify = T) %>% as.numeric() %>% max()
+indev_md <- md_aar %>% str_extract_all("^\\D{3}", simplify = T) %>% tail(1)
+  
+  #figur 1
 fig_kunde <- data_til_fig %>%
   mutate(aar_md = str_c(maaned, " ", aar)) %>% 
   filter(maaned!="aar_til_dato", str_detect(tog_type,"fjern_og_regionaltog"),
@@ -70,6 +64,17 @@ md_under_1 <- fig_kunde_1 %>% pivot_wider(names_from = "type", values_from = "pc
   mutate(tjek = Kundepunktlighed <Kontraktkrav) %>% 
   pull(tjek) %>% sum()
 
+
+#figur 2
+
+fig_2 <- data_til_fig %>%
+  mutate(aar_md = str_c(maaned, " ", aar)) %>% 
+  filter(maaned!="aar_til_dato", str_detect(tog_type,"fjern_og_regionaltog"),
+         type=="Kundepunktlighed",aar %in% c((indev_aar-3):indev_aar)) %>% 
+  mutate(maaned_num = month(dmy(paste0("01-", maaned, "-2024"), locale = "da_DK"))) %>% 
+  arrange(aar, maaned_num)
+
+
 ```
 
 Dette er Transportministeriets interne statusnotat med månedstal fra DSB månedstal. Det viser bl.a. udviklingen i kundepunktligheden.......... Notatet opdateres månedsvis og er baseret på data fra DSB  
@@ -88,11 +93,29 @@ list("Figur 1" = fig_kunde) %>%
 
 ```
 
+## Download my PowerPoint
+
+```{r include=FALSE}
+# Encode your pptx to Base64
+pptx_file <- "S:/CKA/Git/Ledelsesinformation/presentation.pptx"
+
+# Encode as Base64 Data URI
+pptx_base64 <- dataURI(
+  file = pptx_file,
+  mime = "application/vnd.openxmlformats-officedocument.presentationml.presentation"
+)
+  
+```
+
+
+<a href="`r pptx_base64`" download="presentation.pptx"> <button>Download PowerPoint</button> </a>
+
+
 ### Kundepuktlighed
 
 De seneste 12 måneder har kundepunkligheden ligget på `r gnst_tal["Kundepunktlighed"]` og med `r md_under` måneder under kontraktkravet. I samme periode sidste år var `r md_under_1` under kontraktkravet.
 
-```{r cars}
+```{r}
 highchart() %>% 
   hc_add_series(fig_kunde %>% filter(type=="Kundepunktlighed"), 'line', 
                 hcaes(x = aar_md, y =pct), marker = FALSE, color = trm_colors("blaa"), 
@@ -105,4 +128,25 @@ highchart() %>%
   hc_yAxis(title = list(text = "Andel (pct.)")) %>% 
   trm_hc_format("<b>Figur 1</b> Seneste tolv måneders kundepunktlighed",
                 note = str_glue("Kilde: DSB"))
+```
+
+
+
+```{r}
+
+farver <- c("blaa","orange", "groen","gul", "graa") %>% factor(., levels = .)
+
+
+highchart() %>% 
+  hc_add_series(fig_2 %>% filter(type=="Kundepunktlighed"), 'line', 
+                hcaes(x = maaned, y =pct, group = aar), marker = FALSE) %>% 
+    hc_xAxis(categories = fig_2 %>% pull(maaned) %>% unique(),
+           title = list(text = NULL)) |> 
+  hc_colors(c(trm_colors(farver))) %>% 
+  hc_yAxis(title = list(text = "Andel (pct.)"),
+           min = 50,
+           max = 100) %>% 
+  trm_hc_format("<b>Figur 2</b> Månedsvis DSB F&R kundepunktlighed – sammenlignet med tidligere år",
+                note = str_glue("Kilde: DSB"))
+
 ```
