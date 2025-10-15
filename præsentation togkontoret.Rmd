@@ -2,16 +2,70 @@
 title: "præsentation togkontoret"
 output:
   powerpoint_presentation:
-    reference_doc: template_trm_fixed.pptx
-date: "2025-07-15"
+    reference_doc: "Præsentation2.pptx"
 ---
 
 ```{r setup, include=FALSE}
 
-source("S:/CKA/Git/Ledelsesinformation/standard_indstillinger.R")
+knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message = FALSE,dev = "png", 
+                      dev.args = list(type = "cairo"), dpi = 220)
 library(data.table)
 library(base64enc)
 library(gridExtra)
+
+
+library(tidyverse)
+library(readxl)
+library(sf)
+library(TRMvisual)
+library(extrafont)
+library(statbank)
+library(highcharter)
+library(knitr)
+library(extrafont)
+library(ggpp)
+library(officer)
+library(lubridate)
+library(plotly)
+library(scales)
+library(downloadthis)
+library(htmltools)
+library(rvg)
+library(grid)
+ 
+extrafont::loadfonts()
+
+left_margin <- -10
+text_size <- 9
+
+tog_pres_theme <-  theme(
+    text = element_text(family = "Georgia", colour = "#333333"),
+    plot.margin = ggplot2::margin(t = 30, r = 20),
+    axis.ticks = ggplot2::element_blank(),
+     legend.position="bottom",
+    # legend.margin = ggplot2::margin(b = 0.5, unit = "cm"),
+    legend.key.height = grid::unit(0.4, 'cm'),
+    legend.spacing.y = grid::unit(0.4, 'cm'),
+    legend.background = ggplot2::element_rect(fill = "#ECECEC" ),
+    # legend.text = element_text(color = "#A0A0A0"),
+    # legend.text = ggplot2::element_text( size = text_size,
+    #                                      margin = ggplot2::margin(r = 100, unit = "pt")),
+    plot.background = ggplot2::element_rect(fill = "#ECECEC"),
+                     panel.grid.major.x = ggplot2::element_blank(),
+                 panel.grid.minor = ggplot2::element_blank(),
+                 panel.grid.major = ggplot2::element_line(color = "#A0A0A0",
+                                                          size = 0.1),
+    axis.text = ggplot2::element_text(size = text_size, family = "Georgia"),
+    legend.title = element_blank(),
+    plot.title = element_text(face = "bold"),
+    axis.text.x = element_text(angle = 45, hjust = 1),
+    axis.title.y.left = ggplot2::element_text( vjust = 1.05, angle =0,
+                                               margin = ggplot2::margin(r = left_margin,
+                                                                        t = 0, b = 0, l = 10),
+                                               size = text_size)
+    )
+
+
 
 Sys.setlocale("LC_TIME", "da_DK.UTF-8")
 data_til_fig <- fread("S:/TRM Databank/012 Togkontoret/Kundepunktlighed.csv")
@@ -141,10 +195,9 @@ fig_MDBF <- data_til_fig_MDBF %>%
 #   mutate(akk_km = cumsum(coalesce(km,0)),
 #          km_12 = (akk_km-lag(akk_km,12))/12)
 
-
 ```
 
-## Centrale hovedpointer
+# Centrale hovedpointer
 
 - [pointe 1] 
 
@@ -153,9 +206,9 @@ fig_MDBF <- data_til_fig_MDBF %>%
 - [pointe 3] 
 
 
-## Figur 1: Seneste tolv måneders kundepunktlighed
+# Figur 1: Seneste tolv måneders kundepunktlighed
+```{r fig.width=10, fig.height=5}
 
-```{r}
 ggplot(fig_kunde) +
   geom_line(linewidth = 1, aes(x = fct(aar_md), y = pct, group = type, color = type, linetype = type)) +
   scale_color_manual(values = c("Kundepunktlighed" = trm_colors("blaa"), 
@@ -163,21 +216,18 @@ ggplot(fig_kunde) +
   scale_linetype_manual(values = c("Kundepunktlighed" = "solid", 
                                    "Kontraktkrav" = "dashed")) +
   scale_y_continuous(limits = c(50, 100)) +
-  labs(y = "Andel (pct.)",
-       x = NULL,
-       caption = "Kilde: DSB") +
-  theme_minimal(base_size = 12) +
-  theme(
-    legend.position = "bottom",
-    legend.title = element_blank(),
-    plot.title = element_text(face = "bold"),
-    axis.text.x = element_text(angle = 45, hjust = 1)
-  )
+  labs(y = "Pct.",
+       x = NULL) +
+  tog_pres_theme
+  # TRMvisual::theme_trm(-40, 100, 9)
+  
+
 ```
 
 
-## Figur 2: Månedsvis DSB F&R kundepunktlighed – sammenlignet med tidligere år
-```{r}
+# Figur 2: Månedsvis DSB F&R kundepunktlighed – sammenlignet med tidligere år
+```{r fig.width=10, fig.height=5}
+
 farver <- c("blaa","orange", "groen","gul", "graa")
 farvekoder <- trm_colors(farver)  # f.eks. named vector: c("blaa"="#003366",...)
 
@@ -186,37 +236,26 @@ fig2_plot <- ggplot(fig_2 %>% filter(type == "Kundepunktlighed")) +
   geom_line(linewidth = 1,
        aes(x = maaned, y = pct, group=aar, color = aar)) +
   scale_color_manual(values = farvekoder) +
-  scale_y_continuous(limits = c(50, 100), name = "Andel (pct.)") +
-  labs(x = NULL,
-       caption = "Kilde: DSB") +
-  theme_minimal(base_size = 11) +
-  theme(
-    legend.position = "bottom",
-    legend.title = element_blank(),
-    plot.title = element_text(face = "bold"),
-    axis.text.x = element_text(angle = 45, hjust = 1)
-  )
+  scale_y_continuous(limits = c(50, 100), name = "Pct.") +
+  labs(x = NULL) +
+  tog_pres_theme
 
 fig3_plot <- ggplot(fig_3 %>% filter(type == "Kundepunktlighed")) +
   geom_line(aes(x = aar_md, y = pct, group = 1), color = trm_colors("blaa"), linewidth = 1) +
-  scale_y_continuous(limits = c(60, 100), name = "Andel (pct.)") +
+  scale_y_continuous(limits = c(60, 100), name = "Pct.") +
   labs(x = NULL) +
-  theme_minimal(base_size = 11) +
-  theme(
-    plot.title = element_text(face = "bold"),
-    axis.text.x = element_text(angle = 45, hjust = 1)
-  )
+  tog_pres_theme
 ```
 
 
-```{r fig.width=10, fig.height=4}
+```{r fig.width=10, fig.height=5}
 grid.arrange(fig2_plot, fig3_plot, ncol = 2)
 
 ```
 
-## Figur 3: Månedsvis DSB S-tog kundepunktlighed
+# Figur 3: Månedsvis DSB S-tog kundepunktlighed
 
-```{r pressure}
+```{r fig.width=10, fig.height=5}
 ggplot(fig_stog) +
   geom_line(linewidth = 1, aes(x = fct(aar_md), y = pct, group = type, color = type, linetype = type)) +
   scale_color_manual(values = c("Kundepunktlighed" = trm_colors("blaa"), 
@@ -224,20 +263,13 @@ ggplot(fig_stog) +
   scale_linetype_manual(values = c("Kundepunktlighed" = "solid", 
                                    "Kontraktkrav" = "dashed")) +
   scale_y_continuous(limits = c(84, 100)) +
-  labs(y = "Andel (pct.)",
-       x = NULL,
-       caption = "Kilde: DSB") +
-  theme_minimal(base_size = 12) +
-  theme(
-    legend.position = "bottom",
-    legend.title = element_blank(),
-    plot.title = element_text(face = "bold"),
-    axis.text.x = element_text(angle = 45, hjust = 1)
-  )
+  labs(y = "Pct.",
+       x = NULL) +
+  tog_pres_theme
 ```
 
 
-## Figur 4: Månedsvis DSB S-tog kundepunktlighed – sammenlignet med tidligere år
+# Figur 4: Månedsvis DSB S-tog kundepunktlighed – sammenlignet med tidligere år
 ```{r}
 farver <- c("blaa","orange", "groen","gul", "graa")
 farvekoder <- trm_colors(farver)  # f.eks. named vector: c("blaa"="#003366",...)
@@ -247,37 +279,26 @@ fig4_plot <- ggplot(fig_stog_3aar %>% filter(type == "Kundepunktlighed")) +
   geom_line(linewidth = 1,
        aes(x = fct(maaned), y = pct, group=aar, color = aar)) +
   scale_color_manual(values = farvekoder) +
-  scale_y_continuous(limits = c(84, 100), name = "Andel (pct.)") +
-  labs(x = NULL,
-       caption = "Kilde: DSB") +
-  theme_minimal(base_size = 11) +
-  theme(
-    legend.position = "bottom",
-    legend.title = element_blank(),
-    plot.title = element_text(face = "bold"),
-    axis.text.x = element_text(angle = 45, hjust = 1)
-  )
+  scale_y_continuous(limits = c(85, 100), name = "Pct.") +
+  labs(x = NULL) +
+  tog_pres_theme 
 
 fig5_plot <- ggplot(fig_stog_10aar %>% filter(type == "Kundepunktlighed")) +
   geom_line(aes(x = aar_md, y = pct, group = 1), color = trm_colors("blaa"), linewidth = 1) +
-  scale_y_continuous(limits = c(86, 100), name = "Andel (pct.)") +
+  scale_y_continuous(limits = c(85, 100), name = "Pct.") +
   labs(x = NULL) +
-  theme_minimal(base_size = 11) +
-  theme(
-    plot.title = element_text(face = "bold"),
-    axis.text.x = element_text(angle = 45, hjust = 1)
-  )
+  tog_pres_theme
 ```
 
 
-```{r fig.width=10, fig.height=4}
+```{r fig.width=10, fig.height=5}
 grid.arrange(fig4_plot, fig5_plot, ncol = 2)
 
 ```
 
-## Figur 5: Månedsvis MDBF sammenlignet med foregående måned og år
+# Figur 5: Månedsvis MDBF sammenlignet med foregående måned og år
 
-```{r}
+```{r fig.width=10, fig.height=5}
 
 # Forbered data
 data_bar <- fig_MDBF %>%
@@ -303,17 +324,9 @@ ggplot() +
              color = "black") +
 
   scale_fill_manual(values = trm_colors(c("blaa", "orange"))) +
-  labs(title = "Figur 6: Månedsvis MDBF sammenlignet med foregående måned og år",
-       y = "KM",
-       x = NULL,
-       caption = "Kilde: DSB") +
-  theme_minimal(base_size = 11) +
-  theme(
-    legend.title = element_blank(),
-    legend.position = "bottom",
-    plot.title = element_text(face = "bold")
-  ) 
+  labs(y = "km",
+       x = NULL) +
+  scale_y_continuous(limits = c(0, 80000)) +
+  tog_pres_theme
 ```
-
-
 
