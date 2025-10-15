@@ -1,5 +1,5 @@
 
-knitr::opts_chunk$set(echo = FALSE)
+knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message = FALSE)
 
 library(tidyverse)
 library(readxl)
@@ -17,7 +17,9 @@ library(plotly)
 library(scales)
 library(downloadthis)
 library(htmltools)
-
+library(rvg)
+library(grid)
+ 
 lang <- getOption("highcharter.lang")
 lang$decimalPoint <- ","
 lang$thousandsSep <- "."
@@ -45,3 +47,4 @@ if(month(Sys.Date())==1){
 
 sti_kf <- "S:/TRM Databank/003 Klimafremskrivning"
 sti <- "S:/TRM Databank/004 Bilstatistik/Personbil"
+

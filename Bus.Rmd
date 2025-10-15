@@ -82,6 +82,13 @@ if(month(Sys.Date())==1){
 bestand_data <- til_indlaes %>% 
   pull(value) %>% 
   str_subset("Bestand") |>
+  enframe() %>% 
+  mutate(dato = str_extract(value, "\\d{2}-\\d{2}-\\d{4}") %>%
+                 parse_date(format = "%d-%m-%Y"),
+         aar = year(dato)) %>% 
+  filter(dato == max(dato),
+         .by ="aar") %>% 
+  pull(value) %>% 
   (\(y) map_dfr(y, ~read_excel(str_c(sti,"/", .x), skip = 9,
                                .name_repair = str_to_upper) %>% 
                   filter(row_number()!=max(row_number()), !is.na(ANVENDELSE)) %>% 
