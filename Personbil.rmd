@@ -30,6 +30,7 @@ library(scales)
 library(downloadthis)
 library(htmltools)
 library(data.table)
+library(janitor)
 
 source("hc_set_up_og_tekst.R")
 
@@ -40,9 +41,10 @@ brugtvognsimport_data <- dir(sti) %>%
   map_dfr(function(y) 
     read_excel(
       str_c(sti, "/", y), 
-      skip = 10,
-      .name_repair = ~str_to_upper(.x) %>% 
-        str_replace_all(c(" |\\,|\\.|-|\\/|\\(|\\)" = "_", "Å" = "AA", "Æ" = "AE", "Ø" = "OE", "__" = "_"))) %>% 
+      skip = 10) %>%
+      clean_names() %>% 
+      rename_with(str_to_upper) %>% 
+      select(DRIVKRAFT, ANTAL=ANTAL_3, ANDEL = ANDEL_4) %>% 
       pivot_longer(cols = -"DRIVKRAFT", values_to = "ANTAL")%>%
       filter(name %in% c("ANTAL")) %>%
       arrange(DRIVKRAFT) %>%
@@ -62,7 +64,7 @@ brugtvognsimport_data <- dir(sti) %>%
         ) %>% factor(levels = c("Øvrige drivmidler","Benzin",  "Diesel", "Plug-in-hybrid", "El", "Total")),
         
         # Extract all dates in DD-MM-YYYY format from the string and parse them
-        DATE_RANGE = str_extract_all(y, "\\d{2}-\\d{2}-\\d{4}"),
+        DATE_RANGE = str_extract_all(y, "\\d{2}[-.]\\d{2}[-.]\\d{4}"),
         
         # Assign first extracted date as DATE1 and second as DATE2, if both are present
         DATE1 = map_chr(DATE_RANGE, ~ .x[1] %||% NA_character_),
@@ -124,7 +126,7 @@ process_nyreg_data <- function(data, date_column) {
 
 
 
-brugt_1 <-process_nyreg_data(brugtvognsimport_data, date_column = "DATE_ST")
+brugt_1 <- process_nyreg_data(brugtvognsimport_data, date_column = "DATE_ST")
 
 data_bil <- tbl_dst("BIL54", "da") |> 
   filter(BILTYPE %in% c("4000101002"), OMRÅDE == "000", 
