@@ -26,6 +26,11 @@ library(base64enc)
 
 Sys.setlocale("LC_TIME", "da_DK.UTF-8")
 data_til_fig <- fread("S:/TRM Databank/012 Togkontoret/Kundepunktlighed.csv")
+data_til_fig_MDBF <- fread("S:/TRM Databank/012 Togkontoret/MDBF.csv")
+
+md_lvls <-  c("jan", "feb", "mar", "apr", "maj", "jun",
+              "jul", "aug", "sep", "okt", "nov", "dec", 
+              "aar_til_dato")
 
 md_aar <- data_til_fig %>%
   filter(maaned!="aar_til_dato" & tog_type=="fjern_og_regionaltog" & type=="Kundepunktlighed" ) %>%  
@@ -39,8 +44,11 @@ lvls <- md_aar %>%
   tail(12)
 
 indev_aar <- md_aar %>% str_extract_all("\\d{4}$", simplify = T) %>% as.numeric() %>% max()
-indev_md <- md_aar %>% str_extract_all("^\\D{3}", simplify = T) %>% tail(1)
-  
+sidste_aar <- md_aar %>% str_extract_all("\\d{4}$", simplify = T) %>% as.numeric() %>% max()-1
+
+indev_md <- md_aar %>% str_extract_all("^\\D{3}", simplify = T) %>% tail(1) %>% deframe()
+sidste_md <- md_aar %>% str_extract_all("^\\D{3}", simplify = T) %>% .[nrow(.)-1]
+
   #figur 1
 fig_kunde <- data_til_fig %>%
   mutate(aar_md = str_c(maaned, " ", aar)) %>% 
@@ -70,7 +78,8 @@ fig_2 <- data_til_fig %>%
   mutate(aar_md = str_c(maaned, " ", aar)) %>% 
   filter(maaned!="aar_til_dato", str_detect(tog_type,"fjern_og_regionaltog"),
          type=="Kundepunktlighed",aar %in% c((indev_aar-3):indev_aar)) %>% 
-  mutate(maaned_num = month(dmy(paste0("01-", maaned, "-2024"), locale = "da_DK"))) %>% 
+  mutate(maaned = factor(maaned, levels = md_lvls),
+    maaned_num = month(dmy(paste0("01-", maaned, "-2024"), locale = "da_DK"))) %>% 
   arrange(aar, maaned_num)
 
 
@@ -123,6 +132,24 @@ fig_stog_10aar <- data_til_fig %>%
     mutate(maaned_num = month(dmy(paste0("01-", maaned, "-2024"), locale = "da_DK"))) %>% 
   arrange(aar, maaned_num)
 
+#MDBF figurerne
+
+fig_MDBF <- data_til_fig_MDBF %>% 
+  mutate(maaned = factor(maaned, levels = md_lvls), 
+    type = ifelse(type=="IC1-vogne", "IC1", type) %>% 
+           factor(levels = c("Dobbeltdækkere", "IC1", "EB", "IC3", "IC4", "IR4", "SA/SE"))) %>% 
+  filter(aar==indev_aar & maaned %in% c(sidste_md, indev_md) | aar==sidste_aar & maaned=="aar_til_dato")
+  
+# fig_MDBF_2 <- data_til_fig_MDBF %>% 
+#   filter(maaned!="aar_til_dato" & aar >indev_aar-3) %>% 
+#   summarise(km = sum(km, na.rm = T),
+#     .by = c("aar", "maaned")
+#   ) %>% 
+#   mutate(maaned = factor(maaned, levels = md_lvls)) %>% 
+#   arrange(aar, maaned) %>% 
+#   mutate(akk_km = cumsum(coalesce(km,0)),
+#          km_12 = (akk_km-lag(akk_km,12))/12)
+
 
 ```
 
@@ -146,7 +173,7 @@ list("Figur 1" = fig_kunde) %>%
 
 ```{r include=FALSE}
 # Encode your pptx to Base64
-pptx_file <- "S:/CKA/Git/Ledelsesinformation/presentation.pptx"
+pptx_file <- "S:/CKA/Git/Ledelsesinformation/præsentation-togkontoret.pptx"
 
 # Encode as Base64 Data URI
 pptx_base64 <- dataURI(
@@ -157,7 +184,7 @@ pptx_base64 <- dataURI(
 ```
 
 
-<a href="`r pptx_base64`" download="presentation.pptx"> <button>Download PowerPoint</button> </a>
+<a href="`r pptx_base64`" download="præsentation-togkontoret.pptx"> <button>Download PowerPoint</button> </a>
 
 
 ### Kundepuktlighed
@@ -264,3 +291,32 @@ highchart() %>%
   hc_yAxis(title = list(text = "Andel (pct.)"),
            min = 85,
            max = 100) 
+
+```
+
+```{r}
+hchart(fig_MDBF %>% 
+         filter(aar==indev_aar) %>% 
+         mutate(maaned = factor(maaned, levels = c(sidste_md, indev_md))),
+       type = "column", 
+       hcaes(x = type, 
+             y = km, 
+             group = maaned),
+       color = trm_colors(c("blaa", "orange"))) %>% 
+  hc_xAxis(title = list(text = NULL)) %>%
+  hc_yAxis(title = list(text = "KM")) %>%
+  hc_add_series(name = "2024", data = fig_MDBF %>% filter(aar==sidste_aar),
+                type = "scatter", marker = list(symbol = "diamond", radius = 6),
+    hcaes(x = type, y = km),
+    color = "black") %>%
+  hc_plotOptions(series = list(dataLabels = list(enabled = FALSE), pointPadding = 0)) %>%
+  hc_legend(enabled = TRUE) %>%   
+  trm_hc_format("<b>Figur 6</b> Månedsvis MDBF sammenlignet med foregående måned og år",
+                note = str_glue("Kilde: DSB"))
+
+```
+
+
+
+
+
