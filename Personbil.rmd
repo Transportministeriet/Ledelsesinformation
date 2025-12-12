@@ -38,10 +38,16 @@ sti_kf <- "S:/TRM Databank/003 Klimafremskrivning"
 sti <- "S:/TRM Databank/004 Bilstatistik/Personbil"
 
 brugtvognsimport_data <- dir(sti) %>% 
-  map_dfr(function(y) 
-    read_excel(
-      str_c(sti, "/", y), 
-      skip = 10) %>%
+  map_dfr(function(y) {
+    
+    temp <- read_excel(
+      str_c(sti, "/", y))
+    
+    skip_l <- pull(temp, 2) %>% {.[which(is.na(.))]} %>% length()
+    
+    til_out <- read_excel(
+      str_c(sti, "/", y),
+      skip = (skip_l+1)) %>%
       clean_names() %>% 
       rename_with(str_to_upper) %>% 
       select(DRIVKRAFT, ANTAL=ANTAL_3, ANDEL = ANDEL_4) %>% 
@@ -74,7 +80,10 @@ brugtvognsimport_data <- dir(sti) %>%
         DATE_ST = lubridate::dmy(DATE1),
         DATE_SL = lubridate::dmy(DATE2),
         AAR = year(DATE_ST) %>% as.character()) %>% 
-      select(-DATE1, -DATE2, -DATE_RANGE)) %>%
+      select(-DATE1, -DATE2, -DATE_RANGE)
+  
+    return(til_out)
+    }) %>%
   distinct(DRIV, DATE_ST, DATE_SL, .keep_all = TRUE)  # Keep only the first occurrence of each combination
 
 
