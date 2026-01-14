@@ -520,7 +520,7 @@ data_nysalg_1 %>%
 # pull skal bruges naar man henter et tibble ind saa 
 ```
 
-Den ultimo 2019 var den samlede bestand `r totalbestand["I alt 2019"]` varebiler. Fra ultimo 2019 til `r t_sidste_md` `r nyeste_aar` er bestanden faldet med `r abs(totalbestand[str_glue("I alt {senest_md_tekst}")]/totalbestand["I alt 2019"]-1)*100` pct., så den danske bestand af varebiler ultimo `r t_sidste_md` var `r totalbestand[str_glue("I alt {senest_md_tekst}")]` varebiler. Ultimo `r t_sidste_md` `r nyeste_aar` udgjorde elvarebiler `r round((elbestand[str_glue("I alt {senest_md_tekst}")]/totalbestand[str_glue("I alt {senest_md_tekst}")])*100,1)` pct. af den samlede bestand.
+Den ultimo 2019 var den samlede bestand `r totalbestand["I alt 2019"]` varebiler. Fra ultimo 2019 til `r t_sidste_md` `r nyeste_aar` er bestanden faldet med `r abs(totalbestand[str_glue("I alt {nyeste_aar}")]/totalbestand["I alt 2019"]-1)*100` pct., så den danske bestand af varebiler ultimo `r t_sidste_md` var `r totalbestand[str_glue("I alt {nyeste_aar}")]` varebiler. Ultimo `r t_sidste_md` `r nyeste_aar` udgjorde elvarebiler `r round((elbestand[str_glue("I alt {nyeste_aar}")]/totalbestand[str_glue("I alt {nyeste_aar}")])*100,1)` pct. af den samlede bestand.
 
 ```{r}
 

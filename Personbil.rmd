@@ -444,7 +444,7 @@ andel_elbiler <- ny_figur_3_1 %>%
 vækst_siden_2020 <- round((bestand_2023_seneste-bestand_2020)/bestand_2020*100,2)
 
 
-#Data til figur 4. Status for antallet af elbiler i 2023
+#Data til figur 4. Status for antallet af elbiler 
 
 
 DST_tal <- data_bil_1 |>

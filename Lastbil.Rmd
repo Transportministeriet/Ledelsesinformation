@@ -137,20 +137,45 @@ list2env(
   envir = .GlobalEnv
 )
 
+# data_bil_1 |>
+#   mutate(DRIV_1 = ifelse(DRIV %in% c("Benzin", "Diesel"), "Fossil biler", DRIV) |>
+#            factor(levels = c("El", "Plug-in-hybrid", "Fossil biler", "Drivmidler i alt")),
+#          AAR = year(DATE)) |>
+#   summarise(INDHOLD = sum(INDHOLD),
+#             .by = c("DRIV_1", "AAR", "DATE") ) |>
+#   mutate(UDV_ANTAL_BIL = INDHOLD-lag(INDHOLD, as.numeric(Nummer_sidste_md)),
+#          .by = c("DRIV_1")) %>%
+#   filter(month(DATE)==Nummer_sidste_md, AAR>2019)
+
+## FORSLAG TIL RETTELSE ##
 bestand_data_udv <- bestand_data_samlet_gammel_metode %>%
-  filter(KASSORI == "TOTAL", month(DATE) == 12 | month(DATE) == nummer_sidste_md) %>%
-  mutate(AAR = ifelse(month(DATE) != 12, year(DATE), year(DATE) + 1)) %>%
-  arrange(DRIV, AAR, DATE) %>%  # Ensure correct order before lag()
-  group_by(DRIV, AAR) %>%  # Group by both DRIV and AAR
-  mutate(lag_antal = lag(ANTAL, order_by = DATE)) %>%  # Ensure lag follows correct order
-  filter(AAR > 2019, !is.na(lag_antal)) %>% 
-  mutate(UDV = ANTAL - lag_antal,
-         DRIV = factor(DRIV, 
-                       levels = c("El", "Gas", "Diesel", "Øvrige drivmidler", "Total")),
-         .keep = "unused") %>%
+  filter(KASSORI == "TOTAL") %>%
+  mutate(AAR = year(DATE)) %>%
+  arrange(DRIV, DATE) %>%
+  group_by(DRIV) %>%
+  mutate(lag_antal = lag(ANTAL, n = as.numeric(nummer_sidste_md)), UDV = ANTAL - lag_antal) %>%
+  ungroup() %>%
+  filter(month(DATE) == nummer_sidste_md, AAR > 2019, !is.na(lag_antal)) %>%
+  mutate(DRIV = factor(DRIV, levels = c("El", "Gas", "Diesel", "Øvrige drivmidler", "Total"))) %>%
   select(-KASSORI) %>%
   distinct(AAR, DRIV, .keep_all = TRUE) %>%
   arrange(AAR)
+
+## GAMMEL ##
+# bestand_data_udv <- bestand_data_samlet_gammel_metode %>%
+#   filter(KASSORI == "TOTAL", month(DATE) == 12 | month(DATE) == nummer_sidste_md) %>%
+#   mutate(AAR = ifelse(month(DATE) != 12, year(DATE), year(DATE) + 1)) %>%
+#   arrange(DRIV, AAR, DATE) %>%  # Ensure correct order before lag()
+#   group_by(DRIV, AAR) %>%  # Group by both DRIV and AAR
+#   mutate(lag_antal = lag(ANTAL, order_by = DATE)) %>%  # Ensure lag follows correct order
+#   filter(AAR > 2019, !is.na(lag_antal)) %>% 
+#   mutate(UDV = ANTAL - lag_antal,
+#          DRIV = factor(DRIV, 
+#                        levels = c("El", "Gas", "Diesel", "Øvrige drivmidler", "Total")),
+#          .keep = "unused") %>%
+#   select(-KASSORI) %>%
+#   distinct(AAR, DRIV, .keep_all = TRUE) %>%
+#   arrange(AAR)
 
 
 
@@ -483,19 +508,18 @@ figur_3_tunge <- bestand_data_1_tunge |>
   ) 
 
 
-
-figur_4 <- bestand_data_1 %>% 
-  filter(AAR %in% c(nyeste_aar - 1, str_c(seneste_md, " ", nyeste_aar)), DRIV == "El") %>% 
+figur_4 <- bestand_data_1 %>%
+  filter(AAR %in% c(nyeste_aar - 1, str_c(seneste_md, " ", nyeste_aar)), DRIV == "El") %>%
   mutate(
     x_axis = ifelse(
-      AAR == nyeste_aar - 1, 
+      AAR == nyeste_aar - 1,
       str_c("Ultimo ", nyeste_aar - 1),
       str_c("Ultimo ", seneste_md, " ", nyeste_aar) # Ensure ISO_data$month exists
     ),
     oprindelse = "Bilstatistik",
     .keep = "unused"
   ) %>%
-  bind_rows(KF_tal) %>% 
+  bind_rows(KF_tal) %>%
   select(kilde = oprindelse, dato = x_axis, antal = ANTAL)
 
 
