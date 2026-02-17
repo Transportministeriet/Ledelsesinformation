@@ -137,21 +137,21 @@ list2env(
   envir = .GlobalEnv
 )
 
+
+## FORSLAG TIL RETTELSE ##
 bestand_data_udv <- bestand_data_samlet_gammel_metode %>%
-  filter(KASSORI == "TOTAL", month(DATE) == 12 | month(DATE) == nummer_sidste_md) %>%
-  mutate(AAR = ifelse(month(DATE) != 12, year(DATE), year(DATE) + 1)) %>%
-  arrange(DRIV, AAR, DATE) %>%  # Ensure correct order before lag()
-  group_by(DRIV, AAR) %>%  # Group by both DRIV and AAR
-  mutate(lag_antal = lag(ANTAL, order_by = DATE)) %>%  # Ensure lag follows correct order
-  filter(AAR > 2019, !is.na(lag_antal)) %>% 
-  mutate(UDV = ANTAL - lag_antal,
-         DRIV = factor(DRIV, 
-                       levels = c("El", "Gas", "Diesel", "Øvrige drivmidler", "Total")),
-         .keep = "unused") %>%
+  filter(KASSORI == "TOTAL") %>%
+  mutate(AAR = year(DATE)) %>%
+  arrange(DRIV, DATE) %>%
+  group_by(DRIV) %>%
+  mutate(lag_antal = lag(ANTAL, n = as.numeric(nummer_sidste_md)), 
+         UDV = ANTAL - lag_antal) %>%
+  ungroup() %>%
+  filter(month(DATE) == nummer_sidste_md, AAR > 2019, !is.na(lag_antal)) %>%
+  mutate(DRIV = factor(DRIV, levels = c("El", "Gas", "Diesel", "Øvrige drivmidler", "Total"))) %>%
   select(-KASSORI) %>%
   distinct(AAR, DRIV, .keep_all = TRUE) %>%
   arrange(AAR)
-
 
 
 bestand_data_2 <- bestand_data %>% 
@@ -483,19 +483,18 @@ figur_3_tunge <- bestand_data_1_tunge |>
   ) 
 
 
-
-figur_4 <- bestand_data_1 %>% 
-  filter(AAR %in% c(nyeste_aar - 1, str_c(seneste_md, " ", nyeste_aar)), DRIV == "El") %>% 
+figur_4 <- bestand_data_1 %>%
+  filter(AAR %in% c(nyeste_aar - 1, str_c(seneste_md, " ", nyeste_aar)), DRIV == "El") %>%
   mutate(
     x_axis = ifelse(
-      AAR == nyeste_aar - 1, 
+      AAR == nyeste_aar - 1,
       str_c("Ultimo ", nyeste_aar - 1),
       str_c("Ultimo ", seneste_md, " ", nyeste_aar) # Ensure ISO_data$month exists
     ),
     oprindelse = "Bilstatistik",
     .keep = "unused"
   ) %>%
-  bind_rows(KF_tal) %>% 
+  bind_rows(KF_tal) %>%
   select(kilde = oprindelse, dato = x_axis, antal = ANTAL)
 
 
@@ -887,7 +886,7 @@ Ifølge Klimastatus og -fremskrvining 2024 forventes der at være cirka `r indev
 #Figur 4. Status for antallet af ellastbiler i 2025 - oberserveret versus forventet
 
 bestand_data_1 %>% 
-  filter(AAR == nyeste_aar-1 | AAR == str_c(seneste_md, " ", nyeste_aar), DRIV == "El") %>% 
+  filter(AAR %in% c(nyeste_aar, nyeste_aar-1) | AAR == str_c(seneste_md, " ", nyeste_aar), DRIV == "El") %>% 
   mutate(x_axis = AAR,
          oprindelse = "Bilstatistik",
          ANTAL,

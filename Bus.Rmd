@@ -45,8 +45,11 @@ til_indlaes <- bilstat_peri <- dir(str_c("S:/TRM Databank/004 Bilstatistik/Bus")
   mutate(dato = coalesce(parse_date_time2(value, orders = "dmY") %>% as.Date(),
                          map_chr(value, ~strsplit(.x, ', ', fixed = TRUE)[[1]][2]) %>% 
                            map_chr(~strsplit(.x, '- ', fixed = TRUE)[[1]][2]) %>% 
-                           parse_date_time2(orders = "dmY") %>% as.Date()
-  )) 
+                           parse_date_time2(orders = "dmY") %>% as.Date()),
+  type = str_detect(value, "Bestand"),
+  aar = year(dato)) %>% 
+  filter(!is.na(dato), month(dato)==max(month(dato), nr.rm = TRUE),
+         .by = c("aar", "type"))
 
 
 
