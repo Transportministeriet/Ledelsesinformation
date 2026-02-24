@@ -750,7 +750,7 @@ browsable(Figurer_1)
 
 Elbilers andel af det samlede antal nyregistreringer har været stigende siden 2019. I 2019 udgjorde elbiler `r pull(ebil_andel_nysalget, "2019") ` pct. af de samlede nyregistreringer.  I `r nyeste_aar` har elbiler udgjort `r pull(ebil_andel_nysalget, nyeste_aar) ` pct. af de samlede nyregistreringer, jf. figur 2.1. I `r format(ISOdate(2000, Nummer_sidste_md, 1), "%B")` udgjorde elbiler `r ebil_andel_nysalget[length(ebil_andel_nysalget)] %>% as.numeric()` pct. af nyregistreringerne. Hidtil er den højeste andel nyregistrerede elbiler set i `r Måned_max_EL_andel`. 
 
-Elbiler har generelt udgjort en støtre andel af brugtvognsimporten. I 2025 har elbiler hidtil udgjort `r brugt_import_andel_2025_EL` pct. af brugtvognimporten, jf. figur 2.2.
+Elbiler har generelt udgjort en større andel af brugtvognsimporten. I 2025 har elbiler hidtil udgjort `r brugt_import_andel_2025_EL` pct. af brugtvognimporten, jf. figur 2.2.
 
 ```{r}
 
