@@ -186,7 +186,7 @@ nyreg_data_lette <- dir(sti_last) %>%
         ) %>% factor(levels = c("Øvrige drivmidler", "Diesel", "Gas", "El", "Total")),
         
         # Extract all dates in DD-MM-YYYY format from the string and parse them
-        DATE_RANGE = str_extract_all(y, "\\d{2}-\\d{2}-\\d{4}"),
+        DATE_RANGE = str_extract_all(y, "\\d{2}[-.]\\d{2}[-.]\\d{4}"),
         
         # Assign first extracted date as DATE1 and second as DATE2, if both are present
         DATE1 = map_chr(DATE_RANGE, ~ .x[1] %||% NA_character_),
