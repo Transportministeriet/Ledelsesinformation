@@ -564,23 +564,32 @@ brugt_import_2024 <- brugt_1_stjerne |>
   pull(total_ANTAL)  # Extract the summed value
 
 brugt_import_2025 <- brugt_1_stjerne |> 
-  filter(AAR == "2025*") |>  # Filter only for 2024
+  filter(AAR == "2025") |>  # Filter only for 2024
   summarise(total_ANTAL = sum(ANTAL, na.rm = TRUE)) |>  # Sum ANTAL
   pull(total_ANTAL)  # Extract the summed value
 
 brugt_import_2025_EL <- brugt_1_stjerne |> 
-  filter(AAR == "2025*", DRIV == "El") |>  # Filter only for 2024
+  filter(AAR == "2025", DRIV == "El") |>  # Filter only for 2024
   summarise(total_ANTAL = sum(ANTAL, na.rm = TRUE)) |>  # Sum ANTAL
   pull(total_ANTAL)  # Extract the summed value
-
 
 brugt_import_2024_EL <- brugt_1_stjerne |> 
   filter(AAR == "2024", DRIV == "El") |>  # Filter only for 2024
   summarise(total_ANTAL = sum(ANTAL, na.rm = TRUE)) |>  # Sum ANTAL
   pull(total_ANTAL)  # Extract the summed value
 
-brugt_import_andel_2025_EL <- brugt_1_stjerne |> 
-  filter(AAR == "2025*", DRIV == "El") |>  # Filter only for 2024
+brugt_import_2026 <- brugt_1_stjerne |> 
+  filter(AAR == "2026*") |>  # Filter only for 2024
+  summarise(total_ANTAL = sum(ANTAL, na.rm = TRUE)) |>  # Sum ANTAL
+  pull(total_ANTAL)  # Extract the summed value
+
+brugt_import_2026_EL <- brugt_1_stjerne |> 
+  filter(AAR == "2026*", DRIV == "El") |>  # Filter only for 2024
+  summarise(total_ANTAL = sum(ANTAL, na.rm = TRUE)) |>  # Sum ANTAL
+  pull(total_ANTAL)  # Extract the summed value
+
+brugt_import_andel_2026_EL <- brugt_1_stjerne |> 
+  filter(AAR == "2026*", DRIV == "El") |>  # Filter only for 2024
   summarise(total_ANTAL = sum(A_NYREG, na.rm = TRUE)) |>  # Sum ANTAL
   pull(total_ANTAL)  # Extract the summed value
 
@@ -660,7 +669,7 @@ list("Figur 1.1" = figur_1.1, "Figur 1.2" = figur_1.2, "Figur 2.1" = figur_2.1, 
 I perioden fra 2019 til 2022 faldt antallet af nyregistreringer, mens det er steget siden 2022. I `r nyeste_aar` er der hidtil nyregistreret `r pull(totalsalg)`  personbiler, hvoraf `r pull(ebil_total_nysalget, nyeste_aar)` var elbiler. Til sammenligning  var der i hele `r as.character(max_aar-1)` `r pull(ebil_total_nysalget, as.character(max_aar-1))` nyregistrerede elbiler. Nyregistreringer dækker i denne sammenhæng over et registreringspligtigt køretøjs første registrering i motorregisteret. Importerede brugte køretøjer tæller ikke med i nyregistreringerne, men opgøres som genregistreringer.
 
 
-Fra 2023 til 2024 steg brugtvognsimporten med `r (brugt_import_2024-brugt_import_2023)/brugt_import_2023*100` pct. særligt drevet af en øget brugtimport af elbiler. Der blev således importeret `r brugt_import_2024_EL` brugte elbiler i 2024. I 2025 er der foreløbigt importeret `r brugt_import_2025` biler heraf `r brugt_import_2025_EL` elbiler, jf. figur 1.2.
+Fra 2024 til 2025 steg brugtvognsimporten med `r (brugt_import_2025-brugt_import_2024)/brugt_import_2024*100` pct. særligt drevet af en øget brugtimport af elbiler. Der blev således importeret `r brugt_import_2025_EL` brugte elbiler i 2025. I `r nyeste_aar` er der foreløbigt importeret `r brugt_import_2026` biler heraf `r brugt_import_2026_EL` elbiler, jf. figur 1.2.
 
 ```{r}
 
@@ -750,7 +759,7 @@ browsable(Figurer_1)
 
 Elbilers andel af det samlede antal nyregistreringer har været stigende siden 2019. I 2019 udgjorde elbiler `r pull(ebil_andel_nysalget, "2019") ` pct. af de samlede nyregistreringer.  I `r nyeste_aar` har elbiler udgjort `r pull(ebil_andel_nysalget, nyeste_aar) ` pct. af de samlede nyregistreringer, jf. figur 2.1. I `r format(ISOdate(2000, Nummer_sidste_md, 1), "%B")` udgjorde elbiler `r ebil_andel_nysalget[length(ebil_andel_nysalget)] %>% as.numeric()` pct. af nyregistreringerne. Hidtil er den højeste andel nyregistrerede elbiler set i `r Måned_max_EL_andel`. 
 
-Elbiler har generelt udgjort en større andel af brugtvognsimporten. I 2025 har elbiler hidtil udgjort `r brugt_import_andel_2025_EL` pct. af brugtvognimporten, jf. figur 2.2.
+Elbiler har generelt udgjort en større andel af brugtvognsimporten. I `r nyeste_aar` har elbiler hidtil udgjort `r brugt_import_andel_2026_EL` pct. af brugtvognimporten, jf. figur 2.2.
 
 ```{r}
 
@@ -841,12 +850,12 @@ ny_figur_3_1 |>
   trm_hc_format(titel =str_glue("<b>Figur 3.</b> Bestand af personbiler" ), 
                 note = tekst_note_bestand)
 
-rest <- KF_tal$INDHOLD[[2]] - DST_tal$INDHOLD[[1]]
+rest <- KF_tal$INDHOLD[[1]] - DST_tal$INDHOLD[[2]]
 
 
 ```
 
-Jævnfør Klimastatus og -fremskrivning 2024 vil der ved udgangen af 2025 være `r KF_tal$INDHOLD[[1]]` elbiler i Danmark. Bestanden pr. `r str_remove_all(DST_tal$x_axis[[2]], " observeret")` var `r DST_tal$INDHOLD[[2]]` elbiler, jf. figur 4. Differencen mellem det nuværende antal elbiler og det forventede antal elbiler ved udgangen af 2025 er således `r rest`.
+Jævnfør Klimastatus og -fremskrivning 2025 vil der ved udgangen af 2026 være `r KF_tal$INDHOLD[[1]]` elbiler i Danmark. Bestanden pr. `r str_remove_all(DST_tal$x_axis[[2]], " observeret")` var `r DST_tal$INDHOLD[[2]]` elbiler, jf. figur 4. Differencen mellem det nuværende antal elbiler og det forventede antal elbiler ved udgangen af `r nyeste_aar` er således `r rest`.
 
 ```{r}
 
