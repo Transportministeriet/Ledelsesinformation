@@ -37,6 +37,8 @@ source("hc_set_up_og_tekst.R")
 sti_kf <- "S:/TRM Databank/003 Klimafremskrivning"
 sti <- "S:/TRM Databank/004 Bilstatistik/Personbil"
 
+antal_aar_bagud <- 6
+
 brugtvognsimport_data <- dir(sti) %>% 
   map_dfr(function(y) {
     
@@ -681,19 +683,86 @@ data_nysalg_2_stjerne <- data_nysalg_2 %>%
 
 
 y_maks <- data_nysalg_2_stjerne |> 
-  filter(year > max(year, na.rm = TRUE) - 5 | is.na(year)) |> 
+  filter(year > max(year, na.rm = TRUE) - antal_aar_bagud | is.na(year)) |> 
   summarise(INDHOLD = sum(INDHOLD), .by = c("AAR")) |> 
   pull(INDHOLD) |> 
   max()
 
+
+data_nysalg_1_stjerne <- data_nysalg_1 %>%
+  mutate(
+    AAR = ifelse(AAR == nyeste_aar, paste0(AAR, "*"), AAR),
+    year = suppressWarnings(as.numeric(str_sub(AAR, end = 4)))  
+  ) %>% 
+  filter(AAR >= "2021")
+
+
 tickInterval <- 50000 # Set a fixed interval (e.g., 50 thousand units)
+
+
+data_figur_1_2 <- data_nysalg_2_stjerne |> 
+  bind_rows(brugt_1_stjerne %>% rename("A_INDHOLD"="A_NYREG")) %>% 
+  select(names(data_nysalg_2_stjerne)) %>% 
+  filter(year > max(year, na.rm = TRUE) - antal_aar_bagud | is.na(year)) %>% 
+  summarise(INDHOLD = sum(INDHOLD),
+            .by = c("AAR", "DRIV")) %>% 
+  mutate(A_INDHOLD = round(INDHOLD/sum(INDHOLD)*100,1),
+         .by = "AAR")
+
+
+elbil_salg <- data_figur_1_2 %>% filter(DRIV=="El") %>% select(AAR, INDHOLD) %>% deframe()
+total_salg <- data_figur_1_2 %>% summarise(INDHOLD = sum(INDHOLD), .by = "AAR") %>% select(AAR, INDHOLD) %>% deframe()
+
+naest_ny_aar_salg <- total_salg[as.character(næst_nyeste_aar)]
+naest_ny_aar_salg <- total_salg[which(max(total_salg)==total_salg)]
+
+indv_aar_saml_el <- elbil_salg[str_detect(names(elbil_salg), str_glue("^{nyeste_aar}") )]
+indv_aar_saml <- total_salg[str_detect(names(total_salg), str_glue("^{nyeste_aar}") )]
 
 #Figur 1 nyregistreringerne
 
 tekst_note_nyreg <- str_glue("Kilde: Danmarks Statistik<br>{stjerne_tekst}")
+```
+
+
+Siden 2022 er det samlede salg (Nyregistreringer + brugtimport) af personbiler steget i alle år og toppede i `r as.character(names(total_salg[which(total_salg==max(total_salg))]))`. I `r as.character(næst_nyeste_aar)` var det samlede salg `r total_salg[as.character(næst_nyeste_aar)]` biler, hvoraf elbiler udgjorde `r elbil_salg[as.character(næst_nyeste_aar)]` biler. I `r as.character(nyeste_aar)` er der samlet set solgt `r indv_aar_saml_el` elbiler.
+
+```{r}
+
+data_figur_1_2 %>% 
+  hchart('column', hcaes(x = AAR, y = INDHOLD, group = DRIV), borderColor = 0) |> 
+  hc_plotOptions(column = list(stacking = "normal")) |> 
+  hc_colors(c(trm_colors(farver))) |> 
+  hc_yAxis(
+    title = list(text = "Antal (tusind)"),
+    labels = list(formatter = JS("function() {
+        return this.value >= 1000 ? (this.value / 1000).toFixed(0) : this.value;
+    }")),
+    stackLabels = list(enabled = TRUE, verticalAlign = 'top',
+                       crop = FALSE, overflow = 'none')
+  ) |>  
+  hc_xAxis(title = list(text = NULL)) %>% 
+  hc_legend(reversed = TRUE, 
+            layout = "horizontal", 
+            align = "center", 
+            verticalAlign = "bottom",
+            itemStyle = list(fontSize = "11px"),
+            itemDistance = 2) %>% 
+  hc_tooltip(shared = TRUE) %>% 
+  trm_hc_format("<b>Figur 1.</b> Udvikling i samlet salg af personbiler fordelt på drivmiddel",
+                note = tekst_note_nyreg)
+```
+
+I perioden fra 2019 til 2022 faldt antallet af nyregistreringer, mens det er steget siden 2022. I `r nyeste_aar` er der hidtil nyregistreret `r pull(totalsalg)`  personbiler, hvoraf `r pull(ebil_total_nysalget, nyeste_aar)` var elbiler. Til sammenligning  var der i hele `r as.character(max_aar-1)` `r pull(ebil_total_nysalget, as.character(max_aar-1))` nyregistrerede elbiler. Nyregistreringer dækker i denne sammenhæng over et registreringspligtigt køretøjs første registrering i motorregisteret. Importerede brugte køretøjer tæller ikke med i nyregistreringerne, men opgøres som genregistreringer.
+
+
+Fra 2023 til 2024 steg brugtvognsimporten med `r (brugt_import_2024-brugt_import_2023)/brugt_import_2023*100` pct. særligt drevet af en øget brugtimport af elbiler. Der blev således importeret `r brugt_import_2024_EL` brugte elbiler i 2024. I 2025 er der foreløbigt importeret `r brugt_import_2025` biler heraf `r brugt_import_2025_EL` elbiler, jf. figur 1.2.
+
+
+```{r}
 
 figur_1.1 <- data_nysalg_2_stjerne |> 
-  filter(year > max(year, na.rm = TRUE) - 5 | is.na(year)) |> 
+  filter(year > max(year, na.rm = TRUE) - antal_aar_bagud | is.na(year)) |> 
   hchart('column', hcaes(x = AAR, y = INDHOLD, group = DRIV), borderColor = 0) |> 
   hc_plotOptions(column = list(stacking = "normal")) |> 
   hc_colors(c(trm_colors(farver))) |> 
@@ -719,7 +788,7 @@ figur_1.1 <- data_nysalg_2_stjerne |>
 
 #Overvej at gå tilbage
 figur_1.2 <- brugt_1_stjerne |> 
-  filter(year > max(year, na.rm = TRUE) - 5 | is.na(year)) |> 
+  filter(year > max(year, na.rm = TRUE) - antal_aar_bagud | is.na(year)) |> 
   hchart('column', hcaes(x = AAR, y = ANTAL, group = DRIV), borderColor = 0) |> 
   hc_plotOptions(column = list(stacking = "normal")) |> 
   hc_colors(c(trm_colors(farver))) |> 
@@ -757,22 +826,39 @@ browsable(Figurer_1)
 
 ```
 
+Andelen af elbiler i det samlede salg har også været støt stigende siden 2021, hvor andelen var `r  elbil_salg["2021"]/total_salg["2021"]*100`. I `r as.character(næst_nyeste_aar)` var salgsandelen  oppe på `r  elbil_salg[as.character(næst_nyeste_aar)]/naest_ny_aar_salg*100` pct. I `r nyeste_aar` har andelen af elbiler ligget på `r indv_aar_saml_el/indv_aar_saml*100` pct.
+
+```{r}
+
+
+data_figur_1_2 %>% 
+  hchart('column', hcaes(x = AAR, y = A_INDHOLD, group = DRIV), borderColor = 0) |> 
+  hc_plotOptions(column = list(stacking = "normal")) |> 
+  hc_colors(c(trm_colors(farver))) |> 
+  hc_yAxis(title = list(text = "Pct."), max = 100) |> 
+  hc_xAxis(title = list(text = NULL)) %>% 
+  hc_legend(reversed = TRUE, 
+            layout = "horizontal", 
+            align = "center", 
+            verticalAlign = "bottom",
+            itemStyle = list(fontSize = "11px"),
+            itemDistance = 2) %>%
+  hc_tooltip(shared = TRUE) %>% 
+  trm_hc_format(
+    titel = "<b>Figur 2.</b> Drivmidlernes andel af samlet salg for personbiler",
+    note = tekst_note_nyreg)
+
+```
+
+
 Elbilers andel af det samlede antal nyregistreringer har været stigende siden 2019. I 2019 udgjorde elbiler `r pull(ebil_andel_nysalget, "2019") ` pct. af de samlede nyregistreringer.  I `r nyeste_aar` har elbiler udgjort `r pull(ebil_andel_nysalget, nyeste_aar) ` pct. af de samlede nyregistreringer, jf. figur 2.1. I `r format(ISOdate(2000, Nummer_sidste_md, 1), "%B")` udgjorde elbiler `r ebil_andel_nysalget[length(ebil_andel_nysalget)] %>% as.numeric()` pct. af nyregistreringerne. Hidtil er den højeste andel nyregistrerede elbiler set i `r Måned_max_EL_andel`. 
 
 Elbiler har generelt udgjort en større andel af brugtvognsimporten. I `r nyeste_aar` har elbiler hidtil udgjort `r brugt_import_andel_2026_EL` pct. af brugtvognimporten, jf. figur 2.2.
 
 ```{r}
 
-data_nysalg_1_stjerne <- data_nysalg_1 %>%
-  mutate(
-    AAR = ifelse(AAR == nyeste_aar, paste0(AAR, "*"), AAR),
-    year = suppressWarnings(as.numeric(str_sub(AAR, end = 4)))  
-  ) %>% 
-  filter(AAR >= "2021")
-
-
 figur_2.1 <- data_nysalg_1_stjerne |> 
-  filter(year > max(year, na.rm = TRUE) - 5 | is.na(year)) |> 
+  filter(year > max(year, na.rm = TRUE) - antal_aar_bagud | is.na(year)) |> 
   hchart('column', hcaes(x = AAR, y = A_INDHOLD, group = DRIV), borderColor = 0) |> 
   hc_plotOptions(column = list(stacking = "normal")) |> 
   hc_colors(c(trm_colors(farver))) |> 
@@ -791,7 +877,7 @@ figur_2.1 <- data_nysalg_1_stjerne |>
 
 
 figur_2.2 <- brugt_1_stjerne |> 
-  filter(year > max(year, na.rm = TRUE) - 5 | is.na(year)) |> 
+  filter(year > max(year, na.rm = TRUE) - antal_aar_bagud | is.na(year)) |> 
   hchart('column', hcaes(x = AAR, y = A_NYREG, group = DRIV), borderColor = 0) |> 
   hc_plotOptions(column = list(stacking = "normal")) |> 
   hc_colors(c(trm_colors(farver))) |> 
