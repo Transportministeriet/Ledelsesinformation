@@ -482,12 +482,12 @@ figur_3_tunge <- bestand_data_1_tunge |>
          andel = A_BESTAND
   ) 
 
-
+## NY ##
 figur_4 <- bestand_data_1 %>%
-  filter(AAR %in% c(nyeste_aar - 1, str_c(seneste_md, " ", nyeste_aar)), DRIV == "El") %>%
+  filter(AAR %in% c(as.character(nyeste_aar - 1), as.character(nyeste_aar)), DRIV == "El") %>%
   mutate(
     x_axis = ifelse(
-      AAR == nyeste_aar - 1,
+      AAR == as.character(nyeste_aar - 1),
       str_c("Ultimo ", nyeste_aar - 1),
       str_c("Ultimo ", seneste_md, " ", nyeste_aar) # Ensure ISO_data$month exists
     ),
@@ -496,6 +496,22 @@ figur_4 <- bestand_data_1 %>%
   ) %>%
   bind_rows(KF_tal) %>%
   select(kilde = oprindelse, dato = x_axis, antal = ANTAL)
+
+
+## GAMMEL## 
+# figur_4 <- bestand_data_1 %>%
+#   filter(AAR %in% c(nyeste_aar - 1, str_c(seneste_md, " ", nyeste_aar)), DRIV == "El") %>%
+#   mutate(
+#     x_axis = ifelse(
+#       AAR == nyeste_aar - 1,
+#       str_c("Ultimo ", nyeste_aar - 1),
+#       str_c("Ultimo ", seneste_md, " ", nyeste_aar) # Ensure ISO_data$month exists
+#     ),
+#     oprindelse = "Bilstatistik",
+#     .keep = "unused"
+#   ) %>%
+#   bind_rows(KF_tal) %>%
+#   select(kilde = oprindelse, dato = x_axis, antal = ANTAL)
 
 
  
@@ -738,7 +754,7 @@ elandel_seneste <- elbestand_seneste/bestand_seneste*100
 
 ```
 
-Diesel er stadig det dominernde drivmiddel i bestanden af lastbiler. Bestanden af lastbiler har generelt været svagt stigende siden ultimo 2020, hvor den samlede bestand var `r bestand_2021`, mens  bestanden ultimo `r str_c(seneste_md, " ", nyeste_aar)` var `r bestand_seneste` lastbiler. 
+Diesel er stadig det dominerende drivmiddel i bestanden af lastbiler. Bestanden af lastbiler har generelt været svagt stigende siden ultimo 2020, hvor den samlede bestand var `r bestand_2021`, mens  bestanden ultimo `r str_c(seneste_md, " ", nyeste_aar)` var `r bestand_seneste` lastbiler. 
 
 I `r seneste_md` måned udviklede bestanden af ellastbiler sig med `r udv_elbestand_seneste_måned` lastbiler således, at der ultimo `r str_c(seneste_md, " ", nyeste_aar)` var `r elbestand_seneste` ellastbiler i Danmark svarende til `r elandel_seneste` pct. af den samlede bestand jf. figur 3.
 
@@ -879,12 +895,13 @@ rest <- abs(indev_aar_est - elbestand_seneste)
 ```
 
 
-Ifølge Klimastatus og -fremskrvining 2024 forventes der at være cirka `r indev_aar_est` elektriske lastbiler i Danmark ved udgangen af `r as.character(nyeste_aar)`. Differencen mellem det nuværende antal, jævnfør figur 3, og det forventede antal elektriske lastbiler ved udgangen af `r as.character(nyeste_aar)`, jævnfør figur 4, er således `r rest` lastbiler.
+Ifølge Klimastatus og -fremskrivning 2025 forventes der at være cirka `r indev_aar_est` elektriske lastbiler i Danmark ved udgangen af `r as.character(nyeste_aar)`. Differencen mellem det nuværende antal, jævnfør figur 3, og det forventede antal elektriske lastbiler ved udgangen af `r as.character(nyeste_aar)`, jævnfør figur 4, er således `r rest` lastbiler.
 
 
 ```{r}
 #Figur 4. Status for antallet af ellastbiler i 2025 - oberserveret versus forventet
 
+## NY ##
 bestand_data_1 %>% 
   filter(AAR %in% c(nyeste_aar, nyeste_aar-1) | AAR == str_c(seneste_md, " ", nyeste_aar), DRIV == "El") %>% 
   mutate(x_axis = AAR,
@@ -897,13 +914,7 @@ bestand_data_1 %>%
   hc_yAxis(title = list(text = "Antal")) |>
   hc_xAxis(
     title = list(text = NULL),
-    
-    labels = list(
-      align = "center",    
-      rotation = 0         
-    ),
-    tickmarkPlacement = "on"
-  ) |>
+    labels = list(align = "center",    rotation = 0),tickmarkPlacement = "on") |>
   
   hc_plotOptions(column = list(
     pointWidth = 100,       
@@ -912,6 +923,36 @@ bestand_data_1 %>%
   )) %>%
   trm_hc_format("<b>Figur 4.</b> Status for antallet af ellastbiler i 2025",
                 note = tekst_note_bestand_bilstat)
+
+## GAMMEL ##
+
+# bestand_data_1 %>% 
+#   filter(AAR == nyeste_aar-1 | AAR == str_c(seneste_md, " ", nyeste_aar), DRIV == "El") %>% 
+#   mutate(x_axis = AAR,
+#          oprindelse = "Bilstatistik",
+#          ANTAL,
+#          .keep = "none") %>%
+#   bind_rows(KF_tal) |> 
+#   hchart('column', hcaes(x = x_axis, y = ANTAL, group = oprindelse), 
+#          color = trm_colors(c("blaa", "orange")), borderColor = 0) |>
+#   hc_yAxis(title = list(text = "Antal")) |>
+#   hc_xAxis(
+#     title = list(text = NULL),
+#     
+#     labels = list(
+#       align = "center",    
+#       rotation = 0         
+#     ),
+#     tickmarkPlacement = "on"
+#   ) |>
+#   
+#   hc_plotOptions(column = list(
+#     pointWidth = 100,       
+#     groupPadding = 0.52,    
+#     pointPadding = 0.1    
+#   )) %>%
+#   trm_hc_format("<b>Figur 4.</b> Status for antallet af ellastbiler i 2025",
+#                 note = tekst_note_bestand_bilstat)
 
 nyreg_data_underkat_txt_el <- nyreg_data_underkat %>% filter(AAR == nyeste_aar-1, DRIV == "El") %>% select(KASSORI, ANTAL) %>% deframe() %>% as.list()
 

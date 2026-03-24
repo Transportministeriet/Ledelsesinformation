@@ -374,7 +374,10 @@ dette_par_aar <- data_hush_erhv_1 |>
   filter(year(DATE)==max(year(DATE))) |> 
   mutate(MD = month(DATE), DRIV, UDV_BIL, TYPE = as.character(max_aar), .keep = "none")
 
+## til pct.vis ændring under figur 2 ##
 
+base_2019  <- unname(totalbestand["I hus 2019"] + totalbestand["I erh 2019"])
+latest <- unname(totalbestand[str_glue("I hus {t_sidste_md} {nyeste_aar}")] + totalbestand[str_glue("I erh {t_sidste_md} {nyeste_aar}")])
 
 ```
 
@@ -443,7 +446,7 @@ list("Figur 1" = figur_1, "Figur 2" = figur_2, "Figur 3" = figur_3,
 
 
 ### Status på udviklingen af bestanden
-I perioden fra 2021 til 2023 faldt antallet af nyregistrerede varebiler, mens det er steget igen i 2024. I `r nyeste_aar` er der hidtil `r totalsalg[str_glue("I alt {nyeste_aar}")]` nyregistrerede varebiler, hvoraf `r elsalg[str_glue("I alt {nyeste_aar}")]` er elvarebiler. Dertil kommer `r t_lette_last["El"]` elvarebiler med en vægt mellem 3.501 og 4.250 kg. Til sammenligning  er der i `r as.character(max_aar-1)` registreret `r elsalg[str_glue("I alt {as.numeric(nyeste_aar)-1}")]` nye elvarebiler. 
+I perioden fra 2021 til 2023 faldt antallet af nyregistrerede varebiler, mens det steg i 2024, men er faldet igen i 2025. I `r nyeste_aar` er der hidtil `r totalsalg[str_glue("I alt {nyeste_aar}")]` nyregistrerede varebiler, hvoraf `r elsalg[str_glue("I alt {nyeste_aar}")]` er elvarebiler. Dertil kommer `r t_lette_last["El"]` elvarebiler med en vægt mellem 3.501 og 4.250 kg. Til sammenligning  er der i `r as.character(max_aar-1)` registreret `r elsalg[str_glue("I alt {as.numeric(nyeste_aar)-1}")]` nye elvarebiler. 
 
 ```{r}
 #FIGUR 1. Udvikling i nyregistreringer af varebiler fordelt på drivmiddel
@@ -520,7 +523,7 @@ data_nysalg_1 %>%
 # pull skal bruges naar man henter et tibble ind saa 
 ```
 
-Den ultimo 2019 var den samlede bestand `r totalbestand["I alt 2019"]` varebiler. Fra ultimo 2019 til `r t_sidste_md` `r nyeste_aar` er bestanden faldet med `r abs(totalbestand[str_glue("I alt {nyeste_aar}")]/totalbestand["I alt 2019"]-1)*100` pct., så den danske bestand af varebiler ultimo `r t_sidste_md` var `r totalbestand[str_glue("I alt {nyeste_aar}")]` varebiler. Ultimo `r t_sidste_md` `r nyeste_aar` udgjorde elvarebiler `r round((elbestand[str_glue("I alt {nyeste_aar}")]/totalbestand[str_glue("I alt {nyeste_aar}")])*100,1)` pct. af den samlede bestand.
+Den samlede bestand var ultimo 2019 `r comma(base_2019, big.mark=".", decimal.mark=",")` varebiler. Fra ultimo 2019 til `r t_sidste_md` `r nyeste_aar` er bestanden faldet med `r round((1 - latest/base_2019)*100, 1)` pct., så den danske bestand af varebiler ultimo `r t_sidste_md` var `r comma(latest, big.mark=".", decimal.mark=",")` varebiler. Ultimo `r t_sidste_md` `r nyeste_aar` udgjorde elvarebiler `r round(((elbestand[str_glue("I hus {t_sidste_md} {nyeste_aar}")] + elbestand[str_glue("I erh {t_sidste_md} {nyeste_aar}")]) / latest) * 100, 1)` pct. af den samlede bestand.
 
 ```{r}
 
@@ -565,7 +568,7 @@ rest <- KF_tal$INDHOLD[[2]] - DST_tal$INDHOLD[[2]]
 
 ```
 
-Jævnfør Klimastatus og -fremskrivning 2024 forventes der ved udgangen af 2025 `r KF_tal$INDHOLD[[1]]` elvarebiler i Danmark. Bestanden ultimo `r str_remove_all(DST_tal$x_axis[[2]], " observeret")` var `r DST_tal$INDHOLD[[2]]` elvarebiler, jf. figur 4.
+Jævnfør Klimastatus og -fremskrivning 2025 forventes der ved udgangen af 2025 `r KF_tal$INDHOLD[[1]]` elvarebiler i Danmark. Bestanden ultimo `r str_remove_all(DST_tal$x_axis[[2]], " observeret")` var `r DST_tal$INDHOLD[[2]]` elvarebiler, jf. figur 4.
 
 ```{r}
 #Figur 4. Status for antallet af el-varebiler i nyeste år
