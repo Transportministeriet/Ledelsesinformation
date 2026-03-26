@@ -667,11 +667,6 @@ list("Figur 1.1" = figur_1.1, "Figur 1.2" = figur_1.2, "Figur 2.1" = figur_2.1, 
 
 ```
 
-### Status på udviklingen af bestanden
-I perioden fra 2019 til 2022 faldt antallet af nyregistreringer, mens det er steget siden 2022. I `r nyeste_aar` er der hidtil nyregistreret `r pull(totalsalg)`  personbiler, hvoraf `r pull(ebil_total_nysalget, nyeste_aar)` var elbiler. Til sammenligning  var der i hele `r as.character(max_aar-1)` `r pull(ebil_total_nysalget, as.character(max_aar-1))` nyregistrerede elbiler. Nyregistreringer dækker i denne sammenhæng over et registreringspligtigt køretøjs første registrering i motorregisteret. Importerede brugte køretøjer tæller ikke med i nyregistreringerne, men opgøres som genregistreringer.
-
-
-Fra 2024 til 2025 steg brugtvognsimporten med `r (brugt_import_2025-brugt_import_2024)/brugt_import_2024*100` pct. særligt drevet af en øget brugtimport af elbiler. Der blev således importeret `r brugt_import_2025_EL` brugte elbiler i 2025. I `r nyeste_aar` er der foreløbigt importeret `r brugt_import_2026` biler heraf `r brugt_import_2026_EL` elbiler, jf. figur 1.2.
 
 ```{r}
 
@@ -725,6 +720,8 @@ tekst_note_nyreg <- str_glue("Kilde: Danmarks Statistik<br>{stjerne_tekst}")
 ```
 
 
+### Status på udviklingen af bestanden
+
 Siden 2022 er det samlede salg (Nyregistreringer + brugtimport) af personbiler steget i alle år og toppede i `r as.character(names(total_salg[which(total_salg==max(total_salg))]))`. I `r as.character(næst_nyeste_aar)` var det samlede salg `r total_salg[as.character(næst_nyeste_aar)]` biler, hvoraf elbiler udgjorde `r elbil_salg[as.character(næst_nyeste_aar)]` biler. I `r as.character(nyeste_aar)` er der samlet set solgt `r indv_aar_saml_el` elbiler.
 
 ```{r}
@@ -756,7 +753,7 @@ data_figur_1_2 %>%
 I perioden fra 2019 til 2022 faldt antallet af nyregistreringer, mens det er steget siden 2022. I `r nyeste_aar` er der hidtil nyregistreret `r pull(totalsalg)`  personbiler, hvoraf `r pull(ebil_total_nysalget, nyeste_aar)` var elbiler. Til sammenligning  var der i hele `r as.character(max_aar-1)` `r pull(ebil_total_nysalget, as.character(max_aar-1))` nyregistrerede elbiler. Nyregistreringer dækker i denne sammenhæng over et registreringspligtigt køretøjs første registrering i motorregisteret. Importerede brugte køretøjer tæller ikke med i nyregistreringerne, men opgøres som genregistreringer.
 
 
-Fra 2023 til 2024 steg brugtvognsimporten med `r (brugt_import_2024-brugt_import_2023)/brugt_import_2023*100` pct. særligt drevet af en øget brugtimport af elbiler. Der blev således importeret `r brugt_import_2024_EL` brugte elbiler i 2024. I 2025 er der foreløbigt importeret `r brugt_import_2025` biler heraf `r brugt_import_2025_EL` elbiler, jf. figur 1.2.
+Fra 2024 til 2025 steg brugtvognsimporten med `r (brugt_import_2025-brugt_import_2024)/brugt_import_2024*100` pct. særligt drevet af en øget brugtimport af elbiler. Der blev således importeret `r brugt_import_2025_EL` brugte elbiler i 2025. I `r nyeste_aar` er der foreløbigt importeret `r brugt_import_2026` biler heraf `r brugt_import_2026_EL` elbiler, jf. figur 1.2.
 
 
 ```{r}
