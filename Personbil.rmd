@@ -912,7 +912,7 @@ data_fig_4 |>
 ```
 
 
-Figur 6 viser udvikligen i bestanden over måneder. I `r md_d_afvikles_hurtigere` ud af årets første `r month(max(dat_fig_3$DATE))` måneder er  bestanden af dieselbiler blevet afviklet hurtigere, end det var tilfældet i `r as.character(næst_nyeste_aar)`. Bestanden af benzinbiler er afviklet hurtigere i `r md_b_afvikles_hurtigere`  ud af de første  `r month(max(dat_fig_3$DATE))` måneder af 2023. Hidtil er `r max_måned_afvikling_b` den måned, hvor bestanden af benzinbiler er faldet mest. 
+Figur 6 viser udvikligen i bestanden over måneder. I `r md_d_afvikles_hurtigere` ud af årets første `r month(max(dat_fig_3$DATE))` måneder er  bestanden af dieselbiler blevet afviklet hurtigere, end det var tilfældet i `r as.character(næst_nyeste_aar)`. Bestanden af benzinbiler er afviklet hurtigere end i `r md_b_afvikles_hurtigere`  ud af de første  `r month(max(dat_fig_3$DATE))` måneder af 2023. Hidtil er `r max_måned_afvikling_b` den måned, hvor bestanden af benzinbiler er faldet mest. 
 
 **Figur 6. Udvikling pr måned i antallet af biler fordelt på drivmiddel**
 ```{r}

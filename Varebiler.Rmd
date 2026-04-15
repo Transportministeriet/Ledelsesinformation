@@ -568,7 +568,7 @@ rest <- KF_tal$INDHOLD[[2]] - DST_tal$INDHOLD[[2]]
 
 ```
 
-Jævnfør Klimastatus og -fremskrivning 2025 forventes der ved udgangen af 2025 `r KF_tal$INDHOLD[[1]]` elvarebiler i Danmark. Bestanden ultimo `r str_remove_all(DST_tal$x_axis[[2]], " observeret")` var `r DST_tal$INDHOLD[[2]]` elvarebiler, jf. figur 4.
+Jævnfør Klimastatus og -fremskrivning 2025 forventes der ved udgangen af `r nyeste_aar` `r KF_tal$INDHOLD[[1]]` elvarebiler i Danmark. Bestanden ultimo `r str_remove_all(DST_tal$x_axis[[2]], " observeret")` var `r DST_tal$INDHOLD[[2]]` elvarebiler, jf. figur 4.
 
 ```{r}
 #Figur 4. Status for antallet af el-varebiler i nyeste år
