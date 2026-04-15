@@ -895,7 +895,7 @@ rest <- abs(indev_aar_est - elbestand_seneste)
 ```
 
 
-Ifølge Klimastatus og -fremskrvining 2024 forventes der at være cirka `r indev_aar_est` elektriske lastbiler i Danmark ved udgangen af `r as.character(nyeste_aar)`. Differencen mellem det nuværende antal, jævnfør figur 3, og det forventede antal elektriske lastbiler ved udgangen af `r as.character(nyeste_aar)`, jævnfør figur 4, er således `r rest` lastbiler.
+Ifølge Klimastatus og -fremskrivning 2025 forventes der at være cirka `r indev_aar_est` elektriske lastbiler i Danmark ved udgangen af `r as.character(nyeste_aar)`. Differencen mellem det nuværende antal, jævnfør figur 3, og det forventede antal elektriske lastbiler ved udgangen af `r as.character(nyeste_aar)`, jævnfør figur 4, er således `r rest` lastbiler.
 
 
 ```{r}
@@ -903,11 +903,7 @@ Ifølge Klimastatus og -fremskrvining 2024 forventes der at være cirka `r indev
 
 ## NY ##
 bestand_data_1 %>% 
-<<<<<<< .mine
-  filter(AAR %in% c(as.character(nyeste_aar - 1), as.character(nyeste_aar)), DRIV == "El") %>% 
-=======
   filter(AAR %in% c(nyeste_aar, nyeste_aar-1) | AAR == str_c(seneste_md, " ", nyeste_aar), DRIV == "El") %>% 
->>>>>>> .theirs
   mutate(x_axis = AAR,
          oprindelse = "Bilstatistik",
          ANTAL,
@@ -918,13 +914,7 @@ bestand_data_1 %>%
   hc_yAxis(title = list(text = "Antal")) |>
   hc_xAxis(
     title = list(text = NULL),
-    
-    labels = list(
-      align = "center",    
-      rotation = 0         
-    ),
-    tickmarkPlacement = "on"
-  ) |>
+    labels = list(align = "center",    rotation = 0),tickmarkPlacement = "on") |>
   
   hc_plotOptions(column = list(
     pointWidth = 100,       
