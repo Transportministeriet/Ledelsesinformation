@@ -42,68 +42,89 @@ sti <- "S:/TRM Databank/004 Bilstatistik/Bus"
 
 til_indlaes <- bilstat_peri <- dir(str_c("S:/TRM Databank/004 Bilstatistik/Bus")) %>% 
   enframe() %>% 
-  mutate(dato = coalesce(parse_date_time2(value, orders = "dmY") %>% as.Date(),
-                         map_chr(value, ~strsplit(.x, ', ', fixed = TRUE)[[1]][2]) %>% 
-                           map_chr(~strsplit(.x, '- ', fixed = TRUE)[[1]][2]) %>% 
-                           parse_date_time2(orders = "dmY") %>% as.Date()),
-  type = str_detect(value, "Bestand"),
-  aar = year(dato)) %>% 
-  filter(!is.na(dato), month(dato)==max(month(dato), nr.rm = TRUE),
-         .by = c("aar", "type"))
-
-
-
-
+  mutate(
+    value_std = str_replace_all(value, "\\.", "-"),
+    dato = coalesce(
+      parse_date_time2(value_std, orders = "dmY") %>% as.Date(),
+      map_chr(value_std, ~strsplit(.x, ", ", fixed = TRUE)[[1]][2]) %>% 
+        map_chr(~strsplit(.x, "- ", fixed = TRUE)[[1]][2]) %>% 
+        parse_date_time2(orders = "dmY") %>% 
+        as.Date()
+    ),
+    type = str_detect(value, "Bestand"),
+    aar = year(dato)
+  ) %>% 
+  filter(
+    !is.na(dato),
+    month(dato) == max(month(dato), na.rm = TRUE),
+    .by = c("aar", "type")
+  )
 
 #Koden finder den nyeste dato for registreringer af "Nyregistreringer" i til_indlaes-dataframen, tilføjer 1 dag til denne dato, runder den derefter ned til starten af kvartalet, og til sidst returneres datoen for starten af det kvartal. Resultatet gemmes i variablen seneste_kvt.
 seneste_kvt <- til_indlaes %>% 
   filter(str_detect(value, "Nyregistreringer")) %>% 
-  filter(dato==max(dato)) %>% 
-  (\(y) pull(y, dato) +1)() %>% #Lægger 1 ti da de tilfælde hvor vi er i slutningen af kvartalet vælges det indeværende kvartal
-  (\(x) floor_date(x, unit = "quarter")-1)() %>% 
+  filter(dato == max(dato)) %>% 
+  (\(y) pull(y, dato) + 1)() %>% #Lægger 1 ti da de tilfælde hvor vi er i slutningen af kvartalet vælges det indeværende kvartal
+  (\(x) floor_date(x, unit = "quarter") - 1)() %>% 
   floor_date(unit = "quarter")
 
 nummer_sidste_md <- til_indlaes %>% 
   filter(str_detect(value, "Nyregistreringer")) %>% 
-  filter(dato==max(dato)) %>% pull(dato) %>% month()
+  filter(dato == max(dato)) %>% 
+  pull(dato) %>% 
+  month()
 
 seneste_md <- format(ISOdate(2000, nummer_sidste_md, 1), "%B") 
+
 nyeste_aar <- til_indlaes %>% 
   filter(str_detect(value, "Nyregistreringer")) %>% 
-  filter(dato==max(dato)) %>% pull(dato) %>% year()
+  filter(dato == max(dato)) %>% 
+  pull(dato) %>% 
+  year()
 
-
-if(month(Sys.Date())==1){
+if (month(Sys.Date()) == 1) {
   stjerne <- ""
   stjerne_tekst <- ""
-} else{
+} else {
   stjerne <- "*"
   stjerne_tekst <- str_glue("*År til dato (til og med {seneste_md})")
 }
 
-
 bestand_data <- til_indlaes %>% 
   pull(value) %>% 
-  str_subset("Bestand") |>
+  str_subset("Bestand") %>% 
   enframe() %>% 
-  mutate(dato = str_extract(value, "\\d{2}-\\d{2}-\\d{4}") %>%
-                 parse_date(format = "%d-%m-%Y"),
-         aar = year(dato)) %>% 
-  filter(dato == max(dato),
-         .by ="aar") %>% 
+  mutate(
+    dato = str_extract(value, "\\d{2}[.-]\\d{2}[.-]\\d{4}") %>% 
+      str_replace_all("\\.", "-") %>% 
+      parse_date(format = "%d-%m-%Y"),
+    aar = year(dato)
+  ) %>% 
+  filter(dato == max(dato), .by = "aar") %>% 
   pull(value) %>% 
-  (\(y) map_dfr(y, ~read_excel(str_c(sti,"/", .x), skip = 9,
-                               .name_repair = str_to_upper) %>% 
-                  filter(row_number()!=max(row_number()), !is.na(ANVENDELSE)) %>% 
-                  select(DRIVKRAFT, ANVENDELSE, BESTAND) %>% 
-                  mutate(DRIVKRAFT = str_extract_all(DRIVKRAFT, "PHEV|El", simplify = T) %>% 
-                           na_if("") %>% 
-                           coalesce(DRIVKRAFT),
-                         
-                         DRIV = ifelse(DRIVKRAFT %in% c("Benzin", "Gas", "PHEV",  "Brint", "Ukendt"), "Øvrige drivmidler", DRIVKRAFT) %>% 
-                           factor(levels = c("Øvrige drivmidler", "Diesel", "El")),
-                         DATE = parse_number(.x, locale = locale(grouping_mark = "-")),
-                         DATE = lubridate::dmy(DATE))))() 
+  (\(y) map_dfr(
+    y,
+    ~read_excel(
+      str_c(sti, "/", .x),
+      skip = 9,
+      .name_repair = str_to_upper
+    ) %>% 
+      filter(row_number() != max(row_number()), !is.na(ANVENDELSE)) %>% 
+      select(DRIVKRAFT, ANVENDELSE, BESTAND) %>% 
+      mutate(
+        DRIVKRAFT = str_extract_all(DRIVKRAFT, "PHEV|El", simplify = TRUE) %>% 
+          na_if("") %>% 
+          coalesce(DRIVKRAFT),
+        DRIV = ifelse(
+          DRIVKRAFT %in% c("Benzin", "Gas", "PHEV", "Brint", "Ukendt"),
+          "Øvrige drivmidler",
+          DRIVKRAFT
+        ) %>% factor(levels = c("Øvrige drivmidler", "Diesel", "El")),
+        DATE = str_extract(.x, "\\d{2}[.-]\\d{2}[.-]\\d{4}") %>% 
+          str_replace_all("\\.", "-") %>% 
+          dmy()
+      )
+  ))()
 
 bestand_data <- bestand_data %>%
   mutate(DATE = ymd(DATE))
