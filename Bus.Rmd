@@ -407,7 +407,7 @@ I løbet af de første `r nummer_sidste_md` måneder af `r as.character(nyeste_a
 ```{r}
 #Figur 1. Udvikling i nyregistreringer af busser fordelt på drivmiddel
 
-farver <- c("graa",  "blaa", "groen") %>% factor(., levels = .)
+farver <- c("roed",  "blaa", "groen") %>% factor(., levels = .)
 
 nyreg_data_2_stjerne <- nyreg_data_2 %>%
   mutate(

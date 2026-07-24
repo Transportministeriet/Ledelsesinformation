@@ -307,12 +307,12 @@ list2env(
 
 # ---- DIVERSE ----
 
-KF_tal <- fread(str_c(sti_kf, "/tidy_datasaet/", "bestand_kf25.csv")) %>% 
+KF_tal <- fread(str_c(sti_kf, "/tidy_datasaet/", "bestand_kf26.csv")) %>% 
   filter(type == "Lastbiler", drivmiddel == "El") %>% 
   summarise(vaerdi = sum(vaerdi),
     .by = c("aar", "drivmiddel")) %>% 
   mutate(aar = as.numeric(aar),
-         x_axis = str_glue("Forventet {aar} (KF25)"),
+         x_axis = str_glue("Forventet {aar} (KF26)"),
          oprindelse = "KF") %>% 
   filter(aar %in% c(as.numeric(nyeste_aar), as.numeric(nyeste_aar) + 1)) %>%  # TODO: Adjust when KF25 data is available
   select(ANTAL = vaerdi, x_axis, oprindelse)
@@ -582,7 +582,7 @@ I løbet af `r as.character(nyeste_aar)` er der nyregistreret `r totalsalg_senes
 
 tekst_note_nyreg <- str_glue("Kilde: Danmarks Statistik<br>{stjerne_tekst}")
 
-farver <- c("graa",  "blaa", "orange","groen") %>% factor(., levels = .)
+farver <- c("roed",  "blaa", "orange","groen") %>% factor(., levels = .)
 
 nyreg_data_1 %>%
   filter(AAR >= (nyeste_aar-5)) %>% 
@@ -654,7 +654,7 @@ nyreg_data_1 |>
 ```{r, results='asis'}
 #Faktaboks
 
-graa_2 = "#EDF1F4"
+graa_2 = "#CFDAE5"
 
 formatted_text <- div(
  style = sprintf("background-color: %s; padding: 5px 20px; border: 1px solid #ddd; 
@@ -662,7 +662,7 @@ formatted_text <- div(
                    max-width: 700px; margin: auto;", graa_2),
           h3("Faktaboks", style = "margin-top: 0.5;"), #
            p("I indeværende notat defineres lastbiler med en vægt på 4.250 kg. og derunder som lette lastbiler.
-    Lastbiler med en vægt over 4.250 kg. defineres som tunge lastbiler. Det bør bemærkes, at der i andre sammenhænge kan forekomme andre definitnioner af henholdsvis lette og tunge lastibler."))
+    Lastbiler med en vægt over 4.250 kg. defineres som tunge lastbiler. Det bør bemærkes, at der i andre sammenhænge kan forekomme andre definitioner af henholdsvis lette og tunge lastibler."))
   
   
 browsable(formatted_text)
@@ -688,7 +688,7 @@ figur2_lette <- nyreg_data_1_lette |>
   hc_plotOptions(column = list(stacking = "normal"), style = list(
     fontFamily = "Georgia"
   )) |> 
-  hc_colors(as.character(trm_colors(farver[c(2, 4)]))) |>  # Use only "blaa" and "groen" (the second and fourth colors)
+  hc_colors(as.character(trm_colors(farver[c(2, 4)]))) |>  # Use only "cyan" and "groen" (the second and fourth colors)
   hc_yAxis(title = list(text = "Pct."), max = 100) |> 
   hc_xAxis(title = list(text = NULL), categories = fct_sort,
            labels = list(rotation = -30)  # Tilt the labels by -45 degrees (you can adjust the angle)
@@ -794,7 +794,7 @@ categories <- unique(bestand_data_1_lette$AAR)
 figur3_lette <- bestand_data_1_lette |> 
   hchart('column', hcaes(x = AAR, y = ANTAL, group = DRIV), borderColor = 0) |> 
   hc_plotOptions(column = list(stacking = "normal")) |> 
-  hc_colors(as.character(trm_colors(farver[c(1, 2, 4)]))) |>  # Use only "blaa" and "groen" (the second and fourth colors)
+  hc_colors(as.character(trm_colors(farver[c(1, 2, 4)]))) |>  # Use only "cyan" and "groen" (the second and fourth colors)
   hc_yAxis(
     title = list(text = "Antal"),
     labels = list(formatter = JS("function() {
@@ -895,11 +895,11 @@ rest <- abs(indev_aar_est - elbestand_seneste)
 ```
 
 
-Ifølge Klimastatus og -fremskrivning 2025 forventes der at være cirka `r indev_aar_est` elektriske lastbiler i Danmark ved udgangen af `r as.character(nyeste_aar)`. Differencen mellem det nuværende antal, jævnfør figur 3, og det forventede antal elektriske lastbiler ved udgangen af `r as.character(nyeste_aar)`, jævnfør figur 4, er således `r rest` lastbiler.
+Ifølge Klimastatus og -fremskrivning 2026 forventes der at være cirka `r indev_aar_est` elektriske lastbiler i Danmark ved udgangen af `r as.character(nyeste_aar)`. Differencen mellem det nuværende antal, jævnfør figur 3, og det forventede antal elektriske lastbiler ved udgangen af `r as.character(nyeste_aar)`, jævnfør figur 4, er således `r rest` lastbiler.
 
 
 ```{r}
-#Figur 4. Status for antallet af ellastbiler i 2025 - oberserveret versus forventet
+#Figur 4. Status for antallet af ellastbiler i 2026 - oberserveret versus forventet
 
 ## NY ##
 bestand_data_1 %>% 
@@ -921,7 +921,7 @@ bestand_data_1 %>%
     groupPadding = 0.52,    
     pointPadding = 0.1    
   )) %>%
-  trm_hc_format("<b>Figur 4.</b> Status for antallet af ellastbiler i 2025",
+  trm_hc_format("<b>Figur 4.</b> Status for antallet af ellastbiler i 2026",
                 note = tekst_note_bestand_bilstat)
 
 ## GAMMEL ##
@@ -934,7 +934,7 @@ bestand_data_1 %>%
 #          .keep = "none") %>%
 #   bind_rows(KF_tal) |> 
 #   hchart('column', hcaes(x = x_axis, y = ANTAL, group = oprindelse), 
-#          color = trm_colors(c("blaa", "orange")), borderColor = 0) |>
+#          color = trm_colors(c("cyan", "orange")), borderColor = 0) |>
 #   hc_yAxis(title = list(text = "Antal")) |>
 #   hc_xAxis(
 #     title = list(text = NULL),
@@ -985,9 +985,10 @@ med `r abs(nyeste_aars_udv[["Diesel"]])` i `r as.character(nyeste_aar)`, mens be
 bestand_data_udv |>
   arrange(AAR, desc(DRIV)) %>%
   hchart('column', hcaes(x = AAR, y = UDV, group = DRIV ), borderColor = 0) |>
-  hc_colors(c(trm_colors(c(sort(farver, decreasing = T) %>% as.character(), "lyseblaa")))) |>
+  hc_colors(c(trm_colors(c(sort(farver, decreasing = T) %>% as.character(), "blaa")))) |>
   # hc_legend(reversed =TRUE) %>%
   hc_yAxis(title = list(text = "Antal"),
+           min = 0,
            labels = list(
              formatter = JS("function() {
       return this.value ? (this.value).toFixed(0) : this.value;
@@ -1000,7 +1001,7 @@ bestand_data_udv |>
 ```
 
 
-Opdeles lastbilerne i supplerende karosseri, ses tydeligt, at det primært har været renovationslastbiler, som har omstillet til el først. Disse lastbiler er i højere grad styret af krav fra offentlige udbud og kører typisk ikke særlig langt på en dag. Sidste år udgjorde el `r nyreg_data_underkat_txt_el$RENOVATIONSAGGREGAT/nyreg_data_underkat_txt_samlet$RENOVATIONSAGGREGAT*100` pct. af det samlede nyregistreringer af renovations lastbiler, mens el udgjorde `r nyreg_data_underkat_txt_el$LUKKET_KASSE/nyreg_data_underkat_txt_samlet$LUKKET_KASSE*100` pct. af alle nyregistrerede lastbiler med lukket kasse.
+Opdeles lastbilerne i supplerende karosseri, ses tydeligt, at det primært har været renovationslastbiler, som har omstillet til el først. Disse lastbiler er i højere grad styret af krav fra offentlige udbud og kører typisk ikke særlig langt på en dag. Sidste år udgjorde el `r nyreg_data_underkat_txt_el$RENOVATIONSAGGREGAT/nyreg_data_underkat_txt_samlet$RENOVATIONSAGGREGAT*100` pct. af det samlede nyregistreringer af renovationslastbiler, mens el udgjorde `r nyreg_data_underkat_txt_el$LUKKET_KASSE/nyreg_data_underkat_txt_samlet$LUKKET_KASSE*100` pct. af alle nyregistrerede lastbiler med lukket kasse.
 
 Da en lastbil kan have mange forskellige supplerende karosserier, kan en lastbil optræde i flere af kategorierne.
 

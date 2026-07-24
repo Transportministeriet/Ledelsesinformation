@@ -310,12 +310,12 @@ DST_tal <- data_hush_erhv_1  |>
                          str_c(round(AAR - 1,0))),
          oprindelse = "DST")
 
-KF_tal <- fread(str_c(sti_kf, "/tidy_datasaet/", "bestand_kf25.csv")) %>% 
+KF_tal <- fread(str_c(sti_kf, "/tidy_datasaet/", "bestand_kf26.csv")) %>% 
   filter(type == "Varebiler", drivmiddel == "El") %>% 
   summarise(vaerdi = sum(vaerdi),
     .by = c("aar", "drivmiddel")) %>% 
   mutate(aar = as.numeric(aar),
-         x_axis = str_glue("Forventet {aar} (KF25)"),
+         x_axis = str_glue("Forventet {aar} (KF26)"),
          oprindelse = "KF") %>% 
   filter(aar %in% c(as.numeric(nyeste_aar), as.numeric(nyeste_aar) + 1)) %>%  # TODO: Adjust when KF25 data is available
   select(INDHOLD = vaerdi, x_axis, oprindelse)
@@ -451,7 +451,7 @@ I perioden fra 2021 til 2023 faldt antallet af nyregistrerede varebiler, mens de
 ```{r}
 #FIGUR 1. Udvikling i nyregistreringer af varebiler fordelt på drivmiddel
 
-farver <- c("graa", "groen",  "orange", "blaa", "gul") %>% factor(., levels = .) %>% sort(decreasing = T)
+farver <- c("roed", "groen",  "orange", "blaa", "cyan") %>% factor(., levels = .) %>% sort(decreasing = T)
 
 
 format_chart <- function(x, titel, note = NULL) {
@@ -568,7 +568,7 @@ rest <- KF_tal$INDHOLD[[2]] - DST_tal$INDHOLD[[2]]
 
 ```
 
-Jævnfør Klimastatus og -fremskrivning 2025 forventes der ved udgangen af `r nyeste_aar` `r KF_tal$INDHOLD[[1]]` elvarebiler i Danmark. Bestanden ultimo `r str_remove_all(DST_tal$x_axis[[2]], " observeret")` var `r DST_tal$INDHOLD[[2]]` elvarebiler, jf. figur 4.
+Jævnfør Klimastatus og -fremskrivning 2026 forventes der ved udgangen af `r nyeste_aar` `r KF_tal$INDHOLD[[1]]` elvarebiler i Danmark. Bestanden ultimo `r str_remove_all(DST_tal$x_axis[[2]], " observeret")` var `r DST_tal$INDHOLD[[2]]` elvarebiler, jf. figur 4.
 
 ```{r}
 #Figur 4. Status for antallet af el-varebiler i nyeste år
@@ -596,7 +596,7 @@ bind_rows(DST_tal, KF_tal) |>
     pointPadding = 0.1    # Space between bars in the same group
   )) %>%
   trm_hc_format(str_glue("<b>Figur 4.</b> Status for antallet af elvarebiler i {nyeste_aar}"),
-                note = "Kilde: Danmarks Statistik & Klimastatus og -fremskrivning 2024
+                note = "Kilde: Danmarks Statistik & Klimastatus og -fremskrivning 2026
                 <br> Note: Bestanden er opgjort ultimo")
 
 ```
@@ -611,7 +611,7 @@ Af figuren fremgår det yderligere, at der er en fortsat lille vækst i bestande
 data_fig_4 |> 
   filter(!is.na(DRIV_1), !is.na(UDV_ANTAL_BIL)) |> 
   hchart('column', hcaes(x = AAR, y = UDV_ANTAL_BIL, group = DRIV_1 ), borderColor = 0) |> 
-  hc_colors(c(trm_colors(c("groen", "orange", "blaa" ,"lyseblaa")))) |> 
+  hc_colors(c(trm_colors(c("groen", "orange", "blaa" ,"cyan")))) |> 
   hc_yAxis(title = list(text = "Antal (tusind)"),
            labels = list(
              formatter = JS("function() {
@@ -623,7 +623,7 @@ data_fig_4 |>
 
 ```
 
-Varebiler kan opdeles efter brug, afhængigt af om de bruges i husholdningen eller i erhvervet. I `r nyeste_aar` udgjorde erhvervet `r round(totalsalg[str_glue("I erh {nyeste_aar}")]/totalsalg[str_glue("I alt {nyeste_aar}")]*100,1)` pct. af alle nyregistreringerne, svarende til `r totalsalg[str_glue("I erh {nyeste_aar}")]` varebiler. Det er også primært varebiler i erhvervet, som omstilles til eldrift. I `r nyeste_aar`  udgjorde elvarebiler `r elsalg_and[str_glue("I hus {nyeste_aar}")]` pct. af nyregistreringerne i husholdningen, jf. figur 6.1, og `r elsalg_and[str_glue("I erh {nyeste_aar}")]` pct. af nyregistreringerne i erhvervet, jf. figur 6.2. Yderligere viser figur 6.1, at salget af dieselvarebiler erstattes af benzinvarebiler, hvor salget af benzinvarebiler udgjorde `r benzsalg_and["I hus 2020"]` pct. i 2020, mens det `r senest_md_tekst` udgjorde `r benzsalg_and[str_glue("I hus {senest_md_tekst}")]` pct.
+Varebiler kan opdeles efter brug, afhængigt af om de bruges i husholdningen eller i erhvervet. I `r nyeste_aar` udgjorde erhvervet `r round(totalsalg[str_glue("I erh {nyeste_aar}")]/totalsalg[str_glue("I alt {nyeste_aar}")]*100,1)` pct. af alle nyregistreringerne, svarende til `r totalsalg[str_glue("I erh {nyeste_aar}")]` varebiler. Det er også primært varebiler i erhvervet, som omstilles til eldrift. I `r nyeste_aar`  udgjorde elvarebiler `r elsalg_and[str_glue("I hus {nyeste_aar}")]` pct. af nyregistreringerne i husholdningen, jf. figur 6.1, og `r elsalg_and[str_glue("I erh {nyeste_aar}")]` pct. af nyregistreringerne i erhvervet, jf. figur 6.2. Yderligere viser figur 6.1, at salget af dieselvarebiler erstattes af benzinvarebiler, hvor salget af benzinvarebiler udgjorde `r benzsalg_and["I hus 2020"]` pct. i 2020, mens det i `r senest_md_tekst` udgjorde `r benzsalg_and[str_glue("I hus {senest_md_tekst}")]` pct.
 
 ```{r}
 #Figur 6.1 Husholdningens andel af nyregistreringer for varebiler

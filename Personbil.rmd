@@ -89,7 +89,6 @@ brugtvognsimport_data <- dir(sti) %>%
   distinct(DRIV, DATE_ST, DATE_SL, .keep_all = TRUE)  # Keep only the first occurrence of each combination
 
 
-
 # process_nyreg_data <- function(data, date_column) {
 #   data %>% 
 #     filter(DRIV != "Total") %>%
@@ -133,7 +132,6 @@ process_nyreg_data <- function(data, date_column) {
     mutate(A_NYREG = round(ANTAL / sum(ANTAL) * 100, 1), .by = "AAR") %>% 
     arrange(AAR)
 }
-
 
 
 
@@ -459,10 +457,10 @@ DST_tal <- data_bil_1 |>
          oprindelse = "DST")
 
 
-KF_tal <- fread(str_c(sti_kf, "/tidy_datasaet/", "bestand_kf25.csv")) %>% 
+KF_tal <- fread(str_c(sti_kf, "/tidy_datasaet/", "bestand_kf26.csv")) %>% 
   filter(type == "Personbiler", drivmiddel == "El") %>% 
   mutate(aar = as.numeric(aar),
-         x_axis = str_glue("Forventet {aar} (KF25)"),
+         x_axis = str_glue("Forventet {aar} (KF26)"),
          oprindelse = "KF") %>% 
   filter(aar %in% c(as.numeric(nyeste_aar), as.numeric(nyeste_aar) + 1)) %>%  # TODO: Adjust when KF25 data is available
   select(INDHOLD = vaerdi, x_axis, oprindelse)
@@ -670,7 +668,7 @@ list("Figur 1.1" = figur_1.1, "Figur 1.2" = figur_1.2, "Figur 2.1" = figur_2.1, 
 
 ```{r}
 
-farver <- c("groen",  "orange", "blaa", "gul", "graa") %>% factor(., levels = .) %>% sort(decreasing = T)
+farver <- c("groen",  "orange", "blaa", "cyan", "roed") %>% factor(., levels = .) %>% sort(decreasing = T)
 
 data_nysalg_2_stjerne <- data_nysalg_2 %>%
   mutate(AAR = ifelse(AAR == nyeste_aar, paste0(AAR, "*"), AAR)) %>% 
@@ -722,7 +720,7 @@ tekst_note_nyreg <- str_glue("Kilde: Danmarks Statistik<br>{stjerne_tekst}")
 
 ### Status på udviklingen af bestanden
 
-Siden 2022 er det samlede salg (Nyregistreringer + brugtimport) af personbiler steget i alle år og toppede i `r as.character(names(total_salg[which(total_salg==max(total_salg))]))`. I `r as.character(næst_nyeste_aar)` var det samlede salg `r total_salg[as.character(næst_nyeste_aar)]` biler, hvoraf elbiler udgjorde `r elbil_salg[as.character(næst_nyeste_aar)]` biler. I `r as.character(nyeste_aar)` er der samlet set solgt `r indv_aar_saml_el` elbiler.
+Siden 2022 er det samlede salg (nyregistreringer + brugtimport) af personbiler steget i alle år og toppede i `r as.character(names(total_salg[which(total_salg==max(total_salg))]))`. I `r as.character(næst_nyeste_aar)` var det samlede salg `r total_salg[as.character(næst_nyeste_aar)]` biler, hvoraf elbiler udgjorde `r elbil_salg[as.character(næst_nyeste_aar)]` biler. I `r as.character(nyeste_aar)` er der samlet set solgt `r indv_aar_saml_el` elbiler.
 
 ```{r}
 
@@ -850,7 +848,7 @@ data_figur_1_2 %>%
 
 Elbilers andel af det samlede antal nyregistreringer har været stigende siden 2019. I 2019 udgjorde elbiler `r pull(ebil_andel_nysalget, "2019") ` pct. af de samlede nyregistreringer.  I `r nyeste_aar` har elbiler udgjort `r pull(ebil_andel_nysalget, nyeste_aar) ` pct. af de samlede nyregistreringer, jf. figur 2.1. I `r format(ISOdate(2000, Nummer_sidste_md, 1), "%B")` udgjorde elbiler `r ebil_andel_nysalget[length(ebil_andel_nysalget)] %>% as.numeric()` pct. af nyregistreringerne. Hidtil er den højeste andel nyregistrerede elbiler set i `r Måned_max_EL_andel`. 
 
-Elbiler har generelt udgjort en større andel af brugtvognsimporten. I `r nyeste_aar` har elbiler hidtil udgjort `r brugt_import_andel_2026_EL` pct. af brugtvognimporten, jf. figur 2.2.
+Elbiler har generelt udgjort en større andel af brugtvognsimporten. I `r nyeste_aar` har elbiler hidtil udgjort `r brugt_import_andel_2026_EL` pct. af brugtvognsimporten, jf. figur 2.2.
 
 ```{r}
 
@@ -938,7 +936,7 @@ rest <- KF_tal$INDHOLD[[1]] - DST_tal$INDHOLD[[2]]
 
 ```
 
-Jævnfør Klimastatus og -fremskrivning 2025 vil der ved udgangen af 2026 være `r KF_tal$INDHOLD[[1]]` elbiler i Danmark. Bestanden pr. `r str_remove_all(DST_tal$x_axis[[2]], " observeret")` var `r DST_tal$INDHOLD[[2]]` elbiler, jf. figur 4. Differencen mellem det nuværende antal elbiler og det forventede antal elbiler ved udgangen af `r nyeste_aar` er således `r rest`.
+Jævnfør Klimastatus og -fremskrivning 2026 vil der ved udgangen af 2026 være `r KF_tal$INDHOLD[[1]]` elbiler i Danmark. Bestanden pr. `r str_remove_all(DST_tal$x_axis[[2]], " observeret")` var `r DST_tal$INDHOLD[[2]]` elbiler, jf. figur 4. Differencen mellem det nuværende antal elbiler og det forventede antal elbiler ved udgangen af `r nyeste_aar` er således `r rest`.
 
 ```{r}
 
@@ -972,7 +970,7 @@ bind_rows(DST_tal, KF_tal) |>
 
 Alt imens bestanden af elbiler er under udvikling, er bestanden af fossilbiler gået fra en nettotilgang på  `r tal_fos_2019` biler i de første `r month(max(dat_fig_3$DATE))` måneder af 2020 til en nettoafgang på `r abs(tal_fos_2023)` biler i de første `r month(max(dat_fig_3$DATE))` måneder af `r nyeste_aar`. Det skyldes særligt, at bestanden af dieselbiler har været faldende siden august 2020, mens bestanden af benzinbiler har været faldende siden august 2021.
 
-Af figuren fremgår det yderligere, at væksten i bestanden af plug-in-bybrid biler foreløbig er toppet i `r sprintf("%.0f", max_year_P_I_H)`.
+Af figuren fremgår det yderligere, at væksten i bestanden af plug-in-hybridbiler foreløbig er toppet i `r sprintf("%.0f", max_year_P_I_H)`.
 
 ```{r}
 
@@ -982,7 +980,7 @@ data_fig_4_stjerne <- data_fig_4 %>%
 data_fig_4 |> 
   filter(!is.na(DRIV_1), !is.na(UDV_ANTAL_BIL)) |> 
   hchart('column', hcaes(x = AAR, y = UDV_ANTAL_BIL, group = DRIV_1 ), borderColor = 0) |> 
-  hc_colors(c(trm_colors(c("groen", "orange", "blaa" ,"lyseblaa")))) |> 
+  hc_colors(c(trm_colors(c("groen", "orange", "blaa" ,"cyan")))) |> 
   hc_yAxis(title = list(text = "Antal (tusind)"),
            labels = list(
              formatter = JS("function() {
@@ -1006,7 +1004,7 @@ if(Nummer_sidste_md!="1") marker_v <- ", marker = FALSE"
 
 expr <- parse(text =str_c("map(sidste_par_aar$DRIV |> unique(), 
     ~{hchart(sidste_par_aar |> filter(DRIV == .x), 'line', hcaes(x = month.abb[MD], y = UDV_BIL, group = TYPE ), marker = F) |> 
-        hc_colors(c(trm_colors(c('graa', 'orange')))) |> 
+        hc_colors(c(trm_colors(c('cyan', 'orange')))) |> 
         hc_add_series(filter(dette_par_aar, DRIV == .x), type = 'line'" , marker_v,", hcaes(x = month.abb[MD], y = UDV_BIL), color = trm_colors(c('blaa')), name =max_aar) |> 
         hc_title(text = .x) |> 
         hc_yAxis(title = list(text = 'Antal'),

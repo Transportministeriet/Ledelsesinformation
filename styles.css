@@ -4,12 +4,21 @@
   margin: auto;
   font-family: Georgia;
 }
-
+ 
 body {
   font-family: Georgia;
   font-size: 12pt;
 }
-
+ 
 .highcharts-background {
-  fill: #EDF1F4;
+  fill:  #FFFFFF;
+}
+ 
+.highcharts-title {
+  border-bottom: 0.5pt solid #000000;
+  padding-bottom: 8px;
+  white-space: normal !important;
+  overflow: visible !important;
+  max-width: 100%;
+  box-sizing: border-box;
 }

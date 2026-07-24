@@ -1,5 +1,5 @@
 ---
-title: "Klimastatus og -fremskrivning 25"
+title: "Klimastatus og -fremskrivning 26"
 output: 
   flexdashboard::flex_dashboard:
     css: "styles_KF.css"
@@ -25,7 +25,7 @@ options(highcharter.lang = lang)
 sti <- "S:/TRM Databank/003 Klimafremskrivning/tidy_datasaet/"
 
 data <- dir(sti) %>% 
-  str_subset("kf25.csv") |> 
+  str_subset("kf26.csv") |> 
   (\(y) map(y, ~fread(str_c(sti,.x)) %>% 
               mutate(drivmiddel =case_when(drivmiddel =="Total"~"Drivmidler i alt",
                                            drivmiddel =="Øvrige"~"Oevrige",
@@ -35,9 +35,9 @@ data <- dir(sti) %>%
                              "Benzin", "Diesel", "Gas", "Oevrige",
                              "Drivmidler i alt")))
            )) %>% 
-     set_names(str_remove_all(y, "_kf25.csv")))()
+     set_names(str_remove_all(y, "_kf26.csv")))()
 
-farver <- c(trm_colors(c("groen",  "orange", "blaa", "gul", "graa")), "#d49e02", "#0087b3") 
+farver <- c(trm_colors(c("groen",  "orange", "blaa", "cyan", "roed")), "#F8AB95", "#469CB9") 
 names(farver) <- c("El", "Plug-in Hybrid", "Diesel","Benzin", "Oevrige", "Brint", "Gas")
 
 
@@ -51,11 +51,11 @@ til_fig_udl <- data[["udledninger"]] %>%
                              "Lufttransport, indenrigs",  "Grønland & Færøerne",
                              "Øvrige Transport"))))
 
-farver_udl <- c( "#0087b3",trm_colors(c( "blaa", "orange", "groen", "gul", "lyseblaa")),
+farver_udl <- c( "#469CB9",trm_colors(c( "blaa", "orange", "groen", "cyan", "roed")),
                 trm_colors("blaa"),
                 trm_colors("blaa"),
                 trm_colors(c("blaa", "orange")),
-                trm_colors(c("blaa", "graa")))
+                trm_colors(c("blaa", "cyan")))
                 
 names(farver_udl) <- c( "Grænsehandel","Personbiler", "Varebiler", "Lastbiler","Busser","Motorcykler",
                              "Banetransport",
@@ -69,7 +69,7 @@ til_fig_udl_tot <- data[["udledninger"]] %>%
   mutate(sektor = factor(sektor, levels = rev(c( "Vejtransport", "Banetransport", "Luftfart", "Søfart", "Øvrige transport" )))) %>%
   arrange(sektor, aar)
 
-farver_udl_tot <- trm_colors(c("groen", "gul","graa", "orange", "blaa"))
+farver_udl_tot <- trm_colors(c("groen", "roed","cyan", "orange", "blaa"))
   
 
 til_fig <- map_dfr(c("bestand", "salg"), ~data[[.x]] %>% 
@@ -181,9 +181,9 @@ Fremskrivningen baserer sig på middelrette skøn og er behæftet med generel us
 
 Den næste udgave, Klimastatus og -fremskrivning 2026 (KF26), forventes offentliggjort ultimo april 2026 med den endelige version før sommeren 2026.
 
-[Link til KF25](https://www.kefm.dk/klima/klimastatus-og-fremskrivning/klimastatus-og-fremskrivning-2025) 
+[Link til KF26](https://www.kefm.dk/klima/klimastatus-og-fremskrivning/klimastatus-og-fremskrivning-2026) 
 
-Ønskes adgang til alle datasættene kan de tilgås her: <b> S:\\TRM Databank\\003 Klimafremskrivning\\KF25 Transport - dataark.xlsx </b>
+Ønskes adgang til alle datasættene kan de tilgås her: <b> S:\\TRM Databank\\003 Klimafremskrivning\\KF26 Transport - dataark.xlsx </b>
 
 
 `r fa("temperature-arrow-down")` Udledninger
@@ -193,7 +193,7 @@ Den næste udgave, Klimastatus og -fremskrivning 2026 (KF26), forventes offentli
 <br>
 Transportsektoren udgør 32 pct. af Danmarks CO₂-udledninger i 2023 og forventes at stå for 30 pct. af de samlede udledninger i 2030. Der fremskrives reduktioner i udledningen for transportsektoren på 47 pct. fra 2023 til 2030. Vejtransport er den største kilde, men reduktioner vil ske gennem elektrificering, øget energieffektivitet og brug af bæredygtige drivmidler. Selvom transportaktiviteterne stiger, bidrager den teknologiske udvikling til at begrænse udledningerne. Luft- og søfart følger samme tendens med en gradvis omstilling til mere bæredygtige drivmidler.
 
-Tallene kan genfindes i Klimastatus og -fremskrivning 2025 kapitel 22 om transport, [Link](https://www.kefm.dk/Media/638815947445107820/Kapitel%2022%20Transport.pdf)
+Tallene kan genfindes i Klimastatus og -fremskrivning 2026 kapitel 22 om transport, [Link](https://www.kefm.dk/Media/638815947445107820/Kapitel%2022%20Transport.pdf)
 
 
 Row {data-height=auto}
@@ -251,7 +251,7 @@ Bestanden af køretøjer i Danmark har udviklet sig markant i de seneste år sam
 
 Fremskrivningerne frem mod 2050 peger på en fortsat omstilling mod bæredygtige drivmidler, hvor elbiler vil spille en større rolle og reducere transportsektorens CO₂-udledningerne markant. 
 
-Tallene kan genfindes i Klimastatus og -fremskrivning 2025 kapitel 22 om transport, [Link](https://www.kefm.dk/Media/638815947445107820/Kapitel%2022%20Transport.pdf) 
+Tallene kan genfindes i Klimastatus og -fremskrivning 2026 kapitel 22 om transport, [Link](https://www.kefm.dk/Media/638815947445107820/Kapitel%2022%20Transport.pdf) 
 
 Row
 -------------------------------------
@@ -294,7 +294,7 @@ For varebiler sker elektrificeringen langsommere end personbiler. I 2023 udgjord
 
 For lastbiler udgør el endnu kun 9 pct. af tilgangen i 2023, men salget ventes at stige frem mod 2030 drevet af skærpede EU-krav, teknologiudvikling og kilometerbaseret vejafgift på lastbiler. Den hurtigste omstilling ses for busser, hvor over halvdelen af salget af busser var eldrevne i 2024.
     
-Tallene kan genfindes i Klimastatus og -fremskrivning 2025 kapitel 22 om transport, [Link](https://www.kefm.dk/Media/638815947445107820/Kapitel%2022%20Transport.pdf) 
+Tallene kan genfindes i Klimastatus og -fremskrivning 2026 kapitel 22 om transport, [Link](https://www.kefm.dk/Media/638815947445107820/Kapitel%2022%20Transport.pdf) 
 
 Row
 -------------------------------------
