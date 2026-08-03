@@ -1,7 +1,7 @@
 /* General body styling */
 body {
     font-family: 'Lato', sans-serif;
-    background-color: #f4f4f4;
+    background-color: #ffffff;
     color: #222;  /* Darker text */
     margin: 0;
 }
@@ -140,4 +140,10 @@ button {
 
 button:hover {
     background-color: #003847;
+}
+
+/* Top banner color */
+.navbar-inverse {
+    background-color: #002447;
+    border-color: #002447;
 }

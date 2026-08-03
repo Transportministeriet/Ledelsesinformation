@@ -1,0 +1,559 @@
+---
+title: "Luftfartsstatistik - operationer, passagerer og udledning"
+output: 
+  flexdashboard::flex_dashboard:
+    css: "styles_KF.css"
+    orientation: rows
+    vertical_layout: fill
+---
+
+```{r include=FALSE}
+
+library(tidyverse)
+library(flexdashboard)
+library(data.table)
+library(highcharter)
+library(TRMvisual)
+library(fontawesome)
+
+knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message = FALSE)
+
+lang <- getOption("highcharter.lang")
+lang$decimalPoint <- ","
+lang$thousandsSep <- "."
+lang$numericSymbols <- highcharter::JS("null")
+options(highcharter.lang = lang)
+
+# ----- PARAMETRE -----
+
+sti_luft <- "S:/CAKL/Projekter/8. Luftfart/"
+sti_kf   <- "S:/TRM Databank/003 Klimafremskrivning/tidy_datasaet/"
+
+# Basisår for indeksering
+basis_aar_oensket <- 2019L
+
+# Grænse for "store lufthavne" (passagerer i basisåret)
+stor_graense <- 1e6
+
+# Emissionsfaktorer for fly, jf. TE
+flyfaktor <- c(jet = 21157.741, turboprop = 7764.270)
+flysaeder <- c(jet = 190,       turboprop = 71)
+
+# Flytype pr. lufthavn. Datagrundlaget indeholder IKKE flytype - redigerbar antagelse. Ret her hvis vi får bedre viden om flådesammensætningen.
+flytype_lufthavn <- c(
+  "København (Kastrup)"          = "jet",
+  "Billund"                       = "jet",
+  "Aalborg"                       = "jet",
+  "Aarhus"                        = "jet",
+  "Bornholm (Rønne)"             = "turboprop",
+  "Sønderborg"                   = "turboprop"
+)
+
+# Lufthavne udelades af udledningsberegningen hvis gennemsnittet er under denne grænse - de er domineret af offshore-helikopter, skole- og privatflyvning, hvor passagerer pr. operation ikke siger noget om ruteflyenes udnyttelse.
+min_pax_pr_operation <- 10
+
+# ----- indlæsning -------
+
+fil_luft <- dir(sti_luft, pattern = "Luftfart_BLTM", full.names = TRUE)
+if (length(fil_luft) == 0) stop("Fandt ingen fil med 'Luftfart_BLTM' i: ", sti_luft)
+fil_luft <- fil_luft[order(file.mtime(fil_luft), decreasing = TRUE)][1]
+
+raa <- readr::read_delim(
+  fil_luft,
+  delim     = ",",
+  col_types = readr::cols(.default = readr::col_character()),
+  locale    = readr::locale(encoding = "UTF-8"),
+  trim_ws   = TRUE
+)
+
+find_col <- function(df, moenster) {
+  hit <- names(df)[stringr::str_detect(names(df), stringr::regex(moenster, ignore_case = TRUE))]
+  if (length(hit) == 0) NA_character_ else hit[1]
+}
+
+find_aar_col <- function(df) {
+  kandidat <- names(df)[map_lgl(df, ~{
+    v <- suppressWarnings(as.integer(stringr::str_squish(.x)))
+    all(!is.na(v)) && all(v >= 2000 & v <= 2100)
+  })]
+  if (length(kandidat) == 0) NA_character_ else kandidat[1]
+}
+
+kol <- list(
+  lufthavn  = find_col(raa, "lufthavn"),
+  aar       = find_aar_col(raa),
+  maaned    = find_col(raa, "month|m.ned"),
+  handling  = find_col(raa, "handling"),
+  pax       = find_col(raa, "passager"),
+  operation = find_col(raa, "operation")
+)
+
+if (any(is.na(unlist(kol)))) {
+  stop("Kunne ikke identificere alle kolonner. Fundne kolonner: ",
+       paste(names(raa), collapse = " | "))
+}
+
+dk_tal <- function(x) {
+  readr::parse_number(x, locale = readr::locale(decimal_mark = ",", grouping_mark = "."))
+}
+
+# ----- oprydning --------
+
+luft_raa <- raa |>
+  transmute(
+    lufthavn_raa = stringr::str_squish(.data[[kol$lufthavn]]),
+    aar          = as.integer(.data[[kol$aar]]),
+    maaned       = as.integer(stringr::str_squish(.data[[kol$maaned]])),
+    retning      = case_when(
+      stringr::str_detect(tolower(.data[[kol$handling]]), "^afg") ~ "Afgang",
+      stringr::str_detect(tolower(.data[[kol$handling]]), "^ank") ~ "Ankomst",
+      TRUE ~ NA_character_
+    ),
+    passagerer   = dk_tal(.data[[kol$pax]]),
+    operationer  = dk_tal(.data[[kol$operation]])
+  )
+
+# Datakvalitet: tomme og negative passagerfelter forekommer i filen. De sættes til NA og tælles, så de kan oplyses i dashboardet frem for stiltiende at indgå som nul.
+n_tomme    <- sum(is.na(luft_raa$passagerer))
+n_negative <- sum(luft_raa$passagerer < 0, na.rm = TRUE)
+
+navne <- c(
+  "KOBENHAVN"             = "København (Kastrup)",
+  "BILLUND"               = "Billund",
+  "AALBORG"               = "Aalborg",
+  "AARHUS"                = "Aarhus",
+  "BORNHOLM/RONNE"        = "Bornholm (Rønne)",
+  "MIDTJYLLANDS LUFTHAVN" = "Midtjyllands Lufthavn (Karup)",
+  "ESBJERG"               = "Esbjerg",
+  "SONDERBORG"            = "Sønderborg",
+  "ROSKILDE"              = "Roskilde"
+)
+
+luft <- luft_raa |>
+  filter(!is.na(aar), !is.na(maaned), !is.na(retning)) |>
+  mutate(
+    lufthavn    = coalesce(unname(navne[lufthavn_raa]), lufthavn_raa),
+    passagerer  = if_else(passagerer < 0, NA_real_, passagerer),
+    operationer = coalesce(operationer, 0)
+  )
+
+# ---- komplette år ----
+
+aar_status <- luft |>
+  summarise(n_mdr = n_distinct(maaned), .by = aar)
+
+aar_komplette <- aar_status |> filter(n_mdr == 12) |> pull(aar) |> sort()
+aar_delvise   <- aar_status |> filter(n_mdr < 12)  |> pull(aar) |> sort()
+
+seneste_aar <- max(luft$aar)
+seneste_mdr <- luft |> filter(aar == seneste_aar) |> pull(maaned) |> max()
+
+# Ufuldstændige år markeres med stjerne i figurerne. 
+stjerne_aar <- function(x) if_else(x %in% aar_delvise, str_c(x, "*"), as.character(x))
+
+aar_alle          <- sort(unique(luft$aar))
+aar_niveau        <- stjerne_aar(aar_alle)
+seneste_komplet   <- max(aar_komplette)
+seneste_aar_label <- stjerne_aar(seneste_aar)
+
+note_periode <- str_glue(
+  "Kilde: Luftfartsstatistikken. Seneste observation: {seneste_mdr}/{seneste_aar}. ",
+  if (length(aar_delvise) > 0)
+    str_c("År markeret med * er ufuldstændige og dækker kun januar til og med måned ",
+          seneste_mdr, ". Niveauet er derfor ikke sammenligneligt med de hele år. ",
+          "Fanen Passagerudvikling viser en periodesammenlignelig opgørelse.")
+  else ""
+)
+
+# ---- aggregat ----
+# Alle år indgår, også de ufuldstændige.
+
+aar_luft <- luft |>
+  summarise(passagerer  = sum(passagerer, na.rm = TRUE),
+            operationer = sum(operationer),
+            .by = c(lufthavn, aar)) |>
+  mutate(aar_label = factor(stjerne_aar(aar), levels = aar_niveau),
+         komplet   = aar %in% aar_komplette)
+
+# Basisåret for indeksering skal være et helt år.
+basis_aar <- if (basis_aar_oensket %in% aar_komplette) basis_aar_oensket else min(aar_komplette)
+
+store_lufthavne <- aar_luft |>
+  filter(aar == basis_aar, passagerer >= stor_graense) |>
+  pull(lufthavn)
+
+aar_luft <- aar_luft |>
+  mutate(gruppe = if_else(lufthavn %in% store_lufthavne, "Store", "Øvrige"))
+
+# Linjestykket ind i det ufuldstændige år tegnes stiplet, så bruddet i sammenligneligheden er synligt
+zone_x <- match(max(aar_komplette), aar_alle) - 1
+zoner  <- list(list(value = zone_x), list(dashStyle = "ShortDash"))
+
+# --- farver ---
+
+farve_palet <- c(
+  trm_colors(c("blaa", "orange", "groen", "cyan", "roed"), lys = 0),
+  trm_colors(c("blaa", "orange", "groen", "cyan", "roed"), lys = 1),
+  trm_colors(c("blaa", "orange", "groen", "cyan", "roed"), lys = 2)
+)
+farver_for <- function(x) rep_len(farve_palet, length(unique(x)))
+
+# --- KF26-data ---
+
+kf <- tryCatch({
+  dir(sti_kf) |>
+    str_subset("kf26.csv") |>
+    (\(y) map(y, ~fread(str_c(sti_kf, .x))) |> set_names(str_remove_all(y, "_kf26.csv")))()
+}, error = function(e) NULL)
+
+udl_luft <- if (!is.null(kf)) {
+  kf[["udledninger"]] |>
+    filter(sektor == "Luftfart", type != "Total",
+           str_detect(type, "ikke defineret", negate = TRUE)) |>
+    arrange(type, aar)
+} else NULL
+
+
+# ---- emissionsfaktorer pr. sædekilometer ------
+# Kilde: TE. Indsat manuelt Genindlæs ved ny version.
+
+ef <- tibble::tribble(
+  ~transportform,               ~kategori,   ~co2,      ~ch4,  ~n2o,  ~kapacitet,
+  "Elcykel",                    "Cykel",        1.221,  0.001, 0.000,   1,
+  "Personbil, benzin",          "Vej",        138.243,  0.008, 0.001,   4,
+  "Personbil, diesel",          "Vej",        141.564,  0.000, 0.006,   4,
+  "Bus, diesel (gns.)",         "Vej",        799.559,  0.013, 0.034,  46,
+  "Passagertog, el (gns.)",     "Bane",      1781.524,  0.697, 0.026, 222,
+  "Passagertog, diesel (gns.)", "Bane",      3130.680,  0.072, 0.095, 143,
+  "Passagerfly, jet (gns.)",    "Luftfart", 21157.741,  0.000, 0.000, 190,
+  "Passagerfly, turboprop",     "Luftfart",  7764.270,  0.000, 0.000,  71,
+  "Færge, konventionel",       "Søfart",  78461.307,  0.000, 0.000, 328,
+  "Færge, LNG",                "Søfart",  57474.914,  0.000, 0.000, 600
+) |>
+  mutate(co2e_km      = co2 + 25 * ch4 + 298 * n2o,
+         co2e_saedekm = co2e_km / kapacitet) |>
+  arrange(co2e_saedekm)
+
+farver_ef <- c("Luftfart" = trm_colors("orange"),
+               "Vej"      = trm_colors("blaa"),
+               "Bane"     = trm_colors("groen"),
+               "Søfart"  = trm_colors("cyan"),
+               "Cykel"    = trm_colors("blaa", lys = 2))
+
+```
+
+```{r}
+tags$style("
+  .chart-container {
+    width: 100% !important;
+  }
+")
+```
+
+
+`r fa("file-lines")` Beskrivelse
+=====================================
+
+**Formål**
+
+Oversigten viser udviklingen i flyoperationer og passagertal i de danske lufthavne, der indberetter til luftfartsstatistikken, samt et sammenligningsgrundlag for luftfartens klimaaftryk.
+
+**Datagrundlag**
+
+* **Luftfartsstatistikken** opdateres månedligt. Statistikken indeholder pr. lufthavn, år, måned og retning (afgang/ankomst) antal passagerer og antal operationer.
+* **Klimastatus og -fremskrivning 2026 (KF26)** til udledninger fra luftfart i den nationale opgørelse.
+* **Transportøkonomiske Enhedspriser** til emissionsfaktorer på tværs af transportformer.
+
+
+**Vigtige forbehold**
+
+1. **KF-udledningerne dækker kun indenrigsluftfart** samt trafik til Grønland og Færøerne. International luftfart indgår ikke i den nationale klimaopgørelse. Passagertallene i luftfartsstatistikken er derimod domineret af international trafik. De to opgørelser kan derfor ikke divideres med hinanden.
+2. **Belægningsgrad kan ikke beregnes af datagrundlaget.** Filen indeholder ingen sædekapacitet. Der vises i stedet *passagerer pr. operation*. Udledning pr. passagerkilometer er beregnet ved at kombinere dette tal med en antagelse om flytype - se fanen Udledning for forbeholdene.
+3. **Filen indeholder ingen flydistancer.** Der kan derfor ikke beregnes passagerkilometer eller samlet udledning pr. lufthavn.
+
+
+`r fa("plane-departure")` Flyoperationer
+=====================================
+
+**Indledning**
+<br>
+Flyoperationer dækker starter og landinger. København vises for sig, da lufthavnen står for omtrent to tredjedele af alle operationer og ellers gør de øvrige lufthavne ulæselige. Bemærk at Roskilde og Esbjerg har mange operationer i forhold til deres passagertal, da Roskilde er domineret af privat- og skoleflyvning og Esbjerg af offshore-helikoptertrafik.
+
+Det igangværende år indgår løbende og er markeret med stjerne, fx `r seneste_aar_label`. Det sidste linjestykke er stiplet, fordi året kun dækker `r seneste_mdr` måneder og derfor ligger lavere end et helt år - faldet er en periodeeffekt, ikke en udvikling.
+
+Row
+-------------------------------------
+
+```{r}
+
+d <- aar_luft |> filter(lufthavn != "København (Kastrup)") |> arrange(lufthavn, aar)
+
+d |>
+  hchart("line", hcaes(x = aar_label, y = operationer, group = lufthavn),
+         marker = list(enabled = FALSE)) |>
+  hc_plotOptions(series = list(zoneAxis = "x", zones = zoner)) |>
+  hc_colors(farver_for(d$lufthavn)) |>
+  hc_yAxis(title = list(text = "Antal operationer")) |>
+  hc_xAxis(title = list(text = "")) |>
+  hc_tooltip(shared = TRUE, pointFormat = " <b>{series.name}</b>: {point.y:,.0f} operationer <br>") |>
+  trm_hc_format(titel = "<b>Flyoperationer: alle lufthavne undtagen København",
+                note = note_periode,
+                download_fil_navn = "operationer_oevrige")
+
+```
+
+```{r}
+
+d <- aar_luft |> filter(lufthavn == "København (Kastrup)") |> arrange(aar)
+
+d |>
+  hchart("line", hcaes(x = aar_label, y = operationer), marker = list(enabled = FALSE)) |>
+  hc_plotOptions(series = list(zoneAxis = "x", zones = zoner)) |>
+  hc_colors(trm_colors("blaa")) |>
+  hc_yAxis(title = list(text = "Antal operationer")) |>
+  hc_xAxis(title = list(text = "")) |>
+  hc_legend(enabled = FALSE) |>
+  hc_tooltip(pointFormat = " <b>{point.y:,.0f}</b> operationer <br>") |>
+  trm_hc_format(titel = "<b>Flyoperationer: København (Kastrup)",
+                note = note_periode,
+                download_fil_navn = "operationer_kastrup")
+
+```
+
+Row
+-------------------------------------
+
+```{r}
+
+maaned_dk <- c("Januar", "Februar", "Marts", "April", "Maj", "Juni",
+               "Juli", "August", "September", "Oktober", "November", "December")
+
+d <- luft |>
+  filter(aar %in% aar_komplette) |>
+  summarise(operationer = sum(operationer), .by = c(aar, maaned)) |>
+  summarise(operationer = mean(operationer), .by = maaned) |>
+  arrange(maaned) |>
+  mutate(maaned_label = factor(maaned_dk[maaned], levels = maaned_dk))
+
+d |>
+  hchart("column", hcaes(x = maaned_label, y = operationer)) |>
+  hc_colors(trm_colors("blaa")) |>
+  hc_yAxis(title = list(text = "Gns. antal operationer pr. måned")) |>
+  hc_xAxis(title = list(text = "")) |>
+  hc_legend(enabled = FALSE) |>
+  hc_tooltip(pointFormat = " <b>{point.y:,.0f}</b> operationer <br>") |>
+  trm_hc_format(titel = "<b>Sæsonmønster: alle lufthavne samlet",
+                note = str_glue("Gennemsnit over hele år ({min(aar_komplette)}-{seneste_komplet}). Ufuldstændige år indgår ikke, da de ellers ville skævvride sæsonprofilen."),
+                download_fil_navn = "saeson_operationer")
+
+```
+
+
+`r fa("chart-line")` Passagerudvikling
+=====================================
+
+**Indledning**
+<br>
+Indekseringen med `r basis_aar` = 100 gør det muligt at sammenligne genopretningen efter covid-19 på tværs af lufthavne med meget forskellig størrelse. Det igangværende år er markeret med stjerne og tegnet stiplet.
+
+Den nederste figur sammenligner de første `r seneste_mdr` måneder af hvert år, så det igangværende år kan holdes op mod tidligere år på lige vilkår.
+
+Row
+-------------------------------------
+
+```{r}
+
+basis <- aar_luft |>
+  filter(aar == basis_aar, passagerer > 0) |>
+  select(lufthavn, basis_pax = passagerer)
+
+d <- aar_luft |>
+  inner_join(basis, by = "lufthavn") |>
+  mutate(indeks = 100 * passagerer / basis_pax) |>
+  arrange(lufthavn, aar)
+
+d |>
+  hchart("line", hcaes(x = aar_label, y = indeks, group = lufthavn),
+         marker = list(enabled = FALSE)) |>
+  hc_plotOptions(series = list(zoneAxis = "x", zones = zoner)) |>
+  hc_colors(farver_for(d$lufthavn)) |>
+  hc_yAxis(title = list(text = str_glue("Indeks ({basis_aar} = 100)")),
+           plotLines = list(list(value = 100, width = 1, color = "#000000", dashStyle = "Dash"))) |>
+  hc_xAxis(title = list(text = "")) |>
+  hc_tooltip(shared = TRUE, pointFormat = " <b>{series.name}</b>: {point.y:,.1f} <br>") |>
+  trm_hc_format(titel = str_glue("<b>Passagertal, indeks {basis_aar} = 100"),
+                note = note_periode,
+                download_fil_navn = "indeks_passagerer")
+
+```
+
+Row
+-------------------------------------
+
+```{r}
+
+d <- luft |>
+  filter(maaned <= seneste_mdr) |>
+  summarise(passagerer = sum(passagerer, na.rm = TRUE), .by = c(lufthavn, aar)) |>
+  # her er alle år lige lange, så der er ingen stjerne på etiketten
+  mutate(aar_txt = factor(as.character(aar), levels = as.character(aar_alle))) |>
+  arrange(lufthavn, aar)
+
+d |>
+  hchart("column", hcaes(x = aar_txt, y = passagerer, group = lufthavn)) |>
+  hc_plotOptions(series = list(stacking = "normal")) |>
+  hc_colors(farver_for(d$lufthavn)) |>
+  hc_yAxis(title = list(text = "Antal passagerer")) |>
+  hc_xAxis(title = list(text = "")) |>
+  hc_legend(reversed = TRUE) |>
+  hc_tooltip(shared = TRUE,
+             pointFormat = " <b>{series.name}</b>: {point.y:,.0f} ({point.percentage:.1f} pct.) <br>") |>
+  trm_hc_format(
+    titel = str_glue("<b>Passagerer i årets første {seneste_mdr} måneder"),
+    note = str_glue("Sammenlignelig periode på tværs af år: januar til og med måned {seneste_mdr}."),
+    download_fil_navn = "passagerer_aar_til_dato")
+
+```
+
+
+`r fa("users")` Aktivitet
+=====================================
+
+**Indledning**
+<br>
+Passagerer pr. operation angiver, hvor mange passagerer der i gennemsnit er om bord pr. start eller landing. Roskilde og Esbjerg ligger meget lavt, fordi deres operationer overvejende er privat-, skole- og helikopterflyvning uden ruteflyets passagertal.
+
+Row
+-------------------------------------
+
+```{r}
+
+d <- aar_luft |> arrange(lufthavn, aar)
+
+d |>
+  hchart("area", hcaes(x = aar_label, y = passagerer, group = lufthavn),
+         marker = FALSE, borderColor = 0) |>
+  hc_plotOptions(series = list(stacking = "normal", lineWidth = 0)) |>
+  hc_colors(farver_for(d$lufthavn)) |>
+  hc_yAxis(title = list(text = "Antal passagerer")) |>
+  hc_xAxis(title = list(text = "")) |>
+  hc_legend(reversed = TRUE) |>
+  hc_tooltip(shared = TRUE,
+             pointFormat = " <b>{series.name}</b>: {point.y:,.0f} ({point.percentage:.1f} pct.) <br>") |>
+  trm_hc_format(titel = "<b>Passagerer fordelt på lufthavne",
+                note = note_periode,
+                download_fil_navn = "passagerer_lufthavne")
+
+```
+
+Row
+-------------------------------------
+
+```{r}
+
+# Forholdstal påvirkes ikke af, at året er kortere, så her bruges det seneste år overhovedet - også når det er ufuldstændigt.
+
+d <- aar_luft |>
+  filter(aar == seneste_aar, operationer > 0) |>
+  mutate(pax_pr_op = passagerer / operationer) |>
+  arrange(desc(pax_pr_op)) |>
+  mutate(lufthavn = factor(lufthavn, levels = rev(lufthavn)))
+
+d |>
+  hchart("bar", hcaes(x = lufthavn, y = pax_pr_op)) |>
+  hc_colors(trm_colors("blaa")) |>
+  hc_yAxis(title = list(text = "Passagerer pr. operation")) |>
+  hc_xAxis(title = list(text = "")) |>
+  hc_legend(enabled = FALSE) |>
+  hc_tooltip(pointFormat = " <b>{point.y:,.1f}</b> passagerer pr. operation <br>") |>
+  trm_hc_format(
+    titel = str_glue("<b>Passagerer pr. operation, {seneste_aar_label}"),
+    note = "Aktivitetsmål: ikke en belægningsgrad. Sædekapacitet indgår ikke i datagrundlaget.",
+    download_fil_navn = "pax_pr_operation")
+
+```
+
+
+`r fa("temperature-arrow-down")` Udledning
+=====================================
+
+**Indledning**
+<br>
+Første figur sammenligner udledningen pr. sædekilometer på tværs af transportformer, beregnet som CO2 + 25 x CH4 + 298 x N2O (IPCC AR4) divideret med den kapacitet, TE forudsætter. Ved lavere belægning stiger udledningen pr. passager tilsvarende. 
+
+Anden figur omregner til udledning pr. passagerkilometer ved at dividere flyets udledning pr. flykilometer med det faktiske antal passagerer pr. operation. Lufthavne med under `r min_pax_pr_operation` passagerer pr. operation er udeladt, da deres trafik ikke er ruteflyvning
+
+
+Row
+-------------------------------------
+
+```{r}
+
+d <- ef |>
+  mutate(farve = unname(farver_ef[kategori]),
+         transportform = factor(transportform, levels = transportform))
+
+d |>
+  hchart("bar", hcaes(x = transportform, y = co2e_saedekm)) |>
+  hc_plotOptions(series = list(colorByPoint = TRUE)) |>
+  hc_colors(d$farve) |>
+  hc_legend(enabled = FALSE) |>
+  hc_yAxis(title = list(text = "g CO2-e pr. sædekilometer")) |>
+  hc_xAxis(title = list(text = "")) |>
+  hc_tooltip(pointFormat = " <b>{point.y:,.1f}</b> g CO2-e pr. sædekm <br>") |>
+  trm_hc_format(
+    titel = "<b>Udledning pr. sædekilometer på tværs af transportformer",
+    note = "Kilde: Transportøkonomiske Enhedspriser. Basisår 2020 for vej, fly og søfart, 2016 for bane. Faktorerne er ikke fremskrevet.",
+    download_fil_navn = "emissionsfaktorer_saedekm")
+
+```
+
+Row
+-------------------------------------
+
+```{r}
+
+d <- aar_luft |>
+  filter(aar == seneste_aar, operationer > 0) |>
+  mutate(pax_pr_op = passagerer / operationer,
+         flytype   = unname(flytype_lufthavn[lufthavn])) |>
+  filter(!is.na(flytype), pax_pr_op >= min_pax_pr_operation) |>
+  mutate(co2e_pr_pkm = unname(flyfaktor[flytype]) / pax_pr_op) |>
+  arrange(co2e_pr_pkm) |>
+  mutate(lufthavn = factor(lufthavn, levels = lufthavn))
+
+d |>
+  hchart("bar", hcaes(x = lufthavn, y = co2e_pr_pkm)) |>
+  hc_colors(trm_colors("orange")) |>
+  hc_yAxis(title = list(text = "g CO2-e pr. passagerkilometer")) |>
+  hc_xAxis(title = list(text = "")) |>
+  hc_legend(enabled = FALSE) |>
+  hc_tooltip(pointFormat = " <b>{point.y:,.0f}</b> g CO2-e pr. passagerkm <br>") |>
+  trm_hc_format(
+    titel = str_glue("<b>Indikativ udledning pr. passagerkilometer, {seneste_aar_label}"),
+    note = "Beregnet som flyets udledning pr. flykilometer divideret med passagerer pr. operation.",
+    download_fil_navn = "udledning_pr_pkm")
+
+```
+
+```{r}
+
+if (!is.null(udl_luft)) {
+  udl_luft |>
+    hchart("area", hcaes(x = aar, y = vaerdi / 1000000, group = type),
+           marker = FALSE, borderColor = 0) |>
+    hc_plotOptions(series = list(stacking = "normal", lineWidth = 0)) |>
+    hc_colors(trm_colors(c("orange", "blaa"))) |>
+    hc_yAxis(title = list(text = "Mio. ton CO2-e")) |>
+    hc_xAxis(title = list(text = "")) |>
+    hc_legend(reversed = TRUE) |>
+    hc_tooltip(shared = TRUE, pointFormat = " <b>{series.name}</b>: {point.y:,.1f} mio. t <br>") |>
+    trm_hc_format(
+      titel = "<b>Udledninger fra luftfart i den nationale opgørelse (KF26)",
+      note = "Dækker kun indenrigsluftfart samt Grønland og Færøerne. International luftfart indgår ikke. Tallene er afrundet til 0,1 mio. ton.",
+      download_fil_navn = "kf26_luftfart")
+} else {
+  htmltools::HTML("<p>KF26-datasættet kunne ikke indlæses fra netværksdrevet.</p>")
+}
+
+```
