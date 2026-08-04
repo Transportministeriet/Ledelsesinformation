@@ -26,7 +26,7 @@ options(highcharter.lang = lang)
 
 # ----- PARAMETRE -----
 
-sti_luft <- "S:/CAKL/Projekter/8. Luftfart/"
+sti_luft <- "S:/CAKL/Projekter/4. Tværgående analyser/Vidensbank/Data/"
 sti_kf   <- "S:/TRM Databank/003 Klimafremskrivning/tidy_datasaet/"
 
 # Basisår for indeksering
@@ -214,32 +214,6 @@ udl_luft <- if (!is.null(kf)) {
 } else NULL
 
 
-# ---- emissionsfaktorer pr. sædekilometer ------
-# Kilde: TE. Indsat manuelt Genindlæs ved ny version.
-
-ef <- tibble::tribble(
-  ~transportform,               ~kategori,   ~co2,      ~ch4,  ~n2o,  ~kapacitet,
-  "Elcykel",                    "Cykel",        1.221,  0.001, 0.000,   1,
-  "Personbil, benzin",          "Vej",        138.243,  0.008, 0.001,   4,
-  "Personbil, diesel",          "Vej",        141.564,  0.000, 0.006,   4,
-  "Bus, diesel (gns.)",         "Vej",        799.559,  0.013, 0.034,  46,
-  "Passagertog, el (gns.)",     "Bane",      1781.524,  0.697, 0.026, 222,
-  "Passagertog, diesel (gns.)", "Bane",      3130.680,  0.072, 0.095, 143,
-  "Passagerfly, jet (gns.)",    "Luftfart", 21157.741,  0.000, 0.000, 190,
-  "Passagerfly, turboprop",     "Luftfart",  7764.270,  0.000, 0.000,  71,
-  "Færge, konventionel",       "Søfart",  78461.307,  0.000, 0.000, 328,
-  "Færge, LNG",                "Søfart",  57474.914,  0.000, 0.000, 600
-) |>
-  mutate(co2e_km      = co2 + 25 * ch4 + 298 * n2o,
-         co2e_saedekm = co2e_km / kapacitet) |>
-  arrange(co2e_saedekm)
-
-farver_ef <- c("Luftfart" = trm_colors("orange"),
-               "Vej"      = trm_colors("blaa"),
-               "Bane"     = trm_colors("groen"),
-               "Søfart"  = trm_colors("cyan"),
-               "Cykel"    = trm_colors("blaa", lys = 2))
-
 ```
 
 ```{r}
@@ -256,20 +230,17 @@ tags$style("
 
 **Formål**
 
-Oversigten viser udviklingen i flyoperationer og passagertal i de danske lufthavne, der indberetter til luftfartsstatistikken, samt et sammenligningsgrundlag for luftfartens klimaaftryk.
+Oversigten viser udviklingen i flyoperationer og passagertal i de danske lufthavne, der indberetter til luftfartsstatistikken.
 
 **Datagrundlag**
 
 * **Luftfartsstatistikken** opdateres månedligt. Statistikken indeholder pr. lufthavn, år, måned og retning (afgang/ankomst) antal passagerer og antal operationer.
-* **Klimastatus og -fremskrivning 2026 (KF26)** til udledninger fra luftfart i den nationale opgørelse.
-* **Transportøkonomiske Enhedspriser** til emissionsfaktorer på tværs af transportformer.
 
 
 **Vigtige forbehold**
 
-1. **KF-udledningerne dækker kun indenrigsluftfart** samt trafik til Grønland og Færøerne. International luftfart indgår ikke i den nationale klimaopgørelse. Passagertallene i luftfartsstatistikken er derimod domineret af international trafik. De to opgørelser kan derfor ikke divideres med hinanden.
-2. **Belægningsgrad kan ikke beregnes af datagrundlaget.** Filen indeholder ingen sædekapacitet. Der vises i stedet *passagerer pr. operation*. Udledning pr. passagerkilometer er beregnet ved at kombinere dette tal med en antagelse om flytype - se fanen Udledning for forbeholdene.
-3. **Filen indeholder ingen flydistancer.** Der kan derfor ikke beregnes passagerkilometer eller samlet udledning pr. lufthavn.
+1. **Belægningsgrad kan ikke beregnes af datagrundlaget.** Filen indeholder ingen sædekapacitet. Der vises i stedet *passagerer pr. operation*. 
+2. **Data indeholder ingen flydistancer.** Der kan derfor ikke beregnes passagerkilometer eller samlet udledning pr. lufthavn.
 
 
 `r fa("plane-departure")` Flyoperationer
@@ -470,90 +441,5 @@ d |>
     titel = str_glue("<b>Passagerer pr. operation, {seneste_aar_label}"),
     note = "Aktivitetsmål: ikke en belægningsgrad. Sædekapacitet indgår ikke i datagrundlaget.",
     download_fil_navn = "pax_pr_operation")
-
-```
-
-
-`r fa("temperature-arrow-down")` Udledning
-=====================================
-
-**Indledning**
-<br>
-Første figur sammenligner udledningen pr. sædekilometer på tværs af transportformer, beregnet som CO2 + 25 x CH4 + 298 x N2O (IPCC AR4) divideret med den kapacitet, TE forudsætter. Ved lavere belægning stiger udledningen pr. passager tilsvarende. 
-
-Anden figur omregner til udledning pr. passagerkilometer ved at dividere flyets udledning pr. flykilometer med det faktiske antal passagerer pr. operation. Lufthavne med under `r min_pax_pr_operation` passagerer pr. operation er udeladt, da deres trafik ikke er ruteflyvning
-
-
-Row
--------------------------------------
-
-```{r}
-
-d <- ef |>
-  mutate(farve = unname(farver_ef[kategori]),
-         transportform = factor(transportform, levels = transportform))
-
-d |>
-  hchart("bar", hcaes(x = transportform, y = co2e_saedekm)) |>
-  hc_plotOptions(series = list(colorByPoint = TRUE)) |>
-  hc_colors(d$farve) |>
-  hc_legend(enabled = FALSE) |>
-  hc_yAxis(title = list(text = "g CO2-e pr. sædekilometer")) |>
-  hc_xAxis(title = list(text = "")) |>
-  hc_tooltip(pointFormat = " <b>{point.y:,.1f}</b> g CO2-e pr. sædekm <br>") |>
-  trm_hc_format(
-    titel = "<b>Udledning pr. sædekilometer på tværs af transportformer",
-    note = "Kilde: Transportøkonomiske Enhedspriser. Basisår 2020 for vej, fly og søfart, 2016 for bane. Faktorerne er ikke fremskrevet.",
-    download_fil_navn = "emissionsfaktorer_saedekm")
-
-```
-
-Row
--------------------------------------
-
-```{r}
-
-d <- aar_luft |>
-  filter(aar == seneste_aar, operationer > 0) |>
-  mutate(pax_pr_op = passagerer / operationer,
-         flytype   = unname(flytype_lufthavn[lufthavn])) |>
-  filter(!is.na(flytype), pax_pr_op >= min_pax_pr_operation) |>
-  mutate(co2e_pr_pkm = unname(flyfaktor[flytype]) / pax_pr_op) |>
-  arrange(co2e_pr_pkm) |>
-  mutate(lufthavn = factor(lufthavn, levels = lufthavn))
-
-d |>
-  hchart("bar", hcaes(x = lufthavn, y = co2e_pr_pkm)) |>
-  hc_colors(trm_colors("orange")) |>
-  hc_yAxis(title = list(text = "g CO2-e pr. passagerkilometer")) |>
-  hc_xAxis(title = list(text = "")) |>
-  hc_legend(enabled = FALSE) |>
-  hc_tooltip(pointFormat = " <b>{point.y:,.0f}</b> g CO2-e pr. passagerkm <br>") |>
-  trm_hc_format(
-    titel = str_glue("<b>Indikativ udledning pr. passagerkilometer, {seneste_aar_label}"),
-    note = "Beregnet som flyets udledning pr. flykilometer divideret med passagerer pr. operation.",
-    download_fil_navn = "udledning_pr_pkm")
-
-```
-
-```{r}
-
-if (!is.null(udl_luft)) {
-  udl_luft |>
-    hchart("area", hcaes(x = aar, y = vaerdi / 1000000, group = type),
-           marker = FALSE, borderColor = 0) |>
-    hc_plotOptions(series = list(stacking = "normal", lineWidth = 0)) |>
-    hc_colors(trm_colors(c("orange", "blaa"))) |>
-    hc_yAxis(title = list(text = "Mio. ton CO2-e")) |>
-    hc_xAxis(title = list(text = "")) |>
-    hc_legend(reversed = TRUE) |>
-    hc_tooltip(shared = TRUE, pointFormat = " <b>{series.name}</b>: {point.y:,.1f} mio. t <br>") |>
-    trm_hc_format(
-      titel = "<b>Udledninger fra luftfart i den nationale opgørelse (KF26)",
-      note = "Dækker kun indenrigsluftfart samt Grønland og Færøerne. International luftfart indgår ikke. Tallene er afrundet til 0,1 mio. ton.",
-      download_fil_navn = "kf26_luftfart")
-} else {
-  htmltools::HTML("<p>KF26-datasættet kunne ikke indlæses fra netværksdrevet.</p>")
-}
 
 ```
