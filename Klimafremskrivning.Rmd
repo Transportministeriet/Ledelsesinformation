@@ -37,7 +37,7 @@ data <- dir(sti) %>%
            )) %>% 
      set_names(str_remove_all(y, "_kf26.csv")))()
 
-farver <- c(trm_colors(c("groen",  "orange", "blaa", "cyan", "roed")), "#F8AB95", "#469CB9") 
+farver <- c(trm_colors(c("groen",  "orange", "blaa", "cyan", "roed")), "#469CB9", "#F8AB95") 
 names(farver) <- c("El", "Plug-in Hybrid", "Diesel","Benzin", "Oevrige", "Brint", "Gas")
 
 
@@ -191,9 +191,9 @@ Den næste udgave, Klimastatus og -fremskrivning 2027 (KF27), forventes offentli
 
 **Indledning**
 <br>
-Transportsektoren udgør 32 pct. af Danmarks CO₂-udledninger i 2023 og forventes at stå for 30 pct. af de samlede udledninger i 2030. Der fremskrives reduktioner i udledningen for transportsektoren på 47 pct. fra 2023 til 2030. Vejtransport er den største kilde, men reduktioner vil ske gennem elektrificering, øget energieffektivitet og brug af bæredygtige drivmidler. Selvom transportaktiviteterne stiger, bidrager den teknologiske udvikling til at begrænse udledningerne. Luft- og søfart følger samme tendens med en gradvis omstilling til mere bæredygtige drivmidler.
+Transportsektoren udgjorde 31 pct. af Danmarks CO₂-udledninger i 2024 og forventes at stå for 25 pct. af de samlede udledninger i 2030. Der fremskrives reduktioner i udledningen for transportsektoren på 48 pct. fra 2024 til 2030. Vejtransport er den største kilde, men reduktioner vil ske gennem elektrificering, øget energieffektivitet og brug af bæredygtige drivmidler. Selvom transportaktiviteterne stiger, bidrager den teknologiske udvikling til at begrænse udledningerne. Luft- og søfart følger samme tendens med en gradvis omstilling til mere bæredygtige drivmidler.
 
-Tallene kan genfindes i Klimastatus og -fremskrivning 2026 kapitel 22 om transport, [Link](https://www.kefm.dk/Media/638815947445107820/Kapitel%2022%20Transport.pdf)
+Tallene kan genfindes i Klimastatus og -fremskrivning 2026 kapitel 23 om transport, [Link](https://www.kefm.dk/Media/639189371982461846/KF26%20Kapitel%2023%20Transportsektoren.pdf)
 
 
 Row {data-height=auto}
@@ -247,11 +247,11 @@ Bestand {data-icon="fa-solid fa-car-side"}
 
 **Indledning**
 <br>
-Bestanden af køretøjer i Danmark har udviklet sig markant i de seneste år samtidig med en stigende elektrificering. Ultimo 2024 var der godt 2,7 millioner personbiler, hvoraf antallet af elbiler var 340.000. Varebiler udgjorde omkring 362.000 køretøjer ultimo 2024, mens der var knap 43.000 lastbiler og 10.000 busser. Diesel er det klart dominerende drivmiddel for varebiler, lastbiler og busser, men elektrificeringen vinder gradvist indpas for alle køretøjer. Denne udvikling afspejler en generel omstilling mod mere bæredygtige drivmidler drevet af teknologiske fremskridt og politiske målsætninger om CO₂-reduktion.
+Bestanden af køretøjer i Danmark har udviklet sig markant i de seneste år samtidig med en stigende elektrificering. Ultimo 2025 var der godt 2,9 millioner personbiler, hvoraf antallet af elbiler var 540.000. Varebiler udgjorde omkring 343.000 køretøjer ultimo 2025, mens der var godt 44.000 lastbiler og knap 7.000 busser. Diesel er det klart dominerende drivmiddel for varebiler, lastbiler og busser, men elektrificeringen vinder gradvist indpas for alle køretøjer. Denne udvikling afspejler en generel omstilling mod mere bæredygtige drivmidler drevet af teknologiske fremskridt og politiske målsætninger om CO₂-reduktion.
 
 Fremskrivningerne frem mod 2050 peger på en fortsat omstilling mod bæredygtige drivmidler, hvor elbiler vil spille en større rolle og reducere transportsektorens CO₂-udledningerne markant. 
 
-Tallene kan genfindes i Klimastatus og -fremskrivning 2026 kapitel 22 om transport, [Link](https://www.kefm.dk/Media/638815947445107820/Kapitel%2022%20Transport.pdf) 
+Tallene kan genfindes i Klimastatus og -fremskrivning 2026 kapitel 23 om transport, [Link](https://www.kefm.dk/Media/639189371982461846/KF26%20Kapitel%2023%20Transportsektoren.pdf) 
 
 Row
 -------------------------------------
@@ -288,13 +288,13 @@ best_fig_fkt("Busser", "bestand")
 <br>
 Salg dækker over alle nyregistreringer - registreringspligtig køretøjs første registrering i motorregisteret - og brugtimporterede biler
 
-Sammensætningen af drivmidler for salget af køretøjer i Danmark har ændret sig markant de seneste år, hvor der især ses en kraftig vækst i elbiler. I 2024 steg elbilernes andel til godt 70 pct. for salget af nyregistreringer og brugtimport. Dieselbiler er i tilbagegang, mens salget af plug-in hybridbiler, der toppede med 24 pct. i 2021, ventes at falde til 1 pct. i 2030. 
+Sammensætningen af drivmidler for salget af køretøjer i Danmark har ændret sig markant de seneste år, hvor der især ses en kraftig vækst i elbiler. I 2025 steg elbilernes andel til ca. 84 pct. for salget af nyregistreringer og brugtimport. Dieselbiler er i tilbagegang, mens salget af plug-in hybridbiler, der toppede med 24 pct. i 2021, ventes at falde til 1 pct. i 2030. 
 
-For varebiler sker elektrificeringen langsommere end personbiler. I 2023 udgjorde elvarebiler 11,5 pct. af salget, og andelen forventes at stige med bedre teknologi og ladeinfrastruktur.
+For varebiler sker elektrificeringen langsommere end personbiler. I 2025 udgjorde elvarebiler ca. 33 pct. af salget, og andelen forventes at stige med bedre teknologi og ladeinfrastruktur.
 
-For lastbiler udgør el endnu kun 9 pct. af tilgangen i 2023, men salget ventes at stige frem mod 2030 drevet af skærpede EU-krav, teknologiudvikling og kilometerbaseret vejafgift på lastbiler. Den hurtigste omstilling ses for busser, hvor over halvdelen af salget af busser var eldrevne i 2024.
+For lastbiler udgør el endnu kun 10 pct. af tilgangen i 2024, men salget ventes at stige frem mod 2030 drevet af skærpede EU-krav, teknologiudvikling og kilometerbaseret vejafgift på lastbiler. Den hurtigste omstilling ses for busser, hvor over halvdelen af salget af busser var eldrevne i 2025.
     
-Tallene kan genfindes i Klimastatus og -fremskrivning 2026 kapitel 22 om transport, [Link](https://www.kefm.dk/Media/638815947445107820/Kapitel%2022%20Transport.pdf) 
+Tallene kan genfindes i Klimastatus og -fremskrivning 2026 kapitel 23 om transport, [Link](https://www.kefm.dk/Media/639189371982461846/KF26%20Kapitel%2023%20Transportsektoren.pdf) 
 
 Row
 -------------------------------------

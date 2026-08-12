@@ -473,8 +473,8 @@ KF_tal <- fread(str_c(sti_kf, "/tidy_datasaet/", "bestand_kf26.csv")) %>%
 
 #Data figur 5. udvikling i bestanden
 data_fig_4 <- data_bil_1 |> 
-  mutate(DRIV_1 = ifelse(DRIV %in% c("Benzin", "Diesel"), "Fossil biler", DRIV) |> 
-           factor(levels = c("El", "Plug-in-hybrid", "Fossil biler", "Drivmidler i alt")),
+  mutate(DRIV_1 = ifelse(DRIV %in% c("Benzin", "Diesel"), "Fossil", DRIV) |> 
+           factor(levels = c("El", "Plug-in-hybrid", "Fossil", "Drivmidler i alt")),
          AAR = year(DATE)) |> 
   summarise(INDHOLD = sum(INDHOLD),
             .by = c("DRIV_1", "AAR", "DATE") ) |> 
@@ -488,8 +488,8 @@ tal <- data_fig_4 |>
 
 tal_el_2019 <- tal |> filter(DRIV_1=="El", AAR=="2020") |> pull("UDV_ANTAL_BIL")
 tal_el_2023 <- tal |> filter(DRIV_1=="El", AAR==nyeste_aar) |> pull("UDV_ANTAL_BIL")
-tal_fos_2019 <- tal |> filter(DRIV_1=="Fossil biler", AAR=="2020") |> pull("UDV_ANTAL_BIL")
-tal_fos_2023 <- tal |> filter(DRIV_1=="Fossil biler", AAR==nyeste_aar) |> pull("UDV_ANTAL_BIL")
+tal_fos_2019 <- tal |> filter(DRIV_1=="Fossil", AAR=="2020") |> pull("UDV_ANTAL_BIL")
+tal_fos_2023 <- tal |> filter(DRIV_1=="Fossil", AAR==nyeste_aar) |> pull("UDV_ANTAL_BIL")
 
 
 max_year_P_I_H<- data_fig_4 %>%
