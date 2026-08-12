@@ -1,5 +1,5 @@
 ---
-title: "Luftfartsstatistik - operationer, passagerer og udledning"
+title: "Luftfartsstatistik - operationer og passagerer"
 output: 
   flexdashboard::flex_dashboard:
     css: "styles_KF.css"
@@ -11,7 +11,6 @@ output:
 
 library(tidyverse)
 library(flexdashboard)
-library(data.table)
 library(highcharter)
 library(TRMvisual)
 library(fontawesome)
@@ -27,30 +26,9 @@ options(highcharter.lang = lang)
 # ----- PARAMETRE -----
 
 sti_luft <- "S:/CAKL/Projekter/4. Tværgående analyser/Vidensbank/Data/"
-sti_kf   <- "S:/TRM Databank/003 Klimafremskrivning/tidy_datasaet/"
 
 # Basisår for indeksering
 basis_aar_oensket <- 2019L
-
-# Grænse for "store lufthavne" (passagerer i basisåret)
-stor_graense <- 1e6
-
-# Emissionsfaktorer for fly, jf. TE
-flyfaktor <- c(jet = 21157.741, turboprop = 7764.270)
-flysaeder <- c(jet = 190,       turboprop = 71)
-
-# Flytype pr. lufthavn. Datagrundlaget indeholder IKKE flytype - redigerbar antagelse. Ret her hvis vi får bedre viden om flådesammensætningen.
-flytype_lufthavn <- c(
-  "København (Kastrup)"          = "jet",
-  "Billund"                       = "jet",
-  "Aalborg"                       = "jet",
-  "Aarhus"                        = "jet",
-  "Bornholm (Rønne)"             = "turboprop",
-  "Sønderborg"                   = "turboprop"
-)
-
-# Lufthavne udelades af udledningsberegningen hvis gennemsnittet er under denne grænse - de er domineret af offshore-helikopter, skole- og privatflyvning, hvor passagerer pr. operation ikke siger noget om ruteflyenes udnyttelse.
-min_pax_pr_operation <- 10
 
 # ----- indlæsning -------
 
@@ -113,10 +91,6 @@ luft_raa <- raa |>
     operationer  = dk_tal(.data[[kol$operation]])
   )
 
-# Datakvalitet: tomme og negative passagerfelter forekommer i filen. De sættes til NA og tælles, så de kan oplyses i dashboardet frem for stiltiende at indgå som nul.
-n_tomme    <- sum(is.na(luft_raa$passagerer))
-n_negative <- sum(luft_raa$passagerer < 0, na.rm = TRUE)
-
 navne <- c(
   "KOBENHAVN"             = "København (Kastrup)",
   "BILLUND"               = "Billund",
@@ -148,20 +122,26 @@ aar_delvise   <- aar_status |> filter(n_mdr < 12)  |> pull(aar) |> sort()
 seneste_aar <- max(luft$aar)
 seneste_mdr <- luft |> filter(aar == seneste_aar) |> pull(maaned) |> max()
 
+maaned_dk <- c("Januar", "Februar", "Marts", "April", "Maj", "Juni",
+               "Juli", "August", "September", "Oktober", "November", "December")
+
+# Maanedens navn med lille begyndelsesbogstav, saa figurtekster kan skrive
+# "til og med maj" i stedet for "til og med maaned 5".
+seneste_mdr_navn <- str_to_lower(maaned_dk[seneste_mdr])
+
 # Ufuldstændige år markeres med stjerne i figurerne. 
 stjerne_aar <- function(x) if_else(x %in% aar_delvise, str_c(x, "*"), as.character(x))
 
 aar_alle          <- sort(unique(luft$aar))
 aar_niveau        <- stjerne_aar(aar_alle)
 seneste_komplet   <- max(aar_komplette)
-seneste_aar_label <- stjerne_aar(seneste_aar)
 
 note_periode <- str_glue(
-  "Kilde: Luftfartsstatistikken. Seneste observation: {seneste_mdr}/{seneste_aar}. ",
+  "Kilde: Trafikstyrelsen. ",
+  "Anm.: Seneste observation er {seneste_mdr_navn} {seneste_aar}. ",
   if (length(aar_delvise) > 0)
-    str_c("År markeret med * er ufuldstændige og dækker kun januar til og med måned ",
-          seneste_mdr, ". Niveauet er derfor ikke sammenligneligt med de hele år. ",
-          "Fanen Passagerudvikling viser en periodesammenlignelig opgørelse.")
+    str_c("År markeret med * er ufuldstændige og dækker kun januar til og med ",
+          seneste_mdr_navn, ". Niveauet er derfor ikke sammenligneligt med de hele år. ")
   else ""
 )
 
@@ -172,22 +152,47 @@ aar_luft <- luft |>
   summarise(passagerer  = sum(passagerer, na.rm = TRUE),
             operationer = sum(operationer),
             .by = c(lufthavn, aar)) |>
-  mutate(aar_label = factor(stjerne_aar(aar), levels = aar_niveau),
-         komplet   = aar %in% aar_komplette)
+  mutate(aar_label = factor(stjerne_aar(aar), levels = aar_niveau))
 
 # Basisåret for indeksering skal være et helt år.
 basis_aar <- if (basis_aar_oensket %in% aar_komplette) basis_aar_oensket else min(aar_komplette)
 
-store_lufthavne <- aar_luft |>
-  filter(aar == basis_aar, passagerer >= stor_graense) |>
-  pull(lufthavn)
+# ---- månedsdata: indeværende år mod sidste år ----
 
-aar_luft <- aar_luft |>
-  mutate(gruppe = if_else(lufthavn %in% store_lufthavne, "Store", "Øvrige"))
+aar_i_aar  <- seneste_aar
+aar_sidste <- seneste_aar - 1L
 
-# Linjestykket ind i det ufuldstændige år tegnes stiplet, så bruddet i sammenligneligheden er synligt
-zone_x <- match(max(aar_komplette), aar_alle) - 1
-zoner  <- list(list(value = zone_x), list(dashStyle = "ShortDash"))
+har_sidste_aar <- aar_sidste %in% aar_alle
+
+# Returnerer altid en vektor af længde 12. Måneder uden data bliver NA og tegnes som
+# tomme i Highcharts. Når nye måneder kommer med i datagrundlaget, fyldes de automatisk
+# ud - der er ingen hårdkodet slutmåned.
+maanedsserie <- function(data, vaerdi_kol, valgt_aar) {
+  if (!valgt_aar %in% data$aar) return(rep(NA_real_, 12))
+  v <- data |>
+    filter(aar == valgt_aar) |>
+    summarise(vaerdi = sum(.data[[vaerdi_kol]], na.rm = TRUE), .by = maaned)
+  ud <- rep(NA_real_, 12)
+  ud[v$maaned] <- v$vaerdi
+  ud
+}
+
+note_aarssammenligning <- str_glue(
+  "Kilde: Trafikstyrelsen. ",
+  "Anm.: {aar_i_aar} er opgjort til og med {seneste_mdr_navn}. ",
+  "De resterende måneder står tomme, indtil data foreligger. "
+)
+
+# Anmaerkning til figurer, der kun viser hele aar.
+note_hele_aar <- str_glue(
+  "Kilde: Trafikstyrelsen. ",
+  "Anm.: Kun hele år vises. Det igangværende år ({seneste_aar}) indgår ikke, ",
+  "da det kun dækker januar til og med {seneste_mdr_navn} og derfor ikke er sammenligneligt."
+)
+
+# Anmaerkning om retning: passagertal, der ikke er filtreret paa retning, taeller
+# baade afgaaede og ankomne, dvs. alle passagerer ekspederet i lufthavnen.
+note_begge_retninger <- "Passagertallet omfatter både afgåede og ankomne passagerer, altså alle passagerer ekspederet i lufthavnen."
 
 # --- farver ---
 
@@ -197,21 +202,6 @@ farve_palet <- c(
   trm_colors(c("blaa", "orange", "groen", "cyan", "roed"), lys = 2)
 )
 farver_for <- function(x) rep_len(farve_palet, length(unique(x)))
-
-# --- KF26-data ---
-
-kf <- tryCatch({
-  dir(sti_kf) |>
-    str_subset("kf26.csv") |>
-    (\(y) map(y, ~fread(str_c(sti_kf, .x))) |> set_names(str_remove_all(y, "_kf26.csv")))()
-}, error = function(e) NULL)
-
-udl_luft <- if (!is.null(kf)) {
-  kf[["udledninger"]] |>
-    filter(sektor == "Luftfart", type != "Total",
-           str_detect(type, "ikke defineret", negate = TRUE)) |>
-    arrange(type, aar)
-} else NULL
 
 
 ```
@@ -230,17 +220,11 @@ tags$style("
 
 **Formål**
 
-Oversigten viser udviklingen i flyoperationer og passagertal i de danske lufthavne, der indberetter til luftfartsstatistikken.
+Oversigten viser udviklingen i flyoperationer og passagertal i de danske lufthavne, der indberetter til Trafikstyrelsens luftfartsstatistik.
 
 **Datagrundlag**
 
 * **Luftfartsstatistikken** opdateres månedligt. Statistikken indeholder pr. lufthavn, år, måned og retning (afgang/ankomst) antal passagerer og antal operationer.
-
-
-**Vigtige forbehold**
-
-1. **Belægningsgrad kan ikke beregnes af datagrundlaget.** Filen indeholder ingen sædekapacitet. Der vises i stedet *passagerer pr. operation*. 
-2. **Data indeholder ingen flydistancer.** Der kan derfor ikke beregnes passagerkilometer eller samlet udledning pr. lufthavn.
 
 
 `r fa("plane-departure")` Flyoperationer
@@ -248,45 +232,53 @@ Oversigten viser udviklingen i flyoperationer og passagertal i de danske lufthav
 
 **Indledning**
 <br>
-Flyoperationer dækker starter og landinger. København vises for sig, da lufthavnen står for omtrent to tredjedele af alle operationer og ellers gør de øvrige lufthavne ulæselige. Bemærk at Roskilde og Esbjerg har mange operationer i forhold til deres passagertal, da Roskilde er domineret af privat- og skoleflyvning og Esbjerg af offshore-helikoptertrafik.
+Flyoperationer dækker starter og landinger. København vises for sig, da lufthavnen står for omtrent to tredjedele af alle operationer og ellers gør de øvrige lufthavne ulæselige. Bemærk at Roskilde og Esbjerg har mange operationer i forhold til deres passagertal, da Roskilde er domineret af privat- og skoleflyvning. 
 
-Det igangværende år indgår løbende og er markeret med stjerne, fx `r seneste_aar_label`. Det sidste linjestykke er stiplet, fordi året kun dækker `r seneste_mdr` måneder og derfor ligger lavere end et helt år - faldet er en periodeeffekt, ikke en udvikling.
+De to øverste figurer viser kun hele år og går derfor til og med `r seneste_komplet`. Det igangværende år er udeladt, fordi det kun dækker januar til og med `r seneste_mdr_navn` og ellers ville fremstå som et kraftigt fald, der reelt kun er en periodeeffekt.
+
+De to nederste figurer medtager det igangværende år. Figuren over årets første måneder sammenligner samme periode på tværs af år, og den månedsvise figur holder `r aar_i_aar` op mod `r aar_sidste`.
 
 Row
 -------------------------------------
 
 ```{r}
 
-d <- aar_luft |> filter(lufthavn != "København (Kastrup)") |> arrange(lufthavn, aar)
+# Kun hele aar. droplevels fjerner det ufuldstaendige aar fra x-aksen,
+# saa der ikke staar en tom kategori tilbage.
+d <- aar_luft |>
+  filter(lufthavn != "København (Kastrup)", aar %in% aar_komplette) |>
+  mutate(aar_label = droplevels(aar_label)) |>
+  arrange(lufthavn, aar)
 
 d |>
   hchart("line", hcaes(x = aar_label, y = operationer, group = lufthavn),
          marker = list(enabled = FALSE)) |>
-  hc_plotOptions(series = list(zoneAxis = "x", zones = zoner)) |>
   hc_colors(farver_for(d$lufthavn)) |>
   hc_yAxis(title = list(text = "Antal operationer")) |>
   hc_xAxis(title = list(text = "")) |>
   hc_tooltip(shared = TRUE, pointFormat = " <b>{series.name}</b>: {point.y:,.0f} operationer <br>") |>
   trm_hc_format(titel = "<b>Flyoperationer: alle lufthavne undtagen København",
-                note = note_periode,
+                note = note_hele_aar,
                 download_fil_navn = "operationer_oevrige")
 
 ```
 
 ```{r}
 
-d <- aar_luft |> filter(lufthavn == "København (Kastrup)") |> arrange(aar)
+d <- aar_luft |>
+  filter(lufthavn == "København (Kastrup)", aar %in% aar_komplette) |>
+  mutate(aar_label = droplevels(aar_label)) |>
+  arrange(aar)
 
 d |>
   hchart("line", hcaes(x = aar_label, y = operationer), marker = list(enabled = FALSE)) |>
-  hc_plotOptions(series = list(zoneAxis = "x", zones = zoner)) |>
   hc_colors(trm_colors("blaa")) |>
   hc_yAxis(title = list(text = "Antal operationer")) |>
   hc_xAxis(title = list(text = "")) |>
   hc_legend(enabled = FALSE) |>
   hc_tooltip(pointFormat = " <b>{point.y:,.0f}</b> operationer <br>") |>
   trm_hc_format(titel = "<b>Flyoperationer: København (Kastrup)",
-                note = note_periode,
+                note = note_hele_aar,
                 download_fil_navn = "operationer_kastrup")
 
 ```
@@ -295,9 +287,6 @@ Row
 -------------------------------------
 
 ```{r}
-
-maaned_dk <- c("Januar", "Februar", "Marts", "April", "Maj", "Juni",
-               "Juli", "August", "September", "Oktober", "November", "December")
 
 d <- luft |>
   filter(aar %in% aar_komplette) |>
@@ -314,8 +303,69 @@ d |>
   hc_legend(enabled = FALSE) |>
   hc_tooltip(pointFormat = " <b>{point.y:,.0f}</b> operationer <br>") |>
   trm_hc_format(titel = "<b>Sæsonmønster: alle lufthavne samlet",
-                note = str_glue("Gennemsnit over hele år ({min(aar_komplette)}-{seneste_komplet}). Ufuldstændige år indgår ikke, da de ellers ville skævvride sæsonprofilen."),
+                note = str_glue("Kilde: Trafikstyrelsen. Anm.: Gennemsnit over hele år fra {min(aar_komplette)} til {seneste_komplet}. Ufuldstændige år indgår ikke, da de ellers ville skævvride sæsonprofilen."),
                 download_fil_navn = "saeson_operationer")
+
+```
+
+```{r}
+
+# Spejler passagerfiguren på fanen Passagerudvikling. Alle år afkortes til samme
+# antal måneder, så det igangværende år kan sammenlignes med tidligere år.
+
+d <- luft |>
+  filter(maaned <= seneste_mdr) |>
+  summarise(operationer = sum(operationer), .by = c(lufthavn, aar)) |>
+  # her er alle år lige lange, så der er ingen stjerne på etiketten
+  mutate(aar_txt = factor(as.character(aar), levels = as.character(aar_alle))) |>
+  arrange(lufthavn, aar)
+
+d |>
+  hchart("column", hcaes(x = aar_txt, y = operationer, group = lufthavn)) |>
+  hc_plotOptions(series = list(stacking = "normal")) |>
+  hc_colors(farver_for(d$lufthavn)) |>
+  hc_yAxis(title = list(text = "Antal operationer")) |>
+  hc_xAxis(title = list(text = "")) |>
+  hc_legend(reversed = TRUE) |>
+  hc_tooltip(shared = TRUE,
+             pointFormat = " <b>{series.name}</b>: {point.y:,.0f} ({point.percentage:.1f} pct.) <br>") |>
+  trm_hc_format(
+    titel = str_glue("<b>Operationer fra januar til {seneste_mdr_navn} {seneste_aar}"),
+    note = str_glue("Kilde: Trafikstyrelsen. Anm.: Sammenlignelig periode på tværs af år, januar til og med {seneste_mdr_navn}. Operationer omfatter både starter og landinger."),
+    download_fil_navn = "operationer_aar_til_dato")
+
+```
+
+Row
+-------------------------------------
+
+```{r}
+
+# Blandet diagram: søjler for indeværende år, kurve for sidste år.
+# Begge serier har altid 12 værdier, så alle måneder står på x-aksen.
+
+op_i_aar  <- maanedsserie(luft, "operationer", aar_i_aar)
+op_sidste <- maanedsserie(luft, "operationer", aar_sidste)
+
+hc <- highchart() |>
+  hc_xAxis(categories = maaned_dk, title = list(text = "")) |>
+  hc_yAxis(title = list(text = "Antal operationer")) |>
+  hc_add_series(name = as.character(aar_i_aar), data = op_i_aar,
+                type = "column", color = trm_colors("blaa"))
+
+if (har_sidste_aar) {
+  hc <- hc |>
+    hc_add_series(name = as.character(aar_sidste), data = op_sidste,
+                  type = "line", color = trm_colors("orange"),
+                  marker = list(enabled = FALSE))
+}
+
+hc |>
+  hc_tooltip(shared = TRUE, pointFormat = " <b>{series.name}</b>: {point.y:,.0f} operationer <br>") |>
+  trm_hc_format(
+    titel = str_glue("<b>Flyoperationer pr. måned, {aar_i_aar} mod {aar_sidste}"),
+    note = note_aarssammenligning,
+    download_fil_navn = "operationer_maaned_aarssammenligning")
 
 ```
 
@@ -325,9 +375,11 @@ d |>
 
 **Indledning**
 <br>
-Indekseringen med `r basis_aar` = 100 gør det muligt at sammenligne genopretningen efter covid-19 på tværs af lufthavne med meget forskellig størrelse. Det igangværende år er markeret med stjerne og tegnet stiplet.
+Indekseringen med `r basis_aar` = 100 gør det muligt at sammenligne genopretningen efter covid-19 på tværs af lufthavne med meget forskellig størrelse. Indeksfiguren viser kun hele år og går til og med `r seneste_komplet`.
 
-Den nederste figur sammenligner de første `r seneste_mdr` måneder af hvert år, så det igangværende år kan holdes op mod tidligere år på lige vilkår.
+Figuren med januar til og med `r seneste_mdr_navn` sammenligner samme periode på tværs af år, så det igangværende år kan holdes op mod tidligere år på lige vilkår.
+
+Vær opmærksom på retningen. De tre øverste figurer tæller både afgåede og ankomne passagerer, mens den nederste månedsfigur kun omfatter ankomne. Det fremgår af anmærkningen under hver figur.
 
 Row
 -------------------------------------
@@ -338,28 +390,27 @@ basis <- aar_luft |>
   filter(aar == basis_aar, passagerer > 0) |>
   select(lufthavn, basis_pax = passagerer)
 
+# Kun hele aar, jf. de tilsvarende operationsfigurer.
 d <- aar_luft |>
+  filter(aar %in% aar_komplette) |>
   inner_join(basis, by = "lufthavn") |>
-  mutate(indeks = 100 * passagerer / basis_pax) |>
+  mutate(indeks    = 100 * passagerer / basis_pax,
+         aar_label = droplevels(aar_label)) |>
   arrange(lufthavn, aar)
 
 d |>
   hchart("line", hcaes(x = aar_label, y = indeks, group = lufthavn),
          marker = list(enabled = FALSE)) |>
-  hc_plotOptions(series = list(zoneAxis = "x", zones = zoner)) |>
   hc_colors(farver_for(d$lufthavn)) |>
   hc_yAxis(title = list(text = str_glue("Indeks ({basis_aar} = 100)")),
            plotLines = list(list(value = 100, width = 1, color = "#000000", dashStyle = "Dash"))) |>
   hc_xAxis(title = list(text = "")) |>
   hc_tooltip(shared = TRUE, pointFormat = " <b>{series.name}</b>: {point.y:,.1f} <br>") |>
   trm_hc_format(titel = str_glue("<b>Passagertal, indeks {basis_aar} = 100"),
-                note = note_periode,
+                note = str_glue("{note_hele_aar} {note_begge_retninger}"),
                 download_fil_navn = "indeks_passagerer")
 
 ```
-
-Row
--------------------------------------
 
 ```{r}
 
@@ -380,19 +431,11 @@ d |>
   hc_tooltip(shared = TRUE,
              pointFormat = " <b>{series.name}</b>: {point.y:,.0f} ({point.percentage:.1f} pct.) <br>") |>
   trm_hc_format(
-    titel = str_glue("<b>Passagerer i årets første {seneste_mdr} måneder"),
-    note = str_glue("Sammenlignelig periode på tværs af år: januar til og med måned {seneste_mdr}."),
+    titel = str_glue("<b>Passagerer fra januar til {seneste_mdr_navn} {seneste_aar}"),
+    note = str_glue("Kilde: Trafikstyrelsen. Anm.: Sammenlignelig periode på tværs af år, januar til og med {seneste_mdr_navn}. {note_begge_retninger}"),
     download_fil_navn = "passagerer_aar_til_dato")
 
 ```
-
-
-`r fa("users")` Aktivitet
-=====================================
-
-**Indledning**
-<br>
-Passagerer pr. operation angiver, hvor mange passagerer der i gennemsnit er om bord pr. start eller landing. Roskilde og Esbjerg ligger meget lavt, fordi deres operationer overvejende er privat-, skole- og helikopterflyvning uden ruteflyets passagertal.
 
 Row
 -------------------------------------
@@ -412,34 +455,39 @@ d |>
   hc_tooltip(shared = TRUE,
              pointFormat = " <b>{series.name}</b>: {point.y:,.0f} ({point.percentage:.1f} pct.) <br>") |>
   trm_hc_format(titel = "<b>Passagerer fordelt på lufthavne",
-                note = note_periode,
+                note = str_glue("{note_periode} {note_begge_retninger}"),
                 download_fil_navn = "passagerer_lufthavne")
 
 ```
 
-Row
--------------------------------------
-
 ```{r}
 
-# Forholdstal påvirkes ikke af, at året er kortere, så her bruges det seneste år overhovedet - også når det er ufuldstændigt.
+# Blandet diagram: søjler for indeværende år, kurve for sidste år.
+# Kun ankomster indgår, jf. figurens titel.
+# Begge serier har altid 12 værdier, så alle måneder står på x-aksen.
 
-d <- aar_luft |>
-  filter(aar == seneste_aar, operationer > 0) |>
-  mutate(pax_pr_op = passagerer / operationer) |>
-  arrange(desc(pax_pr_op)) |>
-  mutate(lufthavn = factor(lufthavn, levels = rev(lufthavn)))
+ank <- luft |> filter(retning == "Ankomst")
 
-d |>
-  hchart("bar", hcaes(x = lufthavn, y = pax_pr_op)) |>
-  hc_colors(trm_colors("blaa")) |>
-  hc_yAxis(title = list(text = "Passagerer pr. operation")) |>
-  hc_xAxis(title = list(text = "")) |>
-  hc_legend(enabled = FALSE) |>
-  hc_tooltip(pointFormat = " <b>{point.y:,.1f}</b> passagerer pr. operation <br>") |>
+pax_i_aar  <- maanedsserie(ank, "passagerer", aar_i_aar)
+pax_sidste <- maanedsserie(ank, "passagerer", aar_sidste)
+
+hc <- highchart() |>
+  hc_xAxis(categories = maaned_dk, title = list(text = "")) |>
+  hc_yAxis(title = list(text = "Antal ankomne passagerer")) |>
+  hc_add_series(name = as.character(aar_i_aar), data = pax_i_aar,
+                type = "column", color = trm_colors("blaa"))
+
+if (har_sidste_aar) {
+  hc <- hc |>
+    hc_add_series(name = as.character(aar_sidste), data = pax_sidste,
+                  type = "line", color = trm_colors("orange"),
+                  marker = list(enabled = FALSE))
+}
+
+hc |>
+  hc_tooltip(shared = TRUE, pointFormat = " <b>{series.name}</b>: {point.y:,.0f} passagerer <br>") |>
   trm_hc_format(
-    titel = str_glue("<b>Passagerer pr. operation, {seneste_aar_label}"),
-    note = "Aktivitetsmål: ikke en belægningsgrad. Sædekapacitet indgår ikke i datagrundlaget.",
-    download_fil_navn = "pax_pr_operation")
-
+    titel = str_glue("<b>Ankomne passagerer pr. måned, {aar_i_aar} mod {aar_sidste}"),
+    note = str_glue("{note_aarssammenligning}Figuren omfatter kun ankomne passagerer. Afgåede passagerer indgår ikke."),
+    download_fil_navn = "ankomne_passagerer_maaned_aarssammenligning")
 ```

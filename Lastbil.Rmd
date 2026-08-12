@@ -582,7 +582,7 @@ I løbet af `r as.character(nyeste_aar)` er der nyregistreret `r totalsalg_senes
 
 tekst_note_nyreg <- str_glue("Kilde: Danmarks Statistik<br>{stjerne_tekst}")
 
-farver <- c("roed",  "blaa", "orange","groen") %>% factor(., levels = .)
+farver <- c("roed", "blaa", "orange", "groen") %>% factor(., levels = .)
 
 nyreg_data_1 %>%
   filter(AAR >= (nyeste_aar-5)) %>% 
@@ -590,22 +590,13 @@ nyreg_data_1 %>%
   (\(y)
    hchart(y, 'column', hcaes(x = AAR, y =ANTAL, group = DRIV ), borderColor = 0) %>%
      hc_plotOptions(column = list(stacking = "normal")) |> 
-     hc_colors(c(trm_colors(farver))) |> 
+     hc_colors(c(trm_colors(farver, lys = ifelse(farver == "orange", 2, 0)))) |> 
      hc_yAxis(title = list(text = "Antal"),
               labels = list(format = "{value:,.0f}"),
               stackLabels = list(enabled = TRUE, verticalAlign = 'top',
                                  crop = FALSE, overflow = 'none')) |> 
      hc_xAxis(title = list(text = NULL),
-              categories = distinct(y, AAR) %>% deframe() 
-              # labels = list(
-              #   formatter = JS("
-              #     function() {
-              #       if (this.isLast) {
-              #         return this.value + '*'; // Add a '*' to the last category
-              #       }
-              #       return this.value;
-              #     }
-              #    "))
+              categories = distinct(y, AAR) %>% deframe()
      ) %>% 
      hc_legend(reversed =TRUE) %>% 
      hc_tooltip(shared = TRUE,
@@ -613,9 +604,6 @@ nyreg_data_1 %>%
      trm_hc_format("<b>Figur 1.</b> Udvikling i nyregistreringer af lastbiler fordelt på drivmiddel",
                    note = tekst_note_nyreg)
   )()
-
-
-
 
 ```
 
@@ -634,7 +622,7 @@ nyreg_data_1 |>
   hc_plotOptions(column = list(stacking = "normal"), style = list(
     fontFamily = "Georgia"
   )) |> 
-  hc_colors(c(trm_colors(farver))) |> 
+  hc_colors(c(trm_colors(farver, lys = ifelse(farver == "orange", 2, 0)))) |> 
   hc_yAxis(title = list(text = "Pct."), max = 100) |> 
   hc_xAxis(title = list(text = NULL), categories = fct_sort_stjerne) %>% 
   hc_legend(reversed =TRUE) %>%
@@ -715,7 +703,7 @@ figur2_tunge <- nyreg_data_1_tunge |>
          antal = ANTAL) %>%  # Add ANTAL column for use in the tooltip
   hchart('column', hcaes(x = AAR, y = A_NYREG , group = DRIV), borderColor = 0) |> 
   hc_plotOptions(column = list(stacking = "normal"), style = list(fontFamily = "Georgia")) |> 
-  hc_colors(c(trm_colors(farver))) |> 
+  hc_colors(c(trm_colors(farver, lys = ifelse(farver == "orange", 2, 0)))) |> 
   hc_yAxis(title = list(text = "Pct."), max = 100) |> 
   hc_xAxis(title = list(text = NULL), categories = fct_sort,
            labels = list(rotation = -30)  # Tilt the labels by -45 degrees (you can adjust the angle)
@@ -765,7 +753,7 @@ I `r seneste_md` måned udviklede bestanden af ellastbiler sig med `r udv_elbest
 bestand_data_1 |> 
   hchart('column', hcaes(x = AAR, y = ANTAL, group = DRIV ), borderColor = 0) |> 
   hc_plotOptions(column = list(stacking = "normal")) |> 
-  hc_colors(c(trm_colors(farver))) |> 
+  hc_colors(c(trm_colors(farver, lys = ifelse(farver == "orange", 2, 0)))) |> 
   hc_yAxis(
     title = list(text = "Antal"),
     labels = list(formatter = JS("function() {
@@ -839,7 +827,7 @@ figur3_lette <- bestand_data_1_lette |>
 figur3_tunge <-bestand_data_1_tunge |> 
   hchart('column', hcaes(x = AAR, y = ANTAL, group = DRIV ), borderColor = 0) |> 
   hc_plotOptions(column = list(stacking = "normal")) |> 
-  hc_colors(c(trm_colors(farver))) |> 
+  hc_colors(c(trm_colors(farver, lys = ifelse(farver == "orange", 2, 0)))) |> 
   hc_yAxis(
     title = list(text = "Antal (tusind)"),
     labels = list(formatter = JS("function() {
@@ -985,7 +973,9 @@ med `r abs(nyeste_aars_udv[["Diesel"]])` i `r as.character(nyeste_aar)`, mens be
 bestand_data_udv |>
   arrange(AAR, desc(DRIV)) %>%
   hchart('column', hcaes(x = AAR, y = UDV, group = DRIV ), borderColor = 0) |>
-  hc_colors(c(trm_colors(c(sort(farver, decreasing = T) %>% as.character(), "blaa")))) |>
+  hc_colors(c(trm_colors(
+  c(sort(farver, decreasing = T) %>% as.character(), "blaa"),
+  lys = c(ifelse(sort(farver, decreasing = T) %>% as.character() == "orange", 2, 0), 1)))) |>   # orange (gas) = 2, ekstra "blaa" = 1 (undgår kollision med farvers egen "blaa")
   # hc_legend(reversed =TRUE) %>%
   hc_yAxis(title = list(text = "Antal"),
            min = 0,
@@ -1024,7 +1014,7 @@ map(udvalgte_kat, ~{nyreg_data_underkat_stjerne |>
     mutate(AAR = factor(AAR, levels = fct_sort_underkat)) %>% 
     hchart('column', hcaes(x = AAR, y =ANTAL, group = DRIV ), borderColor = 0) |> 
     hc_plotOptions(column = list(stacking = "percent")) |> 
-    hc_colors(c(trm_colors(farver))) |> 
+    hc_colors(c(trm_colors(farver, lys = ifelse(farver == "orange", 2, 0)))) |> 
     hc_yAxis(title = list(text = "Pct."), max = 100) |> 
     hc_xAxis(categories = fct_sort_underkat, title = list(text = NULL)) %>% 
     hc_legend(
@@ -1075,7 +1065,7 @@ map(udvalgte_kat, ~{
     mutate(AAR = factor(AAR, levels = fct_sort_underkat)) %>% 
     hchart('column', hcaes(x = AAR, y = ANTAL, group = DRIV), borderColor = 0) |> 
     hc_plotOptions(column = list(stacking = "NULL")) |> 
-    hc_colors(c(trm_colors(farver))) |> 
+    hc_colors(c(trm_colors(farver, lys = ifelse(farver == "orange", 2, 0)))) |> 
     hc_yAxis(
       title = list(text = "Antal"),
       labels = list(format = "{value:,.0f}")
