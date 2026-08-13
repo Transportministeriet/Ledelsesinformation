@@ -203,6 +203,78 @@ farve_palet <- c(
 )
 farver_for <- function(x) rep_len(farve_palet, length(unique(x)))
 
+# ---- resultattal til Indledning ----
+# Nøgletallene herunder beregnes ud fra data, så Indledning-teksten på faner
+# opdateres automatisk, når datagrundlaget opdateres. Der hardkodes ingen
+# aarstal eller vaerdier i selve teksten.
+
+dk_format <- function(x, digits = 1) {
+  format(round(x, digits), nsmall = digits, big.mark = ".", decimal.mark = ",",
+         trim = TRUE, scientific = FALSE)
+}
+
+# Nationalt niveau: seneste hele aar mod basisaaret
+agg_basis <- aar_luft |>
+  filter(aar == basis_aar) |>
+  summarise(passagerer = sum(passagerer, na.rm = TRUE), operationer = sum(operationer))
+
+agg_seneste <- aar_luft |>
+  filter(aar == seneste_komplet) |>
+  summarise(passagerer = sum(passagerer, na.rm = TRUE), operationer = sum(operationer))
+
+udvikling_pax_total <- 100 * agg_seneste$passagerer / agg_basis$passagerer - 100
+udvikling_ops_total <- 100 * agg_seneste$operationer / agg_basis$operationer - 100
+
+# Indeks pr. lufthavn (passagerer) i seneste hele aar ift. basisaaret.
+# Roskilde udelades her, da lufthavnen jf. fanen Flyoperationer er domineret
+# af privat- og skoleflyvning og derfor ikke er sammenlignelig på passagertal.
+indeks_lufthavne <- aar_luft |>
+  filter(aar %in% c(basis_aar, seneste_komplet)) |>
+  select(lufthavn, aar, passagerer) |>
+  pivot_wider(names_from = aar, values_from = passagerer, names_prefix = "p") |>
+  mutate(indeks = 100 * .data[[str_c("p", seneste_komplet)]] / .data[[str_c("p", basis_aar)]]) |>
+  filter(!is.na(indeks), !lufthavn %in% c("København (Kastrup)", "Roskilde"))
+
+lufthavn_bedst   <- indeks_lufthavne |> slice_max(indeks, n = 1, with_ties = FALSE)
+lufthavn_svagest <- indeks_lufthavne |> slice_min(indeks, n = 1, with_ties = FALSE)
+
+kbh_indeks <- 100 *
+  (aar_luft |> filter(lufthavn == "København (Kastrup)", aar == seneste_komplet) |> pull(passagerer)) /
+  (aar_luft |> filter(lufthavn == "København (Kastrup)", aar == basis_aar) |> pull(passagerer))
+
+kbh_andel_operationer <- 100 *
+  (aar_luft |> filter(lufthavn == "København (Kastrup)", aar == seneste_komplet) |> pull(operationer)) /
+  agg_seneste$operationer
+
+# Aar til dato: samme metode som figurerne, alle maaneder til og med seneste_mdr
+ytd_i_aar <- luft |>
+  filter(maaned <= seneste_mdr, aar == aar_i_aar) |>
+  summarise(passagerer = sum(passagerer, na.rm = TRUE), operationer = sum(operationer))
+
+ytd_sidste <- luft |>
+  filter(maaned <= seneste_mdr, aar == aar_sidste) |>
+  summarise(passagerer = sum(passagerer, na.rm = TRUE), operationer = sum(operationer))
+
+udvikling_ytd_pax <- 100 * (ytd_i_aar$passagerer / ytd_sidste$passagerer - 1)
+udvikling_ytd_ops <- 100 * (ytd_i_aar$operationer / ytd_sidste$operationer - 1)
+
+# Saesonmoenster: gennemsnit over hele aar, samme grundlag som figuren
+saeson_stats <- luft |>
+  filter(aar %in% aar_komplette) |>
+  summarise(operationer = sum(operationer), .by = c(aar, maaned)) |>
+  summarise(operationer = mean(operationer), .by = maaned) |>
+  mutate(maaned_navn = maaned_dk[maaned])
+
+saeson_top         <- saeson_stats |> slice_max(operationer, n = 1, with_ties = FALSE)
+saeson_bund        <- saeson_stats |> slice_min(operationer, n = 1, with_ties = FALSE)
+saeson_forhold_pct <- 100 * (saeson_top$operationer / saeson_bund$operationer - 1)
+
+# Roskilde: operationer pr. passager i seneste hele aar. Bruges til at
+# underbygge talmæssigt, at lufthavnen er domineret af privat- og skoleflyvning.
+roskilde_ops_pr_passager <- aar_luft |>
+  filter(lufthavn == "Roskilde", aar == seneste_komplet) |>
+  summarise(forhold = operationer / passagerer) |>
+  pull(forhold)
 
 ```
 
@@ -218,13 +290,17 @@ tags$style("
 `r fa("file-lines")` Beskrivelse
 =====================================
 
-**Formål**
+Trafikstyrelsen er den officielle producent af dansk luftfartsstatistik og indsamler månedligt oplysninger om flyoperationer og passagerer fra `r n_distinct(luft$lufthavn)` danske lufthavne, der indberetter til styrelsen.
 
-Oversigten viser udviklingen i flyoperationer og passagertal i de danske lufthavne, der indberetter til Trafikstyrelsens luftfartsstatistik.
+Denne oversigt viser udviklingen i flyoperationer og passagertal fra `r min(aar_alle)` og frem, så genopretningen efter covid-19 kan følges på tværs af lufthavnene, og det igangværende år kan holdes op mod tidligere år.
 
-**Datagrundlag**
+Passagertallet lå i `r seneste_komplet` `r dk_format(abs(udvikling_pax_total), 1)` pct. `r ifelse(udvikling_pax_total >= 0, "over", "under")` niveauet fra `r basis_aar`, mens antallet af operationer lå `r dk_format(abs(udvikling_ops_total), 1)` pct. `r ifelse(udvikling_ops_total >= 0, "over", "under")` samme niveau. Udviklingen i hver af de to størrelser foldes ud på fanerne Flyoperationer og Passagerudvikling.
 
-* **Luftfartsstatistikken** opdateres månedligt. Statistikken indeholder pr. lufthavn, år, måned og retning (afgang/ankomst) antal passagerer og antal operationer.
+Passagertallet på de fleste figurer omfatter både afgåede og ankomne passagerer, altså alle passagerer ekspederet i lufthavnen. Det igangværende år (`r seneste_aar`) er endnu ikke afsluttet og dækker kun til og med `r seneste_mdr_navn`.
+
+[Gå til Passagertal.dk](https://passagertal.dk/Embed#vfs://global/passagertal.dk/Velkommen.xview), Trafikstyrelsens offentlige portal for luftfartsstatistik.
+
+Ønskes adgang til det bagvedliggende datasæt, findes det her: <b> `r sti_luft` </b>
 
 
 `r fa("plane-departure")` Flyoperationer
@@ -232,11 +308,11 @@ Oversigten viser udviklingen i flyoperationer og passagertal i de danske lufthav
 
 **Indledning**
 <br>
-Flyoperationer dækker starter og landinger. København vises for sig, da lufthavnen står for omtrent to tredjedele af alle operationer og ellers gør de øvrige lufthavne ulæselige. Bemærk at Roskilde og Esbjerg har mange operationer i forhold til deres passagertal, da Roskilde er domineret af privat- og skoleflyvning. 
+Antallet af flyoperationer i de danske lufthavne var i `r seneste_komplet` på `r dk_format(agg_seneste$operationer, 0)`, hvilket er `r dk_format(abs(udvikling_ops_total), 1)` pct. `r ifelse(udvikling_ops_total >= 0, "flere", "færre")` end i `r basis_aar`. Faldet står i kontrast til passagertallet, der i samme periode er vokset (se fanen Passagerudvikling). 
 
-De to øverste figurer viser kun hele år og går derfor til og med `r seneste_komplet`. Det igangværende år er udeladt, fordi det kun dækker januar til og med `r seneste_mdr_navn` og ellers ville fremstå som et kraftigt fald, der reelt kun er en periodeeffekt.
+København (Kastrup) står alene for `r dk_format(kbh_andel_operationer, 1)` pct. af alle operationer i `r seneste_komplet` og vises derfor i egen figur, så mønstret i de øvrige lufthavne kan aflæses. Roskilde skiller sig markant ud med `r dk_format(roskilde_ops_pr_passager, 1)` operationer pr. passager i `r seneste_komplet`, hvilket afspejler at lufthavnen i høj grad er domineret af privat- og skoleflyvning frem for kommerciel trafik.
 
-De to nederste figurer medtager det igangværende år. Figuren over årets første måneder sammenligner samme periode på tværs af år, og den månedsvise figur holder `r aar_i_aar` op mod `r aar_sidste`.
+Til og med `r seneste_mdr_navn` er der i `r aar_i_aar` gennemført `r dk_format(ytd_i_aar$operationer, 0)` operationer, `r dk_format(abs(udvikling_ytd_ops), 1)` pct. `r ifelse(udvikling_ytd_ops >= 0, "flere", "færre")` end i samme periode `r aar_sidste`.
 
 Row
 -------------------------------------
@@ -330,7 +406,7 @@ d |>
   hc_tooltip(shared = TRUE,
              pointFormat = " <b>{series.name}</b>: {point.y:,.0f} ({point.percentage:.1f} pct.) <br>") |>
   trm_hc_format(
-    titel = str_glue("<b>Operationer fra januar til {seneste_mdr_navn} {seneste_aar}"),
+    titel = str_glue("<b>Operationer fra januar til {seneste_mdr_navn}"),
     note = str_glue("Kilde: Trafikstyrelsen. Anm.: Sammenlignelig periode på tværs af år, januar til og med {seneste_mdr_navn}. Operationer omfatter både starter og landinger."),
     download_fil_navn = "operationer_aar_til_dato")
 
@@ -375,11 +451,11 @@ hc |>
 
 **Indledning**
 <br>
-Indekseringen med `r basis_aar` = 100 gør det muligt at sammenligne genopretningen efter covid-19 på tværs af lufthavne med meget forskellig størrelse. Indeksfiguren viser kun hele år og går til og med `r seneste_komplet`.
+Passagertallet i de danske lufthavne var i `r seneste_komplet` `r dk_format(abs(udvikling_pax_total), 1)` pct. `r ifelse(udvikling_pax_total >= 0, "højere", "lavere")` end i `r basis_aar`. København (Kastrup) ligger med et indeks på `r dk_format(kbh_indeks, 1)` over `r basis_aar`-niveauet. `r lufthavn_bedst$lufthavn` har det højeste indeks blandt de øvrige lufthavne med `r dk_format(lufthavn_bedst$indeks, 1)` (`r basis_aar` = 100), mens `r lufthavn_svagest$lufthavn` med et indeks på `r dk_format(lufthavn_svagest$indeks, 1)` fortsat ligger langt under niveauet fra `r basis_aar`. 
 
-Figuren med januar til og med `r seneste_mdr_navn` sammenligner samme periode på tværs af år, så det igangværende år kan holdes op mod tidligere år på lige vilkår.
+Til og med `r seneste_mdr_navn` `r aar_i_aar` er der ekspederet `r dk_format(ytd_i_aar$passagerer / 1e6, 1)` mio. passagerer mod `r dk_format(ytd_sidste$passagerer / 1e6, 1)` mio. i samme periode `r aar_sidste`, en `r ifelse(udvikling_ytd_pax >= 0, "stigning", "fald")` på `r dk_format(abs(udvikling_ytd_pax), 1)` pct.
 
-Vær opmærksom på retningen. De tre øverste figurer tæller både afgåede og ankomne passagerer, mens den nederste månedsfigur kun omfatter ankomne. Det fremgår af anmærkningen under hver figur.
+Passagertallet i de tre øverste figurer omfatter både afgåede og ankomne passagerer. Den sidste månedsfigur viser derimod kun ankomne passagerer.
 
 Row
 -------------------------------------
@@ -431,7 +507,7 @@ d |>
   hc_tooltip(shared = TRUE,
              pointFormat = " <b>{series.name}</b>: {point.y:,.0f} ({point.percentage:.1f} pct.) <br>") |>
   trm_hc_format(
-    titel = str_glue("<b>Passagerer fra januar til {seneste_mdr_navn} {seneste_aar}"),
+    titel = str_glue("<b>Passagerer fra januar til {seneste_mdr_navn}"),
     note = str_glue("Kilde: Trafikstyrelsen. Anm.: Sammenlignelig periode på tværs af år, januar til og med {seneste_mdr_navn}. {note_begge_retninger}"),
     download_fil_navn = "passagerer_aar_til_dato")
 
