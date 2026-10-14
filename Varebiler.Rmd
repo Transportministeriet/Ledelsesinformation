@@ -601,7 +601,7 @@ bind_rows(DST_tal, KF_tal) |>
 
 ```
 
-Alt imens bestanden af elvarebiler er under en positiv udvikling, falder bestanden af fossilvarebiler fortsat. I de første `r n_sidste_md` måneder af 2020 var der en nettoafgang på `r abs(tal_fos_2019)`, hvor der i de første `r n_sidste_md` måneder af `r nyeste_aar` var en nettoafgang på `r abs(tal_fos_2023)` fossilvarebiler.
+Alt imens bestanden af elvarebiler er under en positiv udvikling, falder bestanden af fossilvarebiler fortsat. I de første `r n_sidste_md` måneder af 2020 var der en nettoafgang på `r abs(tal_fos_2019)` fossilvarebiler, hvor der i de første `r n_sidste_md` måneder af `r nyeste_aar` var en nettoafgang på `r abs(tal_fos_2023)` fossilvarebiler.
 
 Af figuren fremgår det yderligere, at der er en fortsat lille vækst i bestanden af plug-in-hybrid varebiler.
 

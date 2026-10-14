@@ -650,7 +650,7 @@ formatted_text <- div(
                    max-width: 700px; margin: auto;", graa_2),
           h3("Faktaboks", style = "margin-top: 0.5;"), #
            p("I indeværende notat defineres lastbiler med en vægt på 4.250 kg. og derunder som lette lastbiler.
-    Lastbiler med en vægt over 4.250 kg. defineres som tunge lastbiler. Det bør bemærkes, at der i andre sammenhænge kan forekomme andre definitioner af henholdsvis lette og tunge lastibler."))
+    Lastbiler med en vægt over 4.250 kg. defineres som tunge lastbiler. Det bør bemærkes, at der i andre sammenhænge kan forekomme andre definitioner af henholdsvis lette og tunge lastbiler."))
   
   
 browsable(formatted_text)
@@ -659,7 +659,7 @@ browsable(formatted_text)
 
 
 
-Opdeles lastibler efter vægt, fremgår det, at det primært er de lette lastbiler, der omstilles til eldrift. Foreløbigt i `r as.character(nyeste_aar)`  har ellastbiler udgjort `r elsalg_seneste_lette/totalsalg_seneste_lette*100` pct. af alle nyregistreringer for kategorien lette lastbiler, jf. figur 2.1. For tunge lastbiler har  ellastbiler i samme periode kun udgjort `r elsalg_seneste_tunge/totalsalg_seneste_tunge*100` pct. af nyregistreringerne, jf. figur 2.2.
+Opdeles lastbiler efter vægt, fremgår det, at det primært er de lette lastbiler, der omstilles til eldrift. Foreløbigt i `r as.character(nyeste_aar)`  har ellastbiler udgjort `r elsalg_seneste_lette/totalsalg_seneste_lette*100` pct. af alle nyregistreringer for kategorien lette lastbiler, jf. figur 2.1. For tunge lastbiler har  ellastbiler i samme periode kun udgjort `r elsalg_seneste_tunge/totalsalg_seneste_tunge*100` pct. af nyregistreringerne, jf. figur 2.2.
 
 
 ```{r}
@@ -691,7 +691,7 @@ figur2_lette <- nyreg_data_1_lette |>
   hc_tooltip(shared = TRUE,
              pointFormat = "<b>{series.name}</b>: {point.percentage:.1f} pct. (<b>{point.antal:,.0f}</b> lastbiler)<br>") %>%
   trm_hc_format("<b>Figur 2.1</b> Drivmidlernes andel af nyregistreringer for lette lastbiler",
-                note = str_glue("Kilde: Bilstatistik<br>Note: Lette lastibler dækker over lastbiler med en på vægt på 4.250 kg. og nedefter.<br>{stjerne_tekst}"))
+                note = str_glue("Kilde: Bilstatistik<br>Note: Lette lastbiler dækker over lastbiler med en på vægt på 4.250 kg. og nedefter.<br>{stjerne_tekst}"))
 
 
 
@@ -742,7 +742,7 @@ elandel_seneste <- elbestand_seneste/bestand_seneste*100
 
 ```
 
-Diesel er stadig det dominerende drivmiddel i bestanden af lastbiler. Bestanden af lastbiler har generelt været svagt stigende siden ultimo 2020, hvor den samlede bestand var `r bestand_2021`, mens  bestanden ultimo `r str_c(seneste_md, " ", nyeste_aar)` var `r bestand_seneste` lastbiler. 
+Diesel er stadig det dominerende drivmiddel i bestanden af lastbiler. Bestanden af lastbiler har generelt været svagt stigende siden ultimo 2020, hvor den samlede bestand var `r bestand_2021` lastbiler, mens  bestanden ultimo `r str_c(seneste_md, " ", nyeste_aar)` var `r bestand_seneste` lastbiler. 
 
 I `r seneste_md` måned udviklede bestanden af ellastbiler sig med `r udv_elbestand_seneste_måned` lastbiler således, at der ultimo `r str_c(seneste_md, " ", nyeste_aar)` var `r elbestand_seneste` ellastbiler i Danmark svarende til `r elandel_seneste` pct. af den samlede bestand jf. figur 3.
 
@@ -813,7 +813,7 @@ figur3_lette <- bestand_data_1_lette |>
   hc_tooltip(shared=TRUE,
              pointFormat = "<b>{series.name}</b>: {point.percentage:.1f} pct. ({point.y:,.0f} lastbiler) <br>") %>%
   trm_hc_format("<b>Figur 3.1</b> Udviklingen i den samlede bestand af lette lastbiler",
-                note = str_glue("Kilde: Bilstatistik<br>Note 1: Lette lastibler dækker over lastbiler med en på vægt på 4.250 kg. og nedefter.<br>Note 2: Bestanden er opgjort ultimo"))%>% 
+                note = str_glue("Kilde: Bilstatistik<br>Note 1: Lette lastbiler dækker over lastbiler med en på vægt på op til 4.250 kg.<br>Note 2: Bestanden er opgjort ultimo"))%>% 
   hc_legend(reversed = TRUE, 
             layout = "horizontal", 
             align = "center", 
