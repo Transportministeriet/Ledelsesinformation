@@ -1,6 +1,6 @@
 ---
 title: "Luftfartsstatistik - operationer og passagerer"
-output: 
+output:
   flexdashboard::flex_dashboard:
     css: "styles_KF.css"
     orientation: rows
@@ -129,7 +129,7 @@ maaned_dk <- c("Januar", "Februar", "Marts", "April", "Maj", "Juni",
 # "til og med maj" i stedet for "til og med maaned 5".
 seneste_mdr_navn <- str_to_lower(maaned_dk[seneste_mdr])
 
-# Ufuldstændige år markeres med stjerne i figurerne. 
+# Ufuldstændige år markeres med stjerne i figurerne.
 stjerne_aar <- function(x) if_else(x %in% aar_delvise, str_c(x, "*"), as.character(x))
 
 aar_alle          <- sort(unique(luft$aar))
@@ -191,6 +191,29 @@ farve_palet <- c(
   trm_colors(c("blaa", "orange", "groen", "cyan", "roed"), lys = 2)
 )
 farver_for <- function(x) rep_len(farve_palet, length(unique(x)))
+
+# --- y-akse med enhed i titlen ---
+# Datapunkterne beholder de fulde tal, så tooltip og download viser de præcise værdier.
+# Kun akseetiketterne skaleres (fx 2.000.000 vises som 2), og enheden står i aksetitlen.
+# Antal decimaler på etiketterne følger akseintervallet, så 0,5 vises som 0,5 og ikke 1.
+hc_y_antal <- function(hc, titel, enhed = c("mio.", "tusinder")) {
+  enhed   <- match.arg(enhed)
+  divisor <- format(c("mio." = 1e6, "tusinder" = 1e3)[[enhed]], scientific = FALSE)
+
+  etiket_js <- paste0(
+    "function() {",
+    "  var d = ", divisor, ";",
+    "  var ti = this.axis.tickInterval / d;",
+    "  var dec = 0;",
+    "  while (dec < 4 && Math.abs(ti * Math.pow(10, dec) - Math.round(ti * Math.pow(10, dec))) > 1e-9) dec++;",
+    "  return Highcharts.numberFormat(this.value / d, dec);",
+    "}"
+  )
+
+  hc |>
+    hc_yAxis(title  = list(text = paste0(titel, " (", enhed, ")")),
+             labels = list(formatter = highcharter::JS(etiket_js)))
+}
 
 # ---- resultattal til Indledning ----
 # Nøgletallene herunder beregnes ud fra data, så Indledning-teksten på faner
@@ -268,7 +291,7 @@ Passagertallet lå i `r seneste_komplet` `r dk_format(abs(udvikling_pax_total), 
 
 `r note_begge_retninger` Det igangværende år (`r seneste_aar`) er endnu ikke afsluttet og dækker kun til og med `r seneste_mdr_navn`.
 
-For yderligere data om luftfart [Gå til Passagertal.dk](https://passagertal.dk/Embed#vfs://global/passagertal.dk/Velkommen.xview), Trafikstyrelsens offentlige portal for luftfartsstatistik. 
+For yderligere data om luftfart [Gå til Passagertal.dk](https://passagertal.dk/Embed#vfs://global/passagertal.dk/Velkommen.xview), Trafikstyrelsens offentlige portal for luftfartsstatistik.
 
 Ønskes adgang til det bagvedliggende datasæt, findes det her: <b> `r sti_luft` </b>
 
@@ -278,7 +301,7 @@ For yderligere data om luftfart [Gå til Passagertal.dk](https://passagertal.dk/
 
 **Indledning**
 <br>
-Antallet af flyoperationer i de danske lufthavne var i `r seneste_komplet` på `r dk_format(agg_seneste$operationer, 0)`, hvilket er `r dk_format(abs(udvikling_ops_total), 1)` pct. `r ifelse(udvikling_ops_total >= 0, "flere", "færre")` end i `r basis_aar`. Udviklingen i operationstallet står `r ifelse((udvikling_ops_total >= 0) != (udvikling_pax_total >= 0), "i kontrast til", "i forlængelse af")` passagertallet, der i samme periode er `r ifelse(udvikling_pax_total >= 0, "vokset", "faldet")` (se fanen Passagerudvikling). 
+Antallet af flyoperationer i de danske lufthavne var i `r seneste_komplet` på `r dk_format(agg_seneste$operationer, 0)`, hvilket er `r dk_format(abs(udvikling_ops_total), 1)` pct. `r ifelse(udvikling_ops_total >= 0, "flere", "færre")` end i `r basis_aar`. Udviklingen i operationstallet står `r ifelse((udvikling_ops_total >= 0) != (udvikling_pax_total >= 0), "i kontrast til", "i forlængelse af")` passagertallet, der i samme periode er `r ifelse(udvikling_pax_total >= 0, "vokset", "faldet")` (se fanen Passagerudvikling).
 
 København (Kastrup) står alene for `r dk_format(kbh_andel_operationer, 1)` pct. af alle operationer i `r seneste_komplet` og vises derfor i egen figur, så mønsteret i de øvrige lufthavne kan aflæses. Det bemærkes at Roskilde lufthavn primært er skole- og privatflyvninger, hvilket forklarer det høje antal operationer, men lave antal passagerer.
 
@@ -300,7 +323,7 @@ d |>
   hchart("line", hcaes(x = aar_label, y = operationer, group = lufthavn),
          marker = list(enabled = FALSE)) |>
   hc_colors(farver_for(d$lufthavn)) |>
-  hc_yAxis(title = list(text = "Antal operationer")) |>
+  hc_y_antal("Antal operationer", "tusinder") |>
   hc_xAxis(title = list(text = "")) |>
   hc_tooltip(shared = TRUE, pointFormat = " <b>{series.name}</b>: {point.y:,.0f} operationer <br>") |>
   trm_hc_format(titel = "<b>Flyoperationer: alle lufthavne undtagen København",
@@ -319,7 +342,7 @@ d <- aar_luft |>
 d |>
   hchart("line", hcaes(x = aar_label, y = operationer), marker = list(enabled = FALSE)) |>
   hc_colors(trm_colors("blaa")) |>
-  hc_yAxis(title = list(text = "Antal operationer")) |>
+  hc_y_antal("Antal operationer", "tusinder") |>
   hc_xAxis(title = list(text = "")) |>
   hc_legend(enabled = FALSE) |>
   hc_tooltip(pointFormat = " <b>{point.y:,.0f}</b> operationer <br>") |>
@@ -376,7 +399,7 @@ d |>
   hchart("column", hcaes(x = aar_txt, y = operationer, group = lufthavn)) |>
   hc_plotOptions(series = list(stacking = "normal")) |>
   hc_colors(farver_for(d$lufthavn)) |>
-  hc_yAxis(title = list(text = "Antal operationer")) |>
+  hc_y_antal("Antal operationer", "tusinder") |>
   hc_xAxis(title = list(text = "")) |>
   hc_legend(reversed = TRUE) |>
   hc_tooltip(shared = TRUE,
@@ -401,7 +424,7 @@ op_sidste <- maanedsserie(luft, "operationer", aar_sidste)
 
 hc <- highchart() |>
   hc_xAxis(categories = maaned_dk, title = list(text = "")) |>
-  hc_yAxis(title = list(text = "Antal operationer")) |>
+  hc_y_antal("Antal operationer", "tusinder") |>
   hc_add_series(name = as.character(aar_i_aar), data = op_i_aar,
                 type = "column", color = trm_colors("blaa"))
 
@@ -427,7 +450,7 @@ hc |>
 
 **Indledning**
 <br>
-Passagertallet i de danske lufthavne var i `r seneste_komplet` `r dk_format(abs(udvikling_pax_total), 1)` pct. `r ifelse(udvikling_pax_total >= 0, "højere", "lavere")` end i `r basis_aar`. København (Kastrup) ligger med et indeks på `r dk_format(kbh_indeks, 1)` over `r basis_aar`-niveauet. `r lufthavn_bedst$lufthavn` har det højeste indeks blandt de øvrige lufthavne med `r dk_format(lufthavn_bedst$indeks, 1)` (`r basis_aar` = 100). 
+Passagertallet i de danske lufthavne var i `r seneste_komplet` `r dk_format(abs(udvikling_pax_total), 1)` pct. `r ifelse(udvikling_pax_total >= 0, "højere", "lavere")` end i `r basis_aar`. København (Kastrup) ligger med et indeks på `r dk_format(kbh_indeks, 1)` over `r basis_aar`-niveauet. `r lufthavn_bedst$lufthavn` har det højeste indeks blandt de øvrige lufthavne med `r dk_format(lufthavn_bedst$indeks, 1)` (`r basis_aar` = 100).
 
 Til og med `r seneste_mdr_navn` `r aar_i_aar` er der ekspederet `r dk_format(ytd_i_aar$passagerer / 1e6, 1)` mio. passagerer mod `r dk_format(ytd_sidste$passagerer / 1e6, 1)` mio. i samme periode `r aar_sidste`, en `r ifelse(udvikling_ytd_pax >= 0, "stigning", "fald")` på `r dk_format(abs(udvikling_ytd_pax), 1)` pct.
 
@@ -448,7 +471,7 @@ d |>
   hchart("line", hcaes(x = aar_label, y = passagerer, group = lufthavn),
          marker = list(enabled = FALSE)) |>
   hc_colors(farver_for(d$lufthavn)) |>
-  hc_yAxis(title = list(text = "Antal passagerer")) |>
+  hc_y_antal("Antal passagerer", "mio.") |>
   hc_xAxis(title = list(text = "")) |>
   hc_tooltip(shared = TRUE, pointFormat = " <b>{series.name}</b>: {point.y:,.0f} passagerer <br>") |>
   trm_hc_format(titel = "<b>Passagerer: alle lufthavne undtagen København",
@@ -468,7 +491,7 @@ d <- aar_luft |>
 d |>
   hchart("line", hcaes(x = aar_label, y = passagerer), marker = list(enabled = FALSE)) |>
   hc_colors(trm_colors("blaa")) |>
-  hc_yAxis(title = list(text = "Antal passagerer")) |>
+  hc_y_antal("Antal passagerer", "mio.") |>
   hc_xAxis(title = list(text = "")) |>
   hc_legend(enabled = FALSE) |>
   hc_tooltip(pointFormat = " <b>{point.y:,.0f}</b> passagerer <br>") |>
@@ -522,7 +545,7 @@ d |>
   hchart("column", hcaes(x = aar_txt, y = passagerer, group = lufthavn)) |>
   hc_plotOptions(series = list(stacking = "normal")) |>
   hc_colors(farver_for(d$lufthavn)) |>
-  hc_yAxis(title = list(text = "Antal passagerer")) |>
+  hc_y_antal("Antal passagerer", "mio.") |>
   hc_xAxis(title = list(text = "")) |>
   hc_legend(reversed = TRUE) |>
   hc_tooltip(shared = TRUE,
@@ -549,7 +572,7 @@ d |>
          marker = FALSE, borderColor = 0) |>
   hc_plotOptions(series = list(stacking = "normal", lineWidth = 0)) |>
   hc_colors(farver_for(d$lufthavn)) |>
-  hc_yAxis(title = list(text = "Antal passagerer")) |>
+  hc_y_antal("Antal passagerer", "mio.") |>
   hc_xAxis(title = list(text = "")) |>
   hc_legend(reversed = TRUE) |>
   hc_tooltip(shared = TRUE,
@@ -570,7 +593,7 @@ pax_sidste <- maanedsserie(luft, "passagerer", aar_sidste)
 
 hc <- highchart() |>
   hc_xAxis(categories = maaned_dk, title = list(text = "")) |>
-  hc_yAxis(title = list(text = "Antal passagerer")) |>
+  hc_y_antal("Antal passagerer", "mio.") |>
   hc_add_series(name = as.character(aar_i_aar), data = pax_i_aar,
                 type = "column", color = trm_colors("blaa"))
 
